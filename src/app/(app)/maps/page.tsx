@@ -138,6 +138,16 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         orderBy: { createdAt: "desc" }
       })
     : [];
+  const locationStyleMap = new Map(
+    markerStyles
+      .filter((style) => style.target === "location" && style.locationType)
+      .map((style) => [
+        style.locationType ?? "",
+        { shape: style.shape, color: style.color }
+      ])
+  );
+  const defaultPathStyle =
+    markerStyles.find((style) => style.target === "path") ?? null;
   const selectedMapId = String(searchParams.map ?? maps[0]?.id ?? "");
   const selectedMap = maps.find((map) => map.id === selectedMapId) ?? null;
   const mapPayload = selectedMap
@@ -150,17 +160,21 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         imageUrl: selectedMap.imageAssetId
           ? `/api/assets/file/${selectedMap.imageAssetId}`
           : null,
-        pins: selectedMap.pins.map((pin) => ({
-          id: pin.id,
-          x: pin.x,
-          y: pin.y,
-          label: pin.label,
-          markerShape: pin.markerShape,
-          markerColor: pin.markerColor,
-          markerStyle: pin.markerStyle
+        pins: selectedMap.pins.map((pin) => {
+          const fallbackStyle = locationStyleMap.get(pin.locationType);
+          const style = pin.markerStyle
             ? { shape: pin.markerStyle.shape, color: pin.markerStyle.color }
-            : null
-        })),
+            : fallbackStyle ?? null;
+          return {
+            id: pin.id,
+            x: pin.x,
+            y: pin.y,
+            label: pin.label,
+            markerShape: pin.markerShape,
+            markerColor: pin.markerColor,
+            markerStyle: style
+          };
+        }),
         paths: selectedMap.paths.map((path) => ({
           id: path.id,
           polyline: Array.isArray(path.polyline)
@@ -169,7 +183,11 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
           arrowStyle: path.arrowStyle,
           strokeColor: path.strokeColor,
           strokeWidth: path.strokeWidth ?? null,
-          markerStyle: path.markerStyle ? { color: path.markerStyle.color } : null
+          markerStyle: path.markerStyle
+            ? { color: path.markerStyle.color }
+            : defaultPathStyle
+              ? { color: defaultPathStyle.color }
+              : null
         }))
       }
     : null;

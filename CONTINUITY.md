@@ -50,6 +50,8 @@ Done:
 - Ran npm run lint (passed).
 - Added print set builder endpoint + UI.
 - Ran npm run lint (passed).
+- Added location/path marker-style fallbacks in map preview.
+- Ran npm run lint (passed).
 
 Now:
 - Scan for remaining AGENTS.md gaps (map editor UI, notification completeness).
