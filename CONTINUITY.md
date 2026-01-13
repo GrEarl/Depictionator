@@ -3,7 +3,7 @@ Goal (incl. success criteria):
 - Provide map/diagram visualization primitives (shape/color/type) for clear classification.
 - Implement LLM integration switching: Gemini (AI Studio or Vertex) and GPT-5.2 via Codex CLI exec with fixed options.
 - Keep VPS-ready deployment (Docker, health, docs) and use git for versioning, with changes pushed to origin.
-- Docs and UI display product name as Depictionator; branch is main.
+- Docs and UI display product name as Depictionator; branch is main and master removed.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -19,7 +19,7 @@ Key decisions:
 - LLM panel stays as draft-only; executions logged; provider switching handled server-side.
 
 State:
-- Ready (branch main pushed; note: origin/HEAD still points to master until updated in GitHub settings).
+- Blocked: remote refused deleting master because it is still the default branch on GitHub.
 
 Done:
 - Full Prisma schema + minimal UI/API for entities, articles, overlays, timelines, events, maps, pins, paths, eras, chapters, viewpoints, marker styles, assets.
@@ -34,15 +34,14 @@ Done:
 - Git push to origin completed for main.
 
 Now:
-- If desired: switch default branch to main in GitHub repo settings and delete master.
+- Set GitHub default branch to main, then retry deleting master.
 
 Next:
-- If needed: run docker compose on VPS and complete runtime smoke tests.
+- Delete master after default branch switch.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- git branch -M main
-- git push -u origin main
-- git remote set-head origin -a (reported origin/HEAD still master)
+- GitHub Settings -> Branches -> Default branch
+- git push origin --delete master
