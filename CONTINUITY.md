@@ -14,7 +14,7 @@ Key decisions:
 - Implement full Prisma schema to relate all entities per AGENTS.md, then build minimal UI/API shell for each area.
 
 State:
-- In progress (Milestone 1 scaffold + schema + auth + UI shell complete; further CRUD and features pending).
+- In progress (Milestone 1 scaffold + schema + auth + UI shell complete; CRUD/features pending).
 
 Done:
 - Expanded Prisma schema to full AGENTS.md model set with relations/enums and uniqueness where needed.
@@ -23,9 +23,10 @@ Done:
 - Added global filter context + UI and app layout shell with placeholder pages (Articles/Maps/Timeline/Reviews/Settings).
 - Added README with docker/env/backup instructions; updated .env.example, docker-compose.yml, .gitignore, and UI styles.
 - Fixed BOM issues in package.json and prisma/schema.prisma; ran `npx prisma generate` and `npm run lint` successfully.
+- Committed changes (commit eaf25d6).
 
 Now:
-- Commit current changes.
+- Await next feature request (CRUD, timeline, map editor, reviews, etc.).
 
 Next:
 - Implement CRUD flows for articles, overlays, revisions, maps, pins, paths, and timelines.
@@ -39,6 +40,6 @@ Working set (files/ids/commands):
 - src/lib/auth.ts, src/lib/password.ts, src/lib/slug.ts
 - src/app/(app)/* pages, src/app/login, src/app/register, src/app/api/*
 - src/components/*
-- package.json, package-lock.json
 - README.md, .env.example, docker-compose.yml, .gitignore, src/app/globals.css
 - npx prisma generate, npm run lint
+- git commit eaf25d6
