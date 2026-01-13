@@ -186,6 +186,7 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         value={{
           type: "maps",
           mapIds: maps.map((map) => map.id),
+          selectedMapId,
           filters: { eraFilter, chapterFilter, viewpointFilter, mode }
         }}
       />

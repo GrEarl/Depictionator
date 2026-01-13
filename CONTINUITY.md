@@ -48,9 +48,11 @@ Done:
 - Added Leaflet-based map viewer with marker shapes/colors.
 - Added asset file serving endpoint and map image/bounds support.
 - Ran npm run lint (passed).
+- Added print set builder endpoint + UI.
+- Ran npm run lint (passed).
 
 Now:
-- Scan for remaining AGENTS.md gaps (map editor UI, Mermaid in overlays done, notifications completeness).
+- Scan for remaining AGENTS.md gaps (map editor UI, notification completeness).
 
 Next:
 - Extend notifications/watch triggers beyond review approvals where needed.

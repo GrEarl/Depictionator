@@ -185,6 +185,33 @@ export default async function SettingsPage() {
           </section>
 
           <section className="panel">
+            <h3>Print set builder</h3>
+            <form action="/api/pdf/build" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Entity IDs (comma)
+                <input name="entityIds" />
+              </label>
+              <label>
+                Map IDs (comma)
+                <input name="mapIds" />
+              </label>
+              <label>
+                Timeline IDs (comma)
+                <input name="timelineIds" />
+              </label>
+              <label>
+                Include credits
+                <select name="includeCredits">
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </label>
+              <button type="submit">Generate Print Set PDF</button>
+            </form>
+          </section>
+
+          <section className="panel">
             <h3>LLM Configuration</h3>
             <p className="muted">Set GEMINI_API_KEY / GEMINI_MODEL or CODEX_EXEC_ALLOWLIST in environment.</p>
           </section>
