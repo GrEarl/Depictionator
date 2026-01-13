@@ -11,19 +11,20 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Include all modified files in the commit per user request.
+- Included all modified files in the commit per user request.
 
 State:
-- In progress (commit all modifications and push).
+- Ready (commit pushed).
 
 Done:
 - Added spawn error handling (waitForSpawn + formatted error) and stdio checks in streamCodexCli.
 - Removed unused variables and updated error handling to avoid lint warnings.
 - Removed unused searchParams argument in articles page.
 - Ran npm run lint (clean).
+- Committed and pushed all modified files.
 
 Now:
-- Stage all changes, commit, and push.
+- No pending tasks.
 
 Next:
 - None.
@@ -32,6 +33,5 @@ Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- git add .
-- git commit
-- git push
+- git commit 8f75c02
+- git push origin main
