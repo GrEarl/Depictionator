@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 import { parseOptionalString } from "@/lib/forms";
 
 export async function POST(request: Request) {
@@ -40,6 +41,14 @@ export async function POST(request: Request) {
     action: "update",
     targetType: "timeline",
     targetId: timelineId
+  });
+
+  await notifyWatchers({
+    workspaceId,
+    targetType: "timeline",
+    targetId: timelineId,
+    type: "timeline_updated",
+    payload: { timelineId }
   });
 
   return NextResponse.redirect(new URL("/app/timeline", request.url));

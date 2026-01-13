@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 import {
   parseOptionalInt,
   parseOptionalString,
@@ -75,6 +76,14 @@ export async function POST(request: Request) {
     action: "update",
     targetType: "path",
     targetId: pathId
+  });
+
+  await notifyWatchers({
+    workspaceId,
+    targetType: "path",
+    targetId: pathId,
+    type: "path_updated",
+    payload: { pathId }
   });
 
   return NextResponse.redirect(new URL("/app/maps", request.url));

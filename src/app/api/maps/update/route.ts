@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 import { parseOptionalString } from "@/lib/forms";
 
 export async function POST(request: Request) {
@@ -41,6 +42,14 @@ export async function POST(request: Request) {
     action: "update",
     targetType: "map",
     targetId: mapId
+  });
+
+  await notifyWatchers({
+    workspaceId,
+    targetType: "map",
+    targetId: mapId,
+    type: "map_updated",
+    payload: { mapId }
   });
 
   return NextResponse.redirect(new URL("/app/maps", request.url));

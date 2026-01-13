@@ -31,10 +31,14 @@ Done:
 - Added update endpoints for paths/timelines/eras/chapters/events.
 - Added minimal update forms for maps/pins/paths/timelines/eras/chapters/events.
 - Ran npm run lint (passed; deprecation warning for next lint).
+- Added review comment endpoint + UI and comment notifications.
+- Added asset listing with archive/restore in settings.
+- Added watcher notifications on update routes for maps/pins/paths/timelines/events.
+- Ran npm run lint (passed).
 
 Now:
 - Confirm audit logging and workspace scoping on new update routes.
-- Scan for remaining AGENTS.md gaps (asset listing/restore, review comment UI, notification triggers).
+- Scan for remaining AGENTS.md gaps (watch toggles on non-article items, map/timeline visualization).
 
 Next:
 - Add/confirm update forms on maps/timeline pages.

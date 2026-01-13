@@ -19,6 +19,18 @@ export default async function SettingsPage() {
         orderBy: { createdAt: "asc" }
       })
     : [];
+  const assets = workspace
+    ? await prisma.asset.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: null },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
+  const archivedAssets = workspace
+    ? await prisma.asset.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
 
   return (
     <div className="panel">
@@ -116,6 +128,41 @@ export default async function SettingsPage() {
               </label>
               <button type="submit">Upload</button>
             </form>
+          </section>
+
+          <section className="panel">
+            <h3>Assets</h3>
+            <ul>
+              {assets.map((asset) => (
+                <li key={asset.id} className="list-row">
+                  <div>
+                    {asset.storageKey} · {Math.round(asset.size / 1024)} KB
+                  </div>
+                  <form action="/api/archive" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="asset" />
+                    <input type="hidden" name="targetId" value={asset.id} />
+                    <button type="submit" className="link-button">Archive</button>
+                  </form>
+                </li>
+              ))}
+              {assets.length === 0 && <li className="muted">No assets uploaded.</li>}
+            </ul>
+            <h4>Archived assets</h4>
+            <ul>
+              {archivedAssets.map((asset) => (
+                <li key={asset.id} className="list-row">
+                  <div>{asset.storageKey}</div>
+                  <form action="/api/restore" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="asset" />
+                    <input type="hidden" name="targetId" value={asset.id} />
+                    <button type="submit" className="link-button">Restore</button>
+                  </form>
+                </li>
+              ))}
+              {archivedAssets.length === 0 && <li className="muted">No archived assets.</li>}
+            </ul>
           </section>
 
           <section className="panel">

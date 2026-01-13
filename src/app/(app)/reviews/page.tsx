@@ -8,7 +8,10 @@ export default async function ReviewsPage() {
   const reviews = workspace
     ? await prisma.reviewRequest.findMany({
         where: { workspaceId: workspace.id, status: "open" },
-        include: { revision: true },
+        include: {
+          revision: true,
+          comments: { include: { user: true }, orderBy: { createdAt: "asc" } }
+        },
         orderBy: { requestedAt: "desc" }
       })
     : [];
@@ -51,6 +54,27 @@ export default async function ReviewsPage() {
                       <input name="reason" />
                     </label>
                     <button type="submit" className="link-button">Reject</button>
+                  </form>
+                </div>
+                <div className="panel">
+                  <h4>Comments</h4>
+                  <ul>
+                    {review.comments.map((comment) => (
+                      <li key={comment.id} className="list-row">
+                        <div>{comment.bodyMd}</div>
+                        <span className="muted">{comment.user?.name ?? "User"}</span>
+                      </li>
+                    ))}
+                    {review.comments.length === 0 && <li className="muted">No comments yet.</li>}
+                  </ul>
+                  <form action="/api/reviews/comment" method="post" className="form-grid">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="reviewId" value={review.id} />
+                    <label>
+                      Comment
+                      <textarea name="body" rows={3} required />
+                    </label>
+                    <button type="submit" className="link-button">Add comment</button>
                   </form>
                 </div>
               </li>

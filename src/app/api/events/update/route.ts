@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 import {
   parseOptionalFloat,
   parseOptionalInt,
@@ -81,6 +82,14 @@ export async function POST(request: Request) {
     action: "update",
     targetType: "event",
     targetId: eventId
+  });
+
+  await notifyWatchers({
+    workspaceId,
+    targetType: "event",
+    targetId: eventId,
+    type: "event_updated",
+    payload: { eventId }
   });
 
   return NextResponse.redirect(new URL("/app/timeline", request.url));
