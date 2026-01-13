@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { createNotification } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   let session;
@@ -40,6 +41,13 @@ export async function POST(request: Request) {
     targetType: "review",
     targetId: reviewId,
     meta: { reviewerId }
+  });
+
+  await createNotification({
+    userId: reviewerId,
+    workspaceId,
+    type: "review_assigned",
+    payload: { reviewId }
   });
 
   return NextResponse.redirect(new URL("/app/reviews", request.url));
