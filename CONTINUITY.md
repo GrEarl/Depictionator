@@ -3,6 +3,7 @@ Goal (incl. success criteria):
 - Provide map/diagram visualization primitives (shape/color/type) for clear classification.
 - Implement LLM integration switching: Gemini (AI Studio or Vertex) and GPT-5.2 via Codex CLI exec with fixed options.
 - Keep VPS-ready deployment (Docker, health, docs) and use git for versioning, with changes pushed to origin.
+- Update docs to match repo URL and deployment expectations.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -18,7 +19,7 @@ Key decisions:
 - LLM panel stays as draft-only; executions logged; provider switching handled server-side.
 
 State:
-- In progress (push completed; remaining: mention auth required for git push, no further code changes).
+- In progress (doc URL corrections + push).
 
 Done:
 - Full Prisma schema + minimal UI/API for entities, articles, overlays, timelines, events, maps, pins, paths, eras, chapters, viewpoints, marker styles, assets.
@@ -30,22 +31,18 @@ Done:
 - Ran npm run lint (clean).
 - agent-browser validation: /login loads, /maps redirects to /login (no auth).
 - Docker CLI not available in environment (could not run docker compose).
-- Git push to origin: up-to-date; authentication step required in browser if not already done.
+- Git push to origin: up-to-date after auth.
 
 Now:
-- Nothing pending for code changes.
+- Update README/DEPLOY docs to use actual repo URL.
 
 Next:
-- If push auth not completed, user must finish GitHub auth in browser and rerun push.
+- Commit + push doc updates.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- DEPLOY.md
 - README.md
-- src/components/LlmPanel.tsx
-- src/app/api/llm/execute/route.ts
-- src/app/(app)/layout.tsx
-- .env.example
-- npm run lint, agent-browser, git push origin
+- DEPLOY.md
+- git commit, git push

@@ -57,7 +57,7 @@ newgrp docker
 2) Clone and configure:
 
 ```bash
-git clone <your-repo> depictionator
+git clone https://github.com/GrEarl/Depictionator.git depictionator
 cd depictionator
 cp .env.example .env
 ```
@@ -109,5 +109,6 @@ pg_dump -h localhost -U postgres -d worldlore > backup.sql
 
 - This is an MVP scaffold with minimal UI and full backend endpoints for core features.
 - PDF export uses Puppeteer in `/api/pdf/export`.
+
 
 
