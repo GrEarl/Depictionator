@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 
 type TargetType =
   | "entity"
@@ -80,6 +81,14 @@ export async function POST(request: Request) {
     action: "restore",
     targetType,
     targetId
+  });
+
+  await notifyWatchers({
+    workspaceId,
+    targetType,
+    targetId,
+    type: "restored",
+    payload: { targetType, targetId }
   });
 
   return NextResponse.redirect(new URL(request.headers.get("referer") ?? "/", request.url));

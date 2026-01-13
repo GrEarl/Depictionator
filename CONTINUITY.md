@@ -71,9 +71,10 @@ Done:
 - Ran npm run lint (passed).
 - Added @mention notifications for review comments/rejections.
 - Ran npm run lint (passed).
+- Added archive/restore watcher notifications.
+- Ran npm run lint (passed).
 
 Now:
-- Verify VPS deployment readiness changes are committed.
 - Scan for remaining AGENTS.md gaps (notification completeness).
 
 Next:
