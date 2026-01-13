@@ -15,6 +15,8 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "");
   const title = String(form.get("title") ?? "").trim();
   const parentMapId = String(form.get("parentMapId") ?? "").trim();
+  const imageAssetId = String(form.get("imageAssetId") ?? "").trim();
+  const boundsRaw = String(form.get("bounds") ?? "").trim();
 
   if (!workspaceId || !title) {
     return apiError("Missing fields", 400);
@@ -26,12 +28,32 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  let bounds: unknown = null;
+  if (boundsRaw) {
+    try {
+      bounds = JSON.parse(boundsRaw);
+    } catch {
+      return apiError("Invalid bounds JSON", 400);
+    }
+  }
+
+  let imageAsset: { id: string } | null = null;
+  if (imageAssetId) {
+    imageAsset = await prisma.asset.findFirst({
+      where: { id: imageAssetId, workspaceId, softDeletedAt: null }
+    });
+    if (!imageAsset) {
+      return apiError("Image asset not found", 404);
+    }
+  }
+
   const map = await prisma.map.create({
     data: {
       workspaceId,
       title,
       parentMapId: parentMapId || null,
-      bounds: null,
+      imageAssetId: imageAsset?.id ?? null,
+      bounds: bounds ?? null,
       createdById: session.userId,
       updatedById: session.userId
     }

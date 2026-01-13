@@ -17,7 +17,7 @@ Key decisions:
 - Add map visualization primitives via MarkerStyle + event/location types for shape/color differentiation.
 
 State:
-- In progress (CRUD coverage expanded with diff/restore and soft-delete; several update routes and minimal edit forms still pending).
+- In progress (core CRUD largely in place; remaining gaps are markdown rendering, mermaid display, and actual map visualization).
 
 Done:
 - Added archive/restore UI across entities/maps/timelines/chapters/eras/overlays/viewpoints/marker styles.
@@ -44,14 +44,16 @@ Done:
 - Ran npm run lint (passed).
 - Added LLM context plumbing (page context tags + API handling).
 - Ran npm run lint (passed).
+- Added Markdown renderer with Mermaid support and styling.
+- Added Leaflet-based map viewer with marker shapes/colors.
+- Added asset file serving endpoint and map image/bounds support.
+- Ran npm run lint (passed).
 
 Now:
-- Confirm audit logging and workspace scoping on new update routes.
-- Scan for remaining AGENTS.md gaps (markdown rendering, map visualization, remaining notifications).
+- Scan for remaining AGENTS.md gaps (map editor UI, Mermaid in overlays done, notifications completeness).
 
 Next:
-- Add/confirm update forms on maps/timeline pages.
-- Extend notifications/watch triggers for updates beyond review approvals.
+- Extend notifications/watch triggers beyond review approvals where needed.
 
 Open questions (UNCONFIRMED if needed):
 - None.

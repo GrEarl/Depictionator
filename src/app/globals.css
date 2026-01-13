@@ -256,6 +256,110 @@ main {
   white-space: pre-wrap;
 }
 
+.markdown {
+  display: grid;
+  gap: 12px;
+}
+
+.markdown pre {
+  background: #f5f5f8;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.markdown code {
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 13px;
+}
+
+.markdown table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.markdown th,
+.markdown td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+}
+
+.mermaid-block {
+  overflow-x: auto;
+}
+
+.map-viewer {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #f8f7f4;
+  padding: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.map-title {
+  font-weight: 600;
+}
+
+.map-canvas {
+  height: 420px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.marker-icon {
+  background: transparent;
+  border: none;
+}
+
+.marker-shape {
+  width: 14px;
+  height: 14px;
+  display: block;
+  background: var(--marker-color);
+}
+
+.marker-circle {
+  border-radius: 50%;
+}
+
+.marker-square {
+  border-radius: 2px;
+}
+
+.marker-diamond {
+  transform: rotate(45deg);
+}
+
+.marker-triangle {
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-bottom: 14px solid var(--marker-color);
+  background: transparent;
+}
+
+.marker-hex {
+  clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+}
+
+.marker-star {
+  clip-path: polygon(
+    50% 0%,
+    61% 35%,
+    98% 35%,
+    68% 57%,
+    79% 91%,
+    50% 70%,
+    21% 91%,
+    32% 57%,
+    2% 35%,
+    39% 35%
+  );
+}
+
 .review-actions {
   display: grid;
   gap: 8px;

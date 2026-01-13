@@ -2,6 +2,7 @@
 import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
+import { MarkdownView } from "@/components/MarkdownView";
 
 const TRUTH_FLAGS = ["canonical", "rumor", "mistaken", "propaganda", "unknown"];
 
@@ -56,7 +57,8 @@ export default async function ArticleDetailPage({
       overlays: {
         where: overlayWhere,
         include: {
-          revisions: { orderBy: { createdAt: "desc" } }
+          revisions: { orderBy: { createdAt: "desc" } },
+          activeRevision: true
         }
       }
     }
@@ -149,7 +151,7 @@ export default async function ArticleDetailPage({
         <section className="panel">
           <h3>Base Article</h3>
           {entity.article?.baseRevision ? (
-            <pre className="code-block">{entity.article.baseRevision.bodyMd}</pre>
+            <MarkdownView value={entity.article.baseRevision.bodyMd} />
           ) : (
             <p className="muted">No approved base revision yet.</p>
           )}
@@ -245,6 +247,13 @@ export default async function ArticleDetailPage({
               <li key={overlay.id} className="panel">
                 <strong>{overlay.title}</strong>
                 <div className="muted">Truth: {overlay.truthFlag}</div>
+                {overlay.activeRevision ? (
+                  <MarkdownView value={overlay.activeRevision.bodyMd} />
+                ) : overlay.revisions[0] ? (
+                  <MarkdownView value={overlay.revisions[0].bodyMd} />
+                ) : (
+                  <p className="muted">No active revision yet.</p>
+                )}
                 <form action="/api/archive" method="post">
                   <input type="hidden" name="workspaceId" value={workspace.id} />
                   <input type="hidden" name="targetType" value="overlay" />

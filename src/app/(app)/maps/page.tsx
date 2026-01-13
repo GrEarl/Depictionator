@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
+import { MapViewer } from "@/components/MapViewer";
 
 const EVENT_TYPES = [
   "battle",
@@ -95,7 +96,8 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
               ...viewpointCondition,
               ...worldCondition,
               ...storyCondition
-            }
+            },
+            include: { markerStyle: true }
           },
           paths: {
             where: {
@@ -103,7 +105,8 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
               ...viewpointCondition,
               ...worldCondition,
               ...storyCondition
-            }
+            },
+            include: { markerStyle: true }
           }
         },
         orderBy: { createdAt: "desc" }
@@ -135,6 +138,41 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         orderBy: { createdAt: "desc" }
       })
     : [];
+  const selectedMapId = String(searchParams.map ?? maps[0]?.id ?? "");
+  const selectedMap = maps.find((map) => map.id === selectedMapId) ?? null;
+  const mapPayload = selectedMap
+    ? {
+        id: selectedMap.id,
+        title: selectedMap.title,
+        bounds: Array.isArray(selectedMap.bounds)
+          ? (selectedMap.bounds as [[number, number], [number, number]])
+          : null,
+        imageUrl: selectedMap.imageAssetId
+          ? `/api/assets/file/${selectedMap.imageAssetId}`
+          : null,
+        pins: selectedMap.pins.map((pin) => ({
+          id: pin.id,
+          x: pin.x,
+          y: pin.y,
+          label: pin.label,
+          markerShape: pin.markerShape,
+          markerColor: pin.markerColor,
+          markerStyle: pin.markerStyle
+            ? { shape: pin.markerStyle.shape, color: pin.markerStyle.color }
+            : null
+        })),
+        paths: selectedMap.paths.map((path) => ({
+          id: path.id,
+          polyline: Array.isArray(path.polyline)
+            ? (path.polyline as { x: number; y: number }[])
+            : [],
+          arrowStyle: path.arrowStyle,
+          strokeColor: path.strokeColor,
+          strokeWidth: path.strokeWidth ?? null,
+          markerStyle: path.markerStyle ? { color: path.markerStyle.color } : null
+        }))
+      }
+    : null;
   const archivedMaps = workspace
     ? await prisma.map.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
@@ -159,6 +197,28 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
 
       {workspace && (
         <>
+          <section className="panel">
+            <h3>Map preview</h3>
+            <form action="/app/maps" method="get" className="form-grid">
+              <label>
+                Map
+                <select name="map" defaultValue={selectedMapId}>
+                  {maps.map((map) => (
+                    <option key={map.id} value={map.id}>
+                      {map.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <input type="hidden" name="era" value={eraFilter} />
+              <input type="hidden" name="chapter" value={chapterFilter} />
+              <input type="hidden" name="viewpoint" value={viewpointFilter} />
+              <input type="hidden" name="mode" value={mode} />
+              <button type="submit">Load map</button>
+            </form>
+            <MapViewer map={mapPayload} />
+          </section>
+
           <section className="panel">
             <h3>Marker styles</h3>
             <form action="/api/marker-styles/create" method="post" className="form-grid">
@@ -265,6 +325,14 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
                 Parent map ID (optional)
                 <input name="parentMapId" />
               </label>
+              <label>
+                Image asset ID (optional)
+                <input name="imageAssetId" />
+              </label>
+              <label>
+                Bounds JSON (optional)
+                <input name="bounds" placeholder="[[0,0],[1000,1000]]" />
+              </label>
               <button type="submit">Add map</button>
             </form>
           </section>
@@ -290,6 +358,14 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
               <label>
                 Parent map ID
                 <input name="parentMapId" />
+              </label>
+              <label>
+                Image asset ID
+                <input name="imageAssetId" />
+              </label>
+              <label>
+                Bounds JSON
+                <input name="bounds" placeholder="[[0,0],[1000,1000]]" />
               </label>
               <button type="submit">Update map</button>
             </form>
