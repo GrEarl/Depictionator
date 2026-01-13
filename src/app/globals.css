@@ -1,4 +1,4 @@
-﻿:root {
+:root {
   color-scheme: light;
   --ink: #1b1b1f;
   --muted: #5b5b66;
@@ -6,6 +6,9 @@
   --panel: #ffffff;
   --accent: #1f4b99;
   --border: #e0dfd9;
+  --canon-bg: #ffffff;
+  --belief-bg: #fffbf0;
+  --belief-border: #ebdcb2;
 }
 
 * {
@@ -426,4 +429,57 @@ main {
 .filter-summary {
   font-size: 13px;
   color: var(--muted);
+}
+
+/* Compare Layout */
+.compare-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.compare-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.compare-pane.canon {
+  background: var(--canon-bg);
+}
+
+.compare-pane.viewpoint {
+  background: var(--belief-bg);
+  border: 1px solid var(--belief-border);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.truth-flag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.truth-canonical { background: #e0e0e0; color: #333; }
+.truth-rumor { background: #fff3cd; color: #856404; }
+.truth-mistaken { background: #f8d7da; color: #721c24; }
+.truth-propaganda { background: #d4edda; color: #155724; }
+.truth-unknown { background: #e2e3e5; color: #383d41; }
+
+.marker-shape.truth-rumor {
+  opacity: 0.8;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #856404;
+}
+.marker-shape.truth-mistaken {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #721c24;
+}
+.marker-shape.truth-propaganda {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 4px #155724;
+}
+.marker-shape.truth-unknown {
+  opacity: 0.5;
 }

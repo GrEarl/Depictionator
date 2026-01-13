@@ -15,6 +15,7 @@ type MapPin = {
     shape: string;
     color: string;
   } | null;
+  truthFlag?: string;
 };
 
 type MapPath = {
@@ -37,9 +38,10 @@ type MapPayload = {
   paths: MapPath[];
 };
 
-function createIcon(shape: string, color: string) {
+function createIcon(shape: string, color: string, truthFlag?: string) {
   const safeShape = shape || "circle";
-  const html = `<span class="marker-shape marker-${safeShape}" style="--marker-color:${color};"></span>`;
+  const flagClass = truthFlag ? `truth-${truthFlag}` : "";
+  const html = `<span class="marker-shape marker-${safeShape} ${flagClass}" style="--marker-color:${color};"></span>`;
   return L.divIcon({
     className: "marker-icon",
     html,
@@ -87,7 +89,7 @@ export function MapViewer({ map }: { map: MapPayload | null }) {
     map.pins.forEach((pin) => {
       const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
       const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
-      const icon = createIcon(shape, color);
+      const icon = createIcon(shape, color, pin.truthFlag);
       const marker = L.marker([pin.y, pin.x], { icon });
       if (pin.label) {
         marker.bindTooltip(pin.label, { direction: "top" });

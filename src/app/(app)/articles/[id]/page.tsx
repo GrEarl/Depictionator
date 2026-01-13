@@ -154,156 +154,162 @@ export default async function ArticleDetailPage({
         </form>
       </section>
 
-      {showBase && (
-        <section className="panel">
-          <h3>Base Article</h3>
-          {entity.article?.baseRevision ? (
-            <MarkdownView value={entity.article.baseRevision.bodyMd} />
-          ) : (
-            <p className="muted">No approved base revision yet.</p>
-          )}
+      <div className={mode === "compare" ? "compare-layout" : ""}>
+        {showBase && (
+          <div className={`compare-pane canon ${mode === "compare" ? "panel" : ""}`}>
+            <h3>Base Article (Canon)</h3>
+            {entity.article?.baseRevision ? (
+              <MarkdownView value={entity.article.baseRevision.bodyMd} />
+            ) : (
+              <p className="muted">No approved base revision yet.</p>
+            )}
 
-          <form action="/api/revisions/create" method="post" className="form-grid">
-            <input type="hidden" name="workspaceId" value={workspace.id} />
-            <input type="hidden" name="targetType" value="base" />
-            <input type="hidden" name="articleId" value={entity.id} />
-            <label>
-              New draft (Markdown)
-              <textarea name="bodyMd" rows={6} />
-            </label>
-            <label>
-              Change summary
-              <input name="changeSummary" />
-            </label>
-            <button type="submit">Save draft</button>
-          </form>
+            <form action="/api/revisions/create" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <input type="hidden" name="targetType" value="base" />
+              <input type="hidden" name="articleId" value={entity.id} />
+              <label>
+                New draft (Markdown)
+                <textarea name="bodyMd" rows={6} />
+              </label>
+              <label>
+                Change summary
+                <input name="changeSummary" />
+              </label>
+              <button type="submit">Save draft</button>
+            </form>
 
-          <h4>Revisions</h4>
-          <ul>
-            {entity.article?.revisions.map((rev) => (
-              <li key={rev.id} className="list-row">
-                <div>
-                  <a href={`/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
-                </div>
-                {rev.status === "draft" && (
-                  <form action="/api/revisions/submit" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="revisionId" value={rev.id} />
-                    <button type="submit" className="link-button">Submit review</button>
-                  </form>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
+            <h4>Revisions</h4>
+            <ul>
+              {entity.article?.revisions.map((rev) => (
+                <li key={rev.id} className="list-row">
+                  <div>
+                    <a href={`/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
+                  </div>
+                  {rev.status === "draft" && (
+                    <form action="/api/revisions/submit" method="post">
+                      <input type="hidden" name="workspaceId" value={workspace.id} />
+                      <input type="hidden" name="revisionId" value={rev.id} />
+                      <button type="submit" className="link-button">Submit review</button>
+                    </form>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      {showOverlays && (
-        <section className="panel">
-          <h3>Overlays (Viewpoint)</h3>
-          <form action="/api/overlays/create" method="post" className="form-grid">
-            <input type="hidden" name="workspaceId" value={workspace.id} />
-            <input type="hidden" name="entityId" value={entity.id} />
-            <label>
-              Title
-              <input name="title" required />
-            </label>
-            <label>
-              Truth flag
-              <select name="truthFlag">
-                {TRUTH_FLAGS.map((flag) => (
-                  <option key={flag} value={flag}>
-                    {flag}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Viewpoint ID (optional)
-              <input name="viewpointId" />
-            </label>
-            <label>
-              World from (era/date)
-              <input name="worldFrom" />
-            </label>
-            <label>
-              World to (era/date)
-              <input name="worldTo" />
-            </label>
-            <label>
-              Story from chapter ID
-              <input name="storyFromChapterId" />
-            </label>
-            <label>
-              Story to chapter ID
-              <input name="storyToChapterId" />
-            </label>
-            <label>
-              Body (Markdown)
-              <textarea name="bodyMd" rows={6} />
-            </label>
-            <label>
-              Change summary
-              <input name="changeSummary" />
-            </label>
-            <button type="submit">Create overlay draft</button>
-          </form>
-
-          <ul>
-            {entity.overlays.map((overlay) => (
-              <li key={overlay.id} className="panel">
-                <strong>{overlay.title}</strong>
-                <div className="muted">Truth: {overlay.truthFlag}</div>
-                {overlay.activeRevision ? (
-                  <MarkdownView value={overlay.activeRevision.bodyMd} />
-                ) : overlay.revisions[0] ? (
-                  <MarkdownView value={overlay.revisions[0].bodyMd} />
-                ) : (
-                  <p className="muted">No active revision yet.</p>
-                )}
-                <form action="/api/archive" method="post">
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <input type="hidden" name="targetType" value="overlay" />
-                  <input type="hidden" name="targetId" value={overlay.id} />
-                  <button type="submit" className="link-button">Archive overlay</button>
-                </form>
-                <ul>
-                  {overlay.revisions.map((rev) => (
-                    <li key={rev.id} className="list-row">
-                      <div>
-                        <a href={`/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
-                      </div>
-                      {rev.status === "draft" && (
-                        <form action="/api/revisions/submit" method="post">
-                          <input type="hidden" name="workspaceId" value={workspace.id} />
-                          <input type="hidden" name="revisionId" value={rev.id} />
-                          <button type="submit" className="link-button">Submit review</button>
-                        </form>
-                      )}
-                    </li>
+        {showOverlays && (
+          <div className="compare-pane viewpoint">
+            <h3>Overlays (Viewpoint)</h3>
+            <form action="/api/overlays/create" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <input type="hidden" name="entityId" value={entity.id} />
+              <label>
+                Title
+                <input name="title" required />
+              </label>
+              <label>
+                Truth flag
+                <select name="truthFlag">
+                  {TRUTH_FLAGS.map((flag) => (
+                    <option key={flag} value={flag}>
+                      {flag}
+                    </option>
                   ))}
-                </ul>
-              </li>
-            ))}
-            {entity.overlays.length === 0 && <li className="muted">No overlays yet.</li>}
-          </ul>
-          <h4>Archived overlays</h4>
-          <ul>
-            {archivedOverlays.map((overlay) => (
-              <li key={overlay.id} className="list-row">
-                <span>{overlay.title}</span>
-                <form action="/api/restore" method="post">
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <input type="hidden" name="targetType" value="overlay" />
-                  <input type="hidden" name="targetId" value={overlay.id} />
-                  <button type="submit" className="link-button">Restore</button>
-                </form>
-              </li>
-            ))}
-            {archivedOverlays.length === 0 && <li className="muted">No archived overlays.</li>}
-          </ul>
-        </section>
-      )}
+                </select>
+              </label>
+              <label>
+                Viewpoint ID (optional)
+                <input name="viewpointId" />
+              </label>
+              <label>
+                World from (era/date)
+                <input name="worldFrom" />
+              </label>
+              <label>
+                World to (era/date)
+                <input name="worldTo" />
+              </label>
+              <label>
+                Story from chapter ID
+                <input name="storyFromChapterId" />
+              </label>
+              <label>
+                Story to chapter ID
+                <input name="storyToChapterId" />
+              </label>
+              <label>
+                Body (Markdown)
+                <textarea name="bodyMd" rows={6} />
+              </label>
+              <label>
+                Change summary
+                <input name="changeSummary" />
+              </label>
+              <button type="submit">Create overlay draft</button>
+            </form>
+
+            <ul>
+              {entity.overlays.map((overlay) => (
+                <li key={overlay.id} className="panel">
+                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <strong>{overlay.title}</strong>
+                    <span className={`truth-flag truth-${overlay.truthFlag}`}>
+                      {overlay.truthFlag}
+                    </span>
+                  </div>
+                  {overlay.activeRevision ? (
+                    <MarkdownView value={overlay.activeRevision.bodyMd} />
+                  ) : overlay.revisions[0] ? (
+                    <MarkdownView value={overlay.revisions[0].bodyMd} />
+                  ) : (
+                    <p className="muted">No active revision yet.</p>
+                  )}
+                  <form action="/api/archive" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="overlay" />
+                    <input type="hidden" name="targetId" value={overlay.id} />
+                    <button type="submit" className="link-button">Archive overlay</button>
+                  </form>
+                  <ul>
+                    {overlay.revisions.map((rev) => (
+                      <li key={rev.id} className="list-row">
+                        <div>
+                          <a href={`/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
+                        </div>
+                        {rev.status === "draft" && (
+                          <form action="/api/revisions/submit" method="post">
+                            <input type="hidden" name="workspaceId" value={workspace.id} />
+                            <input type="hidden" name="revisionId" value={rev.id} />
+                            <button type="submit" className="link-button">Submit review</button>
+                          </form>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              ))}
+              {entity.overlays.length === 0 && <li className="muted">No overlays yet.</li>}
+            </ul>
+            <h4>Archived overlays</h4>
+            <ul>
+              {archivedOverlays.map((overlay) => (
+                <li key={overlay.id} className="list-row">
+                  <span>{overlay.title}</span>
+                  <form action="/api/restore" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="overlay" />
+                    <input type="hidden" name="targetId" value={overlay.id} />
+                    <button type="submit" className="link-button">Restore</button>
+                  </form>
+                </li>
+              ))}
+              {archivedOverlays.length === 0 && <li className="muted">No archived overlays.</li>}
+            </ul>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { MarkdownView } from "@/components/MarkdownView";
 
 type Provider = "gemini_ai" | "gemini_vertex" | "codex_cli";
 
@@ -119,13 +120,58 @@ export function LlmPanel({
         method: "POST",
         body: form
       });
-      const data = await res.json();
-      if (data?.result?.data?.text) {
-        setResponse(data.result.data.text);
-      } else if (data?.result?.error) {
-        setResponse(data.result.error);
-      } else {
-        setResponse(JSON.stringify(data, null, 2));
+
+      if (!res.ok) {
+        setResponse("Error: " + res.statusText);
+        return;
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) {
+        const text = await res.text();
+        try {
+           const json = JSON.parse(text);
+           if (json?.result?.data?.text) {
+             setResponse(json.result.data.text);
+           } else if (json?.result?.error) {
+             setResponse(json.result.error);
+           } else {
+             setResponse(JSON.stringify(json, null, 2));
+           }
+        } catch {
+           setResponse(text);
+        }
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      let firstChunk = true;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        
+        // Simple check to handle the legacy JSON response if the backend isn't streaming yet
+        // or if it returns a JSON error object.
+        if (firstChunk && chunk.trim().startsWith("{")) {
+           try {
+             // Attempt to see if it's a JSON object (this is a heuristic, distinct from stream)
+             // Ideally the backend sends a header.
+             const json = JSON.parse(chunk); // This might fail if chunk is partial, but for legacy small responses it works.
+             if (json.result) {
+               if (json.result.data?.text) setResponse(json.result.data.text);
+               else if (json.result.error) setResponse(json.result.error);
+               else setResponse(JSON.stringify(json, null, 2));
+               firstChunk = false;
+               continue; 
+             }
+           } catch {
+             // Not valid JSON, treat as text stream
+           }
+        }
+        
+        setResponse((prev) => (firstChunk ? chunk : prev + chunk));
+        firstChunk = false;
       }
     } catch (error) {
       setResponse(String(error));
@@ -249,7 +295,9 @@ export function LlmPanel({
               </button>
             </form>
           )}
-          <pre className="code-block">{response || "No output yet."}</pre>
+          <div className="panel" style={{ maxHeight: '400px', overflowY: 'auto', marginTop: '12px', padding: '12px' }}>
+             {response ? <MarkdownView value={response} /> : <p className="muted">No output yet.</p>}
+          </div>
         </div>
       )}
     </div>

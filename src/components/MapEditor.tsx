@@ -188,6 +188,7 @@ export function MapEditor({
   }
 
   async function submitPin() {
+    if (!map) return;
     if (pinDraft.x === null || pinDraft.y === null) return;
     const form = new FormData();
     form.append("workspaceId", workspaceId);
@@ -211,6 +212,7 @@ export function MapEditor({
   }
 
   async function submitPath() {
+    if (!map) return;
     if (pathPoints.length < 2) return;
     const form = new FormData();
     form.append("workspaceId", workspaceId);

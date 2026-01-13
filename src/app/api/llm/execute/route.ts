@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
-import { spawn } from "node:child_process";
+import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { promises as fs } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -13,20 +12,10 @@ const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
 const DEFAULT_VERTEX_MODEL = process.env.VERTEX_GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
 const CODEX_MODEL = "gpt-5.2";
 const CODEX_CLI_PATH = process.env.CODEX_CLI_PATH ?? "codex";
-const CODEX_TIMEOUT_MS = Number(process.env.CODEX_EXEC_TIMEOUT_MS ?? "120000");
 
 const PROVIDERS = ["gemini_ai", "gemini_vertex", "codex_cli"] as const;
 
 type Provider = (typeof PROVIDERS)[number];
-
-type LlmResult = {
-  data?: {
-    text?: string;
-    raw?: unknown;
-    meta?: Record<string, unknown>;
-  };
-  error?: string;
-};
 
 type GeminiSource = "ai_studio" | "vertex";
 
@@ -89,19 +78,20 @@ function extractGeminiText(payload: unknown): string | null {
         .trim();
     }
     const directText = readString(content.text);
-    if (directText) return directText.trim();
+    if (directText) return directText;
   }
   const fallback = readString(payload.text);
-  if (fallback) return fallback.trim();
+  if (fallback) return fallback;
   return null;
 }
 
-async function callGemini(prompt: string, options: GeminiOptions): Promise<LlmResult> {
+async function* streamGemini(prompt: string, options: GeminiOptions): AsyncGenerator<string, void, unknown> {
   const apiKey = options.apiKey?.trim() ||
     (options.source === "vertex" ? process.env.VERTEX_GEMINI_API_KEY : process.env.GEMINI_API_KEY);
 
   if (!apiKey) {
-    return { error: "Gemini API key not configured" };
+    yield JSON.stringify({ error: "Gemini API key not configured" });
+    return;
   }
 
   let url = "";
@@ -109,11 +99,12 @@ async function callGemini(prompt: string, options: GeminiOptions): Promise<LlmRe
     const project = options.vertexProject?.trim() || process.env.VERTEX_GEMINI_PROJECT;
     const location = options.vertexLocation?.trim() || process.env.VERTEX_GEMINI_LOCATION;
     if (!project || !location) {
-      return { error: "Vertex project/location not configured" };
+      yield JSON.stringify({ error: "Vertex project/location not configured" });
+      return;
     }
-    url = `https://${location}-aiplatform.googleapis.com/v1beta1/projects/${project}/locations/${location}/publishers/google/models/${options.model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    url = `https://${location}-aiplatform.googleapis.com/v1beta1/projects/${project}/locations/${location}/publishers/google/models/${options.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`;
   } else {
-    url = `https://generativelanguage.googleapis.com/v1beta/models/${options.model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+    url = `https://generativelanguage.googleapis.com/v1beta/models/${options.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`;
   }
 
   const body: Record<string, unknown> = {
@@ -129,41 +120,72 @@ async function callGemini(prompt: string, options: GeminiOptions): Promise<LlmRe
     body: JSON.stringify(body)
   });
 
-  const textPayload = await response.text();
-  let data: unknown = textPayload;
-  try {
-    data = JSON.parse(textPayload);
-  } catch {
-    data = textPayload;
-  }
-
   if (!response.ok) {
-    return {
-      error: `Gemini error ${response.status}`,
-      data: { raw: data }
-    };
+    const text = await response.text();
+    yield JSON.stringify({ error: `Gemini error ${response.status}: ${text}` });
+    return;
   }
 
-  const text = extractGeminiText(data);
-  if (!text) {
-    return { error: "Gemini returned no text output", data: { raw: data } };
+  if (!response.body) {
+     yield JSON.stringify({ error: "No response body from Gemini" });
+     return;
   }
 
-  return { data: { text, raw: data } };
+  const reader = response.body.getReader();
+  let buffer = "";
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      buffer += chunk;
+      
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+      
+      for (const line of lines) {
+         if (line.startsWith("data: ")) {
+             const jsonStr = line.slice(6).trim();
+             if (jsonStr === "[DONE]") continue;
+             try {
+                 const data = JSON.parse(jsonStr);
+                 const text = extractGeminiText(data);
+                 if (text) yield text;
+             } catch {
+             }
+         }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
 }
 
-function parseJsonLines(output: string): unknown[] {
-  return output
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line) => {
-      try {
-        return JSON.parse(line);
-      } catch {
-        return { type: "raw", text: line };
-      }
-    });
+function waitForSpawn(child: ChildProcessWithoutNullStreams): Promise<Error | null> {
+  return new Promise((resolve) => {
+    const onError = (error: Error) => {
+      cleanup();
+      resolve(error);
+    };
+    const onSpawn = () => {
+      cleanup();
+      resolve(null);
+    };
+    const cleanup = () => {
+      child.off("error", onError);
+      child.off("spawn", onSpawn);
+    };
+    child.once("error", onError);
+    child.once("spawn", onSpawn);
+  });
+}
+
+function formatSpawnError(error: Error): string {
+  if (isRecord(error) && error.code === "ENOENT") {
+    return "Codex CLI not installed or not on PATH";
+  }
+  return `Codex CLI failed to start: ${error.message}`;
 }
 
 function extractTextFromContent(content: unknown): string {
@@ -185,74 +207,7 @@ function extractTextFromContent(content: unknown): string {
   return "";
 }
 
-function extractCodexText(events: unknown[]): string | null {
-  for (let index = events.length - 1; index >= 0; index -= 1) {
-    const entry = events[index];
-    if (!isRecord(entry)) continue;
-    if (entry.type === "message" && isRecord(entry.message) && entry.message.role === "assistant") {
-      const content = "content" in entry.message ? entry.message.content : undefined;
-      const text = extractTextFromContent(content ?? entry.message.text);
-      if (text.trim()) return text.trim();
-    }
-    if (entry.role === "assistant") {
-      const content = "content" in entry ? entry.content : undefined;
-      const text = extractTextFromContent(content ?? entry.text);
-      if (text.trim()) return text.trim();
-    }
-    if (entry.type === "output_text") {
-      const text = extractTextFromContent(entry.text ?? entry.output_text);
-      if (text.trim()) return text.trim();
-    }
-  }
-  return null;
-}
-
-async function runCommand(
-  command: string,
-  args: string[],
-  input: string,
-  env: NodeJS.ProcessEnv,
-  timeoutMs: number
-) {
-  return new Promise<{ stdout: string; stderr: string; exitCode: number | null; timedOut: boolean }>(
-    (resolve, reject) => {
-      const child = spawn(command, args, { env });
-      let stdout = "";
-      let stderr = "";
-      let timedOut = false;
-
-      const timer = setTimeout(() => {
-        timedOut = true;
-        child.kill();
-      }, timeoutMs);
-
-      child.stdout.on("data", (chunk) => {
-        stdout += chunk.toString();
-      });
-
-      child.stderr.on("data", (chunk) => {
-        stderr += chunk.toString();
-      });
-
-      child.on("error", (error) => {
-        clearTimeout(timer);
-        reject(error);
-      });
-
-      child.on("close", (code) => {
-        clearTimeout(timer);
-        resolve({ stdout, stderr, exitCode: code, timedOut });
-      });
-
-      if (input) {
-        child.stdin.write(`${input}\n`);
-      }
-      child.stdin.end();
-    }
-  );
-}
-
-async function callCodexCli(prompt: string, authBase64?: string): Promise<LlmResult> {
+async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenerator<string, void, unknown> {
   let authDir: string | null = null;
   const env = { ...process.env } as NodeJS.ProcessEnv;
 
@@ -262,7 +217,8 @@ async function callCodexCli(prompt: string, authBase64?: string): Promise<LlmRes
       decoded = Buffer.from(authBase64.trim(), "base64").toString("utf8");
       JSON.parse(decoded);
     } catch {
-      return { error: "Invalid codex auth base64 (expected JSON)" };
+      yield JSON.stringify({ error: "Invalid codex auth base64 (expected JSON)" });
+      return;
     }
 
     authDir = await fs.mkdtemp(path.join(os.tmpdir(), "codex-auth-"));
@@ -275,67 +231,102 @@ async function callCodexCli(prompt: string, authBase64?: string): Promise<LlmRes
     "--json",
     "--model",
     CODEX_MODEL,
-    "--search",
-    "true",
     "--sandbox",
     "read-only",
-    "--ask-for-approval",
-    "never",
     "-"
   ];
 
+  const child = spawn(CODEX_CLI_PATH, args, { env });
+  const spawnError = await waitForSpawn(child);
+  if (spawnError) {
+    yield JSON.stringify({ error: formatSpawnError(spawnError) });
+    return;
+  }
+  if (!child.stdin || !child.stdout) {
+    yield JSON.stringify({ error: "Codex CLI stdio not available" });
+    return;
+  }
+  child.stdin.write(`${prompt}\n`);
+  child.stdin.end();
+
+  let buffer = "";
+
+  // Since we are in an async generator, let's use a more direct approach to event handling
+  const readable = child.stdout;
+  
   try {
-    const { stdout, stderr, exitCode, timedOut } = await runCommand(
-      CODEX_CLI_PATH,
-      args,
-      prompt,
-      env,
-      CODEX_TIMEOUT_MS
-    );
+    for await (const chunk of readable) {
+        buffer += chunk.toString();
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
 
-    if (timedOut) {
-      return { error: "Codex CLI timed out" };
-    }
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed) continue;
+            try {
+                const event = JSON.parse(trimmed);
+                
+                // Handle Errors immediately
+                if (event.type === "error" || event.type === "turn.failed") {
+                    const errMessage =
+                      isRecord(event.error) && typeof event.error.message === "string"
+                        ? event.error.message
+                        : undefined;
+                    const msg = extractTextFromContent(event.message ?? errMessage);
+                    if (msg) yield `\n> *Error: ${msg}*\n`;
+                    continue;
+                }
 
-    const events = parseJsonLines(stdout);
-    const text = extractCodexText(events);
-    const data = { text: text ?? undefined, raw: events, meta: { exitCode, stderr } };
-
-    if (exitCode && exitCode !== 0) {
-      return { error: `Codex CLI exited with code ${exitCode}`, data };
+                // Extract thinking process if available
+                if (event.type === "thought" || event.type === "reasoning") {
+                    const thought = extractTextFromContent(event.content ?? event.text);
+                    if (thought) yield `> *Thinking: ${thought}*\n\n`;
+                }
+                
+                // Extract message content
+                if (event.type === "message" || event.type === "thread.message") {
+                    const msg = event.message ?? event;
+                    // Only output assistant messages to avoid duplicating user prompt if echoed
+                    if (isRecord(msg) && msg.role === "assistant") {
+                        const content = extractTextFromContent(msg.content ?? msg.text);
+                        // Avoid re-yielding the whole block if it's a final message summary, 
+                        // but usually stream provides deltas. 
+                        // If this CLI provides full message at end, we might duplicate.
+                        // Assuming events are distinct or deltas. 
+                        // If 'content' is a string, it's likely a full chunk or message.
+                        if (content) yield content;
+                    }
+                }
+                
+                // Extract incremental output (deltas)
+                if (event.type === "text_delta" || event.type === "content_block_delta" || event.type === "delta") {
+                    const text = extractTextFromContent(event.text ?? event.delta ?? event.output_text);
+                    if (text) yield text;
+                }
+            } catch {
+                // If not JSON, it might be raw output
+                yield trimmed + "\n";
+            }
+        }
     }
-
-    if (!text) {
-      return { error: "Codex CLI returned no text output", data };
-    }
-
-    return { data };
-  } catch (error: unknown) {
-    if (isRecord(error) && error.code === "ENOENT") {
-      return { error: "Codex CLI not installed or not on PATH" };
-    }
-    if (isRecord(error) && typeof error.message === "string") {
-      return { error: `Codex CLI error: ${error.message}` };
-    }
-    return { error: "Codex CLI error: unknown error" };
   } finally {
     if (authDir) {
-      try {
-        await fs.rm(authDir, { recursive: true, force: true });
-      } catch {
-        // Ignore cleanup failure in temp dir.
-      }
+        try { await fs.rm(authDir, { recursive: true, force: true }); } catch {}
     }
+  }
+
+  const exitCode = await new Promise<number | null>((resolve) => {
+    child.on("close", resolve);
+  });
+
+  if (exitCode !== 0 && exitCode !== null) {
+      yield `\n\n[Codex CLI exited with code ${exitCode}]`;
   }
 }
 
 export async function POST(request: Request) {
   let session;
-  try {
-    session = await requireApiSession();
-  } catch {
-    return apiError("Unauthorized", 401);
-  }
+  try { session = await requireApiSession(); } catch { return apiError("Unauthorized", 401); }
 
   const form = await request.formData();
   const providerRaw = String(form.get("provider") ?? "");
@@ -344,21 +335,13 @@ export async function POST(request: Request) {
   const context = String(form.get("context") ?? "").trim();
   const workspaceId = String(form.get("workspaceId") ?? "").trim();
 
-  if (!prompt) {
-    return apiError("Prompt required", 400);
-  }
+  if (!prompt) return apiError("Prompt required", 400);
 
   const enabledProviders = getEnabledProviders();
-  if (!enabledProviders.includes(provider)) {
-    return apiError("Provider disabled", 400);
-  }
+  if (!enabledProviders.includes(provider)) return apiError("Provider disabled", 400);
 
   if (workspaceId) {
-    try {
-      await requireWorkspaceAccess(session.userId, workspaceId, "viewer");
-    } catch {
-      return apiError("Forbidden", 403);
-    }
+    try { await requireWorkspaceAccess(session.userId, workspaceId, "viewer"); } catch { return apiError("Forbidden", 403); }
   }
 
   const model = String(form.get("model") ?? "").trim();
@@ -375,58 +358,73 @@ export async function POST(request: Request) {
     context: context || null,
     provider,
     model: provider === "codex_cli" ? CODEX_MODEL : model || null,
-    search: provider === "codex_cli" ? true : search,
-    apiKeyProvided: Boolean(apiKey?.trim()),
-    codexAuthProvided: Boolean(codexAuthBase64?.trim())
+    search: provider === "codex_cli" ? true : search
   };
 
   const log = await prisma.llmLog.create({
     data: {
       provider: provider === "codex_cli" ? "codex_cli" : "gemini",
       input: logInput,
-      status: "pending",
+      status: "streaming",
       userId: session.userId,
       workspaceId: workspaceId || null
     }
   });
 
-  let result: LlmResult;
-  if (provider === "codex_cli") {
-    result = await callCodexCli(fullPrompt, codexAuthBase64);
-  } else if (provider === "gemini_vertex") {
-    result = await callGemini(fullPrompt, {
-      source: "vertex",
-      apiKey,
-      model: model || DEFAULT_VERTEX_MODEL,
-      search,
-      vertexProject,
-      vertexLocation
-    });
-  } else {
-    result = await callGemini(fullPrompt, {
-      source: "ai_studio",
-      apiKey,
-      model: model || DEFAULT_GEMINI_MODEL,
-      search,
-      vertexProject: undefined,
-      vertexLocation: undefined
-    });
-  }
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      let fullText = "";
+      let error: string | null = null;
 
-  const status = result.error ? "error" : "ok";
-  await prisma.llmLog.update({
-    where: { id: log.id },
-    data: { output: result, status }
+      try {
+        if (provider === "codex_cli") {
+          for await (const chunk of streamCodexCli(fullPrompt, codexAuthBase64)) {
+              fullText += chunk;
+              controller.enqueue(encoder.encode(chunk));
+          }
+        } else {
+          const options: GeminiOptions = {
+            source: provider === "gemini_vertex" ? "vertex" : "ai_studio",
+            apiKey,
+            model: model || (provider === "gemini_vertex" ? DEFAULT_VERTEX_MODEL : DEFAULT_GEMINI_MODEL),
+            search,
+            vertexProject,
+            vertexLocation
+          };
+          for await (const chunk of streamGemini(fullPrompt, options)) {
+             if (chunk.trim().startsWith('{"error":')) {
+                 controller.enqueue(encoder.encode(chunk));
+                 try { const parsed = JSON.parse(chunk); if (parsed.error) error = parsed.error; } catch {}
+             } else {
+                 fullText += chunk;
+                 controller.enqueue(encoder.encode(chunk));
+             }
+          }
+        }
+      } catch (e) {
+        error = String(e);
+        controller.enqueue(encoder.encode(`\n\n[Error: ${error}]`));
+      } finally {
+        const finalStatus = error ? "error" : "ok";
+        await prisma.llmLog.update({
+          where: { id: log.id },
+          data: { status: finalStatus, output: { data: { text: fullText }, error } }
+        });
+        await logAudit({
+            workspaceId: workspaceId || "system",
+            actorUserId: session.userId,
+            action: "llm_execute",
+            targetType: "llm_log",
+            targetId: log.id,
+            meta: { provider, status: finalStatus }
+        });
+        controller.close();
+      }
+    }
   });
 
-  await logAudit({
-    workspaceId: workspaceId || "system",
-    actorUserId: session.userId,
-    action: "llm_execute",
-    targetType: "llm_log",
-    targetId: log.id,
-    meta: { provider, status }
+  return new Response(stream, {
+    headers: { "Content-Type": "text/plain; charset=utf-8", "X-Log-Id": log.id }
   });
-
-  return NextResponse.json({ status, result, logId: log.id });
 }

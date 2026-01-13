@@ -16,12 +16,22 @@ export default async function ReviewsPage() {
       })
     : [];
 
+  const auditLogs = workspace
+    ? await prisma.auditLog.findMany({
+        where: { workspaceId: workspace.id },
+        include: { actorUser: true },
+        orderBy: { createdAt: "desc" },
+        take: 50
+      })
+    : [];
+
   return (
     <div className="panel">
       <h2>Reviews</h2>
       {!workspace && <p className="muted">Select a workspace to review drafts.</p>}
 
       {workspace && (
+        <>
         <section className="panel">
           <h3>Open review requests</h3>
           <ul>
@@ -82,6 +92,25 @@ export default async function ReviewsPage() {
             {reviews.length === 0 && <li className="muted">No pending reviews.</li>}
           </ul>
         </section>
+
+        <section className="panel">
+          <h3>Audit Log</h3>
+          <ul>
+            {auditLogs.map((log) => (
+              <li key={log.id} className="list-row">
+                <div>
+                  <span style={{ fontWeight: 600 }}>{log.action}</span>
+                  <span className="muted"> on {log.targetType} ({log.targetId})</span>
+                </div>
+                <div className="muted" style={{ fontSize: '12px' }}>
+                  {log.actorUser?.name ?? log.actorUserId} · {log.createdAt.toLocaleString()}
+                </div>
+              </li>
+            ))}
+            {auditLogs.length === 0 && <li className="muted">No audit logs.</li>}
+          </ul>
+        </section>
+        </>
       )}
     </div>
   );

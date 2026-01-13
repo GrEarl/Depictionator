@@ -20,9 +20,19 @@ const ENTITY_TYPES = [
 export default async function ArticlesPage() {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
+
+  // Parse filters
+  // const eraFilter = String(searchParams.era ?? "all");
+  // const chapterFilter = String(searchParams.chapter ?? "all");
+  // const viewpointFilter = String(searchParams.viewpoint ?? "canon");
+
   const entities = workspace
     ? await prisma.entity.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
+        where: {
+          workspaceId: workspace.id,
+          softDeletedAt: null
+          // TODO: Add filtering by era/chapter if feasible with string fields
+        },
         include: { article: { select: { baseRevisionId: true } } },
         orderBy: { updatedAt: "desc" }
       })

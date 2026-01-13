@@ -1,9 +1,6 @@
 Goal (incl. success criteria):
-- Implement all AGENTS.md requirements into a usable system (backend + minimal UI), with robust, foolproof behavior.
-- Provide map/diagram visualization primitives (shape/color/type) for clear classification.
-- Implement LLM integration switching: Gemini (AI Studio or Vertex) and GPT-5.2 via Codex CLI exec with fixed options.
-- Keep VPS-ready deployment (Docker, health, docs) and use git for versioning, with changes pushed to origin.
-- Docs and UI display product name as Depictionator; branch is main.
+- Fix Codex CLI spawn error handling in LLM execute route so missing CLI returns structured error and does not crash.
+- Commit all currently modified files as requested.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -14,35 +11,27 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Manual Next.js scaffold; Prisma schema models full AGENTS.md domain with soft delete and revisions.
-- Leaflet used for maps with MarkerStyle for shape/color differentiation.
-- LLM panel stays as draft-only; executions logged; provider switching handled server-side.
+- Include all modified files in the commit per user request.
 
 State:
-- Blocked: GitHub default branch still master; user is on Settings -> Branches (branch protection section) and must switch default to main before master can be deleted.
+- In progress (commit all modifications and push).
 
 Done:
-- Full Prisma schema + minimal UI/API for entities, articles, overlays, timelines, events, maps, pins, paths, eras, chapters, viewpoints, marker styles, assets.
-- Review workflow, audit logging, watch/notifications, read state, unread indicators, mention notifications.
-- Revision diff/restore, Markdown renderer + Mermaid, map viewer/editor (Leaflet) with pin/path creation.
-- Print set builder endpoint + UI, asset serving, /health endpoint, Docker entrypoint.
-- LLM provider switching (Gemini AI Studio/Vertex + GPT-5.2 via Codex CLI), UI inputs, API handling, and env/docs updates.
-- Added DEPLOY.md (Ubuntu VPS guide), README updated with repo URL and Depictionator name.
+- Added spawn error handling (waitForSpawn + formatted error) and stdio checks in streamCodexCli.
+- Removed unused variables and updated error handling to avoid lint warnings.
+- Removed unused searchParams argument in articles page.
 - Ran npm run lint (clean).
-- agent-browser validation: /login loads, /maps redirects to /login (no auth).
-- Docker CLI not available in environment (could not run docker compose).
-- Git push to origin completed for main.
-- Attempted deletion of master failed because it is still default branch.
 
 Now:
-- Guide user to Default branch section (scroll up) and switch to main, then delete master.
+- Stage all changes, commit, and push.
 
 Next:
-- After default branch switch, run `git push origin --delete master`.
+- None.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- GitHub Settings -> Branches -> Default branch
-- git push origin --delete master
+- git add .
+- git commit
+- git push

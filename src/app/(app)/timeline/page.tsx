@@ -45,13 +45,14 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
             where: { softDeletedAt: null, ...worldCondition, ...storyCondition },
             orderBy: { createdAt: "desc" }
           }
-        }
+        },
+        orderBy: { name: "asc" }
       })
     : [];
   const archivedTimelines = workspace
     ? await prisma.timeline.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
-        orderBy: { createdAt: "desc" }
+        orderBy: { name: "asc" }
       })
     : [];
   const eras = workspace
@@ -92,6 +93,11 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
       })
     : [];
 
+  const activeTab = String(searchParams.tab ?? "world_history");
+  const filteredTimelines = timelines.filter(t => 
+    activeTab === 'all' || t.type === activeTab || (activeTab === 'world_history' && t.type === 'world_history') || (activeTab === 'game_storyline' && t.type === 'game_storyline')
+  );
+
   return (
     <div className="panel">
       <LlmContext
@@ -103,10 +109,86 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
       />
       <h2>Timeline</h2>
       <FilterSummary />
+      
+      <div className="link-grid" style={{ marginBottom: '16px' }}>
+        <a href="?tab=world_history" style={{ fontWeight: activeTab === 'world_history' ? 'bold' : 'normal', borderColor: activeTab === 'world_history' ? 'var(--accent)' : 'var(--border)' }}>
+          World History
+        </a>
+        <a href="?tab=game_storyline" style={{ fontWeight: activeTab === 'game_storyline' ? 'bold' : 'normal', borderColor: activeTab === 'game_storyline' ? 'var(--accent)' : 'var(--border)' }}>
+          Game Storyline
+        </a>
+        <a href="?tab=all" style={{ fontWeight: activeTab === 'all' ? 'bold' : 'normal', borderColor: activeTab === 'all' ? 'var(--accent)' : 'var(--border)' }}>
+          All
+        </a>
+      </div>
+
       {!workspace && <p className="muted">Select a workspace to manage timelines.</p>}
 
       {workspace && (
         <>
+          <section className="panel">
+            <h3>Timelines ({activeTab.replace('_', ' ')})</h3>
+            {filteredTimelines.map((timeline) => (
+              <div key={timeline.id} className="panel">
+                <div className="list-row">
+                  <strong>{timeline.name}</strong>
+                  <span className="muted">{timeline.type}</span>
+                </div>
+                <ul>
+                  {timeline.events.map((event) => (
+                    <li key={event.id} className="list-row" style={{ alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{event.title}</div>
+                        <div className="muted" style={{ fontSize: '13px' }}>
+                           {event.worldStart ? `World: ${event.worldStart}` : ''} 
+                           {(event.worldStart && (event.storyOrder || event.storyChapterId)) ? ' · ' : ''}
+                           {event.storyChapterId ? `Chapter: ${chapters.find(c => c.id === event.storyChapterId)?.name ?? event.storyChapterId}` : ''}
+                           {(event.storyChapterId && event.storyOrder) ? ' / ' : ''}
+                           {event.storyOrder ? `Order: ${event.storyOrder}` : ''}
+                        </div>
+                        <div className="link-grid" style={{ marginTop: '4px', fontSize: '12px' }}>
+                          {event.locationMapId && (
+                            <a href={`/maps?map=${event.locationMapId}`}>View on Map</a>
+                          )}
+                          {event.involvedEntityIds.length > 0 && (
+                            <a href={`/articles/${event.involvedEntityIds[0]}`}>
+                              Related Entity {event.involvedEntityIds.length > 1 ? `(+${event.involvedEntityIds.length - 1})` : ''}
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                         <span className="badge">{event.eventType}</span>
+                         <form action="/api/watches/toggle" method="post">
+                           <input type="hidden" name="workspaceId" value={workspace.id} />
+                           <input type="hidden" name="targetType" value="event" />
+                           <input type="hidden" name="targetId" value={event.id} />
+                           <button type="submit" className="link-button">Watch</button>
+                         </form>
+                      </div>
+                    </li>
+                  ))}
+                  {timeline.events.length === 0 && <li className="muted">No events.</li>}
+                </ul>
+                <div className="list-row">
+                  <form action="/api/watches/toggle" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="timeline" />
+                    <input type="hidden" name="targetId" value={timeline.id} />
+                    <button type="submit" className="link-button">Watch</button>
+                  </form>
+                  <form action="/api/archive" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="timeline" />
+                    <input type="hidden" name="targetId" value={timeline.id} />
+                    <button type="submit" className="link-button">Archive timeline</button>
+                  </form>
+                </div>
+              </div>
+            ))}
+            {filteredTimelines.length === 0 && <p className="muted">No timelines found for this tab.</p>}
+          </section>
+
           <section className="panel">
             <h3>Create timeline</h3>
             <form action="/api/timelines/create" method="post" className="form-grid">
@@ -499,50 +581,6 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
             </form>
           </section>
 
-          <section className="panel">
-            <h3>Timelines</h3>
-            {timelines.map((timeline) => (
-              <div key={timeline.id} className="panel">
-                <strong>{timeline.name}</strong>
-                <div className="muted">{timeline.type}</div>
-                <ul>
-                  {timeline.events.map((event) => (
-                    <li key={event.id} className="list-row">
-                      <div>{event.title}</div>
-                      <span className="muted">{event.eventType}</span>
-                      <form action="/api/watches/toggle" method="post">
-                        <input type="hidden" name="workspaceId" value={workspace.id} />
-                        <input type="hidden" name="targetType" value="event" />
-                        <input type="hidden" name="targetId" value={event.id} />
-                        <button type="submit" className="link-button">Watch</button>
-                      </form>
-                      <form action="/api/archive" method="post">
-                        <input type="hidden" name="workspaceId" value={workspace.id} />
-                        <input type="hidden" name="targetType" value="event" />
-                        <input type="hidden" name="targetId" value={event.id} />
-                        <button type="submit" className="link-button">Archive</button>
-                      </form>
-                    </li>
-                  ))}
-                  {timeline.events.length === 0 && <li className="muted">No events.</li>}
-                </ul>
-                <div className="list-row">
-                  <form action="/api/watches/toggle" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="timeline" />
-                    <input type="hidden" name="targetId" value={timeline.id} />
-                    <button type="submit" className="link-button">Watch</button>
-                  </form>
-                  <form action="/api/archive" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="timeline" />
-                    <input type="hidden" name="targetId" value={timeline.id} />
-                    <button type="submit" className="link-button">Archive timeline</button>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </section>
           <section className="panel">
             <h3>Archived timelines</h3>
             <ul>

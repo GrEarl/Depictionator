@@ -128,14 +128,14 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
     ? await prisma.pin.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: { map: true },
-        orderBy: { createdAt: "desc" }
+        // orderBy: { id: "desc" }
       })
     : [];
   const allPaths = workspace
     ? await prisma.path.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: { map: true },
-        orderBy: { createdAt: "desc" }
+        // orderBy: { id: "desc" }
       })
     : [];
   const locationStyleMap = new Map(
@@ -150,6 +150,9 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
     markerStyles.find((style) => style.target === "path") ?? null;
   const selectedMapId = String(searchParams.map ?? maps[0]?.id ?? "");
   const selectedMap = maps.find((map) => map.id === selectedMapId) ?? null;
+  const parentMap = selectedMap?.parentMapId ? maps.find((m) => m.id === selectedMap.parentMapId) : null;
+  const childMaps = selectedMap ? maps.filter((m) => m.parentMapId === selectedMap.id) : [];
+
   const mapPayload = selectedMap
     ? {
         id: selectedMap.id,
@@ -172,7 +175,8 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
             label: pin.label,
             markerShape: pin.markerShape,
             markerColor: pin.markerColor,
-            markerStyle: style
+            markerStyle: style,
+            truthFlag: pin.truthFlag
           };
         }),
         paths: selectedMap.paths.map((path) => ({
@@ -218,6 +222,26 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         <>
           <section className="panel">
             <h3>Map preview</h3>
+            
+            {/* Hierarchical Navigation */}
+            <div className="list-row" style={{justifyContent: 'flex-start', gap: '16px'}}>
+               {parentMap && (
+                 <a href={`/maps?map=${parentMap.id}`} className="link-button">
+                   &larr; Up to {parentMap.title}
+                 </a>
+               )}
+               {childMaps.length > 0 && (
+                 <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
+                   <span className="muted">Sub-regions:</span>
+                   {childMaps.map(child => (
+                     <a key={child.id} href={`/maps?map=${child.id}`} className="badge" style={{textDecoration:'none', cursor:'pointer'}}>
+                       {child.title}
+                     </a>
+                   ))}
+                 </div>
+               )}
+            </div>
+
             <form action="/maps" method="get" className="form-grid">
               <label>
                 Map
