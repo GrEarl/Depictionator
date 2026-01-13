@@ -71,6 +71,13 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
         orderBy: { orderIndex: "asc" }
       })
     : [];
+  const allEvents = workspace
+    ? await prisma.event.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: null },
+        include: { timeline: true },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
   const markerStyles = workspace
     ? await prisma.markerStyle.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null, target: "event" },
@@ -113,6 +120,37 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
           </section>
 
           <section className="panel">
+            <h3>Update timeline</h3>
+            <form action="/api/timelines/update" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Timeline
+                <select name="timelineId" required>
+                  {timelines.map((timeline) => (
+                    <option key={timeline.id} value={timeline.id}>
+                      {timeline.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Name
+                <input name="name" />
+              </label>
+              <label>
+                Type
+                <select name="type">
+                  <option value="">--</option>
+                  <option value="world_history">World History</option>
+                  <option value="game_storyline">Game Storyline</option>
+                  <option value="dev_meta">Dev Meta</option>
+                </select>
+              </label>
+              <button type="submit">Update timeline</button>
+            </form>
+          </section>
+
+          <section className="panel">
             <h3>Create era</h3>
             <form action="/api/eras/create" method="post" className="form-grid">
               <input type="hidden" name="workspaceId" value={workspace.id} />
@@ -148,6 +186,40 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="panel">
+            <h3>Update era</h3>
+            <form action="/api/eras/update" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Era
+                <select name="eraId" required>
+                  {eras.map((era) => (
+                    <option key={era.id} value={era.id}>
+                      {era.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Name
+                <input name="name" />
+              </label>
+              <label>
+                World start
+                <input name="worldStart" />
+              </label>
+              <label>
+                World end
+                <input name="worldEnd" />
+              </label>
+              <label>
+                Sort key
+                <input name="sortKey" type="number" />
+              </label>
+              <button type="submit">Update era</button>
+            </form>
           </section>
           <section className="panel">
             <h3>Archived eras</h3>
@@ -199,6 +271,36 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
                 </li>
               ))}
             </ul>
+          </section>
+
+          <section className="panel">
+            <h3>Update chapter</h3>
+            <form action="/api/chapters/update" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Chapter
+                <select name="chapterId" required>
+                  {chapters.map((chapter) => (
+                    <option key={chapter.id} value={chapter.id}>
+                      {chapter.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Name
+                <input name="name" />
+              </label>
+              <label>
+                Order
+                <input name="orderIndex" type="number" />
+              </label>
+              <label>
+                Description
+                <textarea name="description" rows={3} />
+              </label>
+              <button type="submit">Update chapter</button>
+            </form>
           </section>
           <section className="panel">
             <h3>Archived chapters</h3>
@@ -298,6 +400,94 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
                 <input name="involvedEntityIds" />
               </label>
               <button type="submit">Add event</button>
+            </form>
+          </section>
+
+          <section className="panel">
+            <h3>Update event</h3>
+            <form action="/api/events/update" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Event
+                <select name="eventId" required>
+                  {allEvents.map((event) => (
+                    <option key={event.id} value={event.id}>
+                      {event.title} · {event.timeline?.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Timeline ID
+                <input name="timelineId" />
+              </label>
+              <label>
+                Title
+                <input name="title" />
+              </label>
+              <label>
+                Event type
+                <select name="eventType">
+                  <option value="">--</option>
+                  {EVENT_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Marker style
+                <select name="markerStyleId">
+                  <option value="">--</option>
+                  {markerStyles.map((style) => (
+                    <option key={style.id} value={style.id}>
+                      {style.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                World start
+                <input name="worldStart" />
+              </label>
+              <label>
+                World end
+                <input name="worldEnd" />
+              </label>
+              <label>
+                Story order
+                <input name="storyOrder" type="number" />
+              </label>
+              <label>
+                Story chapter ID
+                <input name="storyChapterId" />
+              </label>
+              <label>
+                Location map ID
+                <input name="locationMapId" />
+              </label>
+              <label>
+                Location pin ID
+                <input name="locationPinId" />
+              </label>
+              <label>
+                Location X
+                <input name="locationX" type="number" step="0.1" />
+              </label>
+              <label>
+                Location Y
+                <input name="locationY" type="number" step="0.1" />
+              </label>
+              <label>
+                Summary (Markdown)
+                <textarea name="summaryMd" rows={3} />
+              </label>
+              <label>
+                Involved Entity IDs (comma)
+                <input name="involvedEntityIds" />
+              </label>
+              <button type="submit">Update event</button>
             </form>
           </section>
 

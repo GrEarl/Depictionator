@@ -17,7 +17,7 @@ Key decisions:
 - Add map visualization primitives via MarkerStyle + event/location types for shape/color differentiation.
 
 State:
-- In progress (CRUD coverage expanded with diff/restore and soft-delete; remaining gaps still pending).
+- In progress (CRUD coverage expanded with diff/restore and soft-delete; several update routes and minimal edit forms still pending).
 
 Done:
 - Added archive/restore UI across entities/maps/timelines/chapters/eras/overlays/viewpoints/marker styles.
@@ -28,12 +28,16 @@ Done:
 - Added review assignment endpoint + UI.
 - Added diff dependency and updated global filter options from DB.
 - Ran prisma generate and lint successfully.
+- Added update endpoints for paths/timelines/eras/chapters/events.
+- Added minimal update forms for maps/pins/paths/timelines/eras/chapters/events.
+- Ran npm run lint (passed; deprecation warning for next lint).
 
 Now:
-- Continue remaining AGENTS.md requirements: full update endpoints for maps/pins/paths/events/timelines, review comments UI, audit coverage for all mutations, asset listing/restore, and global filter consistency across all views.
+- Confirm audit logging and workspace scoping on new update routes.
+- Scan for remaining AGENTS.md gaps (asset listing/restore, review comment UI, notification triggers).
 
 Next:
-- Implement edit/update endpoints + minimal UI for maps/pins/paths/events/timelines/eras/chapters.
+- Add/confirm update forms on maps/timeline pages.
 - Extend notifications/watch triggers for updates beyond review approvals.
 
 Open questions (UNCONFIRMED if needed):

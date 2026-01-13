@@ -108,6 +108,20 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         orderBy: { createdAt: "desc" }
       })
     : [];
+  const allPins = workspace
+    ? await prisma.pin.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: null },
+        include: { map: true },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
+  const allPaths = workspace
+    ? await prisma.path.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: null },
+        include: { map: true },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
   const archivedMaps = workspace
     ? await prisma.map.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
@@ -236,6 +250,32 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
           </section>
 
           <section className="panel">
+            <h3>Update map</h3>
+            <form action="/api/maps/update" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Map
+                <select name="mapId" required>
+                  {maps.map((map) => (
+                    <option key={map.id} value={map.id}>
+                      {map.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Title
+                <input name="title" />
+              </label>
+              <label>
+                Parent map ID
+                <input name="parentMapId" />
+              </label>
+              <button type="submit">Update map</button>
+            </form>
+          </section>
+
+          <section className="panel">
             <h3>Create pin</h3>
             <form action="/api/pins/create" method="post" className="form-grid">
               <input type="hidden" name="workspaceId" value={workspace.id} />
@@ -332,6 +372,104 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
           </section>
 
           <section className="panel">
+            <h3>Update pin</h3>
+            <form action="/api/pins/update" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Pin
+                <select name="pinId" required>
+                  {allPins.map((pin) => (
+                    <option key={pin.id} value={pin.id}>
+                      {(pin.label || pin.id).slice(0, 24)} · {pin.map?.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                X
+                <input name="x" type="number" step="0.1" />
+              </label>
+              <label>
+                Y
+                <input name="y" type="number" step="0.1" />
+              </label>
+              <label>
+                Label
+                <input name="label" />
+              </label>
+              <label>
+                Location type
+                <select name="locationType">
+                  <option value="">--</option>
+                  {LOCATION_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Truth flag
+                <select name="truthFlag">
+                  <option value="">--</option>
+                  <option value="canonical">canonical</option>
+                  <option value="rumor">rumor</option>
+                  <option value="mistaken">mistaken</option>
+                  <option value="propaganda">propaganda</option>
+                  <option value="unknown">unknown</option>
+                </select>
+              </label>
+              <label>
+                Viewpoint ID
+                <input name="viewpointId" />
+              </label>
+              <label>
+                World from
+                <input name="worldFrom" />
+              </label>
+              <label>
+                World to
+                <input name="worldTo" />
+              </label>
+              <label>
+                Story from chapter ID
+                <input name="storyFromChapterId" />
+              </label>
+              <label>
+                Story to chapter ID
+                <input name="storyToChapterId" />
+              </label>
+              <label>
+                Marker style
+                <select name="markerStyleId">
+                  <option value="">--</option>
+                  {markerStyles.map((style) => (
+                    <option key={style.id} value={style.id}>
+                      {style.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Override shape
+                <select name="markerShape">
+                  <option value="">--</option>
+                  {SHAPES.map((shape) => (
+                    <option key={shape} value={shape}>
+                      {shape}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Override color
+                <input name="markerColor" />
+              </label>
+              <button type="submit">Update pin</button>
+            </form>
+          </section>
+
+          <section className="panel">
             <h3>Create path</h3>
             <form action="/api/paths/create" method="post" className="form-grid">
               <input type="hidden" name="workspaceId" value={workspace.id} />
@@ -407,6 +545,95 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
                 </select>
               </label>
               <button type="submit">Add path</button>
+            </form>
+          </section>
+
+          <section className="panel">
+            <h3>Update path</h3>
+            <form action="/api/paths/update" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Path
+                <select name="pathId" required>
+                  {allPaths.map((path) => (
+                    <option key={path.id} value={path.id}>
+                      {path.id.slice(0, 10)} · {path.map?.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Polyline JSON
+                <textarea name="polyline" rows={3} />
+              </label>
+              <label>
+                Arrow style
+                <select name="arrowStyle">
+                  <option value="">--</option>
+                  <option value="arrow">Arrow</option>
+                  <option value="dashed">Dashed</option>
+                  <option value="dotted">Dotted</option>
+                </select>
+              </label>
+              <label>
+                Truth flag
+                <select name="truthFlag">
+                  <option value="">--</option>
+                  <option value="canonical">canonical</option>
+                  <option value="rumor">rumor</option>
+                  <option value="mistaken">mistaken</option>
+                  <option value="propaganda">propaganda</option>
+                  <option value="unknown">unknown</option>
+                </select>
+              </label>
+              <label>
+                Viewpoint ID
+                <input name="viewpointId" />
+              </label>
+              <label>
+                World from
+                <input name="worldFrom" />
+              </label>
+              <label>
+                World to
+                <input name="worldTo" />
+              </label>
+              <label>
+                Story from chapter ID
+                <input name="storyFromChapterId" />
+              </label>
+              <label>
+                Story to chapter ID
+                <input name="storyToChapterId" />
+              </label>
+              <label>
+                Stroke color
+                <input name="strokeColor" />
+              </label>
+              <label>
+                Stroke width
+                <input name="strokeWidth" type="number" />
+              </label>
+              <label>
+                Marker style
+                <select name="markerStyleId">
+                  <option value="">--</option>
+                  {markerStyles.map((style) => (
+                    <option key={style.id} value={style.id}>
+                      {style.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Related event ID
+                <input name="relatedEventId" />
+              </label>
+              <label>
+                Related entity IDs (comma)
+                <input name="relatedEntityIds" />
+              </label>
+              <button type="submit">Update path</button>
             </form>
           </section>
 
