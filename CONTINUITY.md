@@ -3,7 +3,7 @@ Goal (incl. success criteria):
 - Provide map/diagram visualization primitives (shape/color/type) for clear classification.
 - Implement LLM integration switching: Gemini (AI Studio or Vertex) and GPT-5.2 via Codex CLI exec with fixed options.
 - Keep VPS-ready deployment (Docker, health, docs) and use git for versioning, with changes pushed to origin.
-- Docs and UI display product name as Depictionator.
+- Docs and UI display product name as Depictionator; default branch is main.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -19,7 +19,7 @@ Key decisions:
 - LLM panel stays as draft-only; executions logged; provider switching handled server-side.
 
 State:
-- Ready (Depictionator naming updated and pushed).
+- In progress (rename default branch to main and push).
 
 Done:
 - Full Prisma schema + minimal UI/API for entities, articles, overlays, timelines, events, maps, pins, paths, eras, chapters, viewpoints, marker styles, assets.
@@ -34,7 +34,7 @@ Done:
 - Git push to origin completed.
 
 Now:
-- No pending code tasks.
+- Switch branch to main and push; update remote HEAD if possible.
 
 Next:
 - If needed: run docker compose on VPS and complete runtime smoke tests.
@@ -43,9 +43,6 @@ Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- README.md
-- DEPLOY.md
-- src/app/(app)/layout.tsx
-- src/app/login/page.tsx
-- Gemini.md
-- git push
+- git branch -M main
+- git push -u origin main
+- git remote set-head origin -a
