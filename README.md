@@ -1,4 +1,4 @@
-﻿# WorldLore Atlas
+# WorldLore Atlas
 
 Worldbuilding atlas for game development teams. This repo follows the rules in `AGENTS.md`.
 
@@ -43,6 +43,7 @@ docker compose up --build
 ```
 
 ## Ubuntu VPS deployment (easy)
+Detailed guide: see `DEPLOY.md`.
 
 1) Install Docker + Compose:
 
@@ -64,7 +65,7 @@ cp .env.example .env
 Edit `.env`:
 - Set `AUTH_SECRET` to a strong random value.
 - Set `APP_BASE_URL` to your public URL (e.g. https://your-domain).
-- Set `GEMINI_API_KEY` if using Gemini.
+- Configure LLM providers/keys as needed (see LLM section).
 - Keep `DATABASE_URL` pointing at `db` for compose (default is fine).
 
 3) Build + start:
@@ -85,8 +86,14 @@ Notes:
 
 ## LLM
 
-- Set `GEMINI_API_KEY` and optionally `GEMINI_MODEL` for Gemini requests.
-- `CODEX_EXEC_ALLOWLIST` must be set to allow Codex CLI execution (currently stubbed for safety).
+- Enable providers with `LLM_PROVIDERS_ENABLED` (comma list: `gemini_ai`, `gemini_vertex`, `codex_cli`) and choose
+  a default with `LLM_DEFAULT_PROVIDER`.
+- Gemini (AI Studio): set `GEMINI_API_KEY` and optionally `GEMINI_MODEL`.
+- Gemini (Vertex): set `VERTEX_GEMINI_API_KEY`, `VERTEX_GEMINI_PROJECT`, `VERTEX_GEMINI_LOCATION`,
+  and optionally `VERTEX_GEMINI_MODEL`.
+- Codex CLI: ensure `codex` is installed and available (override path with `CODEX_CLI_PATH`), and optional
+  timeout via `CODEX_EXEC_TIMEOUT_MS`. The app can accept a base64 `auth.json` per request or use the default
+  `~/.codex/auth.json`.
 
 ## Backups
 
@@ -102,3 +109,5 @@ pg_dump -h localhost -U postgres -d worldlore > backup.sql
 
 - This is an MVP scaffold with minimal UI and full backend endpoints for core features.
 - PDF export uses Puppeteer in `/api/pdf/export`.
+
+

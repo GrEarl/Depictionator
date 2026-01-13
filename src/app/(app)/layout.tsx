@@ -1,9 +1,23 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { GlobalFilterProvider } from "@/components/GlobalFilterProvider";
 import { GlobalFilters } from "@/components/GlobalFilters";
 import { LlmPanel } from "@/components/LlmPanel";
 import { getCurrentSession, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+
+const DEFAULT_PROVIDERS = ["gemini_ai", "gemini_vertex", "codex_cli"] as const;
+
+function normalizeProvider(value: string) {
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) return null;
+  if (normalized === "gemini") return "gemini_ai";
+  if (normalized === "vertex") return "gemini_vertex";
+  if (normalized === "codex") return "codex_cli";
+  if (DEFAULT_PROVIDERS.includes(normalized as (typeof DEFAULT_PROVIDERS)[number])) {
+    return normalized;
+  }
+  return null;
+}
 
 export default async function AppLayout({
   children
@@ -32,15 +46,23 @@ export default async function AppLayout({
     viewpoints.map((viewpoint) => ({ value: viewpoint.id, label: viewpoint.name }))
   );
 
+  const enabledProviders = process.env.LLM_PROVIDERS_ENABLED
+    ? process.env.LLM_PROVIDERS_ENABLED.split(",")
+        .map((entry) => normalizeProvider(entry))
+        .filter((entry): entry is string => Boolean(entry))
+    : [...DEFAULT_PROVIDERS];
+
+  const defaultProvider = normalizeProvider(process.env.LLM_DEFAULT_PROVIDER ?? "") ?? enabledProviders[0];
+  const defaultGeminiModel = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+  const defaultVertexModel = process.env.VERTEX_GEMINI_MODEL ?? defaultGeminiModel;
+
   return (
     <GlobalFilterProvider>
       <div className="app-shell">
         <header className="app-header">
           <div className="brand">
             <Link href="/">WorldLore Atlas</Link>
-            <span className="workspace-pill">
-              {session?.workspace?.name ?? "No workspace selected"}
-            </span>
+            <span className="workspace-pill">{session?.workspace?.name ?? "No workspace selected"}</span>
           </div>
           <nav className="app-nav">
             <Link href="/">Dashboard</Link>
@@ -53,13 +75,21 @@ export default async function AppLayout({
           <div className="user-actions">
             <span>{user.name ?? user.email}</span>
             <form action="/api/auth/logout" method="post">
-              <button type="submit" className="link-button">Logout</button>
+              <button type="submit" className="link-button">
+                Logout
+              </button>
             </form>
           </div>
         </header>
         <GlobalFilters eras={eraOptions} chapters={chapterOptions} viewpoints={viewpointOptions} />
         <div className="app-body">{children}</div>
-        <LlmPanel workspaceId={session?.workspace?.id} />
+        <LlmPanel
+          workspaceId={session?.workspace?.id}
+          enabledProviders={enabledProviders}
+          defaultProvider={defaultProvider}
+          defaultGeminiModel={defaultGeminiModel}
+          defaultVertexModel={defaultVertexModel}
+        />
       </div>
     </GlobalFilterProvider>
   );

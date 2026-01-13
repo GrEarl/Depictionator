@@ -213,7 +213,11 @@ export default async function SettingsPage() {
 
           <section className="panel">
             <h3>LLM Configuration</h3>
-            <p className="muted">Set GEMINI_API_KEY / GEMINI_MODEL or CODEX_EXEC_ALLOWLIST in environment.</p>
+            <p className="muted">
+              Configure LLM providers via env: LLM_PROVIDERS_ENABLED, LLM_DEFAULT_PROVIDER, GEMINI_API_KEY /
+              GEMINI_MODEL, VERTEX_GEMINI_API_KEY / VERTEX_GEMINI_PROJECT / VERTEX_GEMINI_LOCATION /
+              VERTEX_GEMINI_MODEL, and CODEX_CLI_PATH. The panel allows per-request API keys and Codex auth base64.
+            </p>
           </section>
         </>
       )}

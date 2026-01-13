@@ -199,6 +199,17 @@ main {
   font-size: 13px;
 }
 
+.checkbox-label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.checkbox-label input {
+  width: auto;
+}
+
 .form-grid input,
 .form-grid select,
 .form-grid textarea {
