@@ -68,6 +68,54 @@ enum ViewpointType {
   omniscient
 }
 
+enum EventType {
+  battle
+  travel
+  political
+  diplomatic
+  discovery
+  ritual
+  disaster
+  economic
+  cultural
+  mystery
+  other
+}
+
+enum LocationType {
+  capital
+  city
+  village
+  fortress
+  dungeon
+  ruin
+  landmark
+  region
+  outpost
+  camp
+  port
+  temple
+  mine
+  gate
+  road
+  other
+}
+
+enum MarkerShape {
+  circle
+  square
+  diamond
+  triangle
+  hex
+  star
+}
+
+enum MarkerTarget {
+  event
+  location
+  path
+}
+
 enum AssetKind {
   image
   file
@@ -152,6 +200,7 @@ model Workspace {
   pins        Pin[]
   paths       Path[]
   assets      Asset[]
+  markerStyles MarkerStyle[]
   auditLogs   AuditLog[]
   reviewRequests ReviewRequest[]
   reviewComments ReviewComment[]
@@ -308,6 +357,7 @@ model Event {
   workspaceId     String
   timelineId      String
   title           String
+  eventType       EventType  @default(other)
   worldStart      String?
   worldEnd        String?
   storyOrder      Int?
@@ -318,6 +368,7 @@ model Event {
   locationPinId   String?
   locationX       Float?
   locationY       Float?
+  markerStyleId   String?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
   createdById     String?
@@ -331,6 +382,7 @@ model Event {
   locationPin Pin? @relation("EventLocationPin", fields: [locationPinId], references: [id])
   createdBy User? @relation("EventCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("EventUpdatedBy", fields: [updatedById], references: [id])
+  markerStyle MarkerStyle? @relation(fields: [markerStyleId], references: [id])
 
   paths Path[]
 
@@ -405,6 +457,7 @@ model Pin {
   x                 Float
   y                 Float
   entityId          String?
+  locationType      LocationType @default(other)
   worldFrom         String?
   worldTo           String?
   storyFromChapterId String?
@@ -413,11 +466,15 @@ model Pin {
   truthFlag         TruthFlag
   label             String?
   iconKey           String?
+  markerShape       MarkerShape?
+  markerColor       String?
+  markerStyleId     String?
 
   map        Map       @relation(fields: [mapId], references: [id])
   workspace  Workspace @relation(fields: [workspaceId], references: [id])
   entity     Entity?   @relation(fields: [entityId], references: [id])
   viewpoint  Viewpoint? @relation(fields: [viewpointId], references: [id])
+  markerStyle MarkerStyle? @relation(fields: [markerStyleId], references: [id])
   storyFrom  Chapter?  @relation("PinStoryFrom", fields: [storyFromChapterId], references: [id])
   storyTo    Chapter?  @relation("PinStoryTo", fields: [storyToChapterId], references: [id])
 
@@ -438,8 +495,11 @@ model Path {
   viewpointId       String?
   truthFlag         TruthFlag
   arrowStyle        ArrowStyle
+  strokeColor       String?
+  strokeWidth       Int?
   relatedEntityIds  String[]
   relatedEventId    String?
+  markerStyleId     String?
 
   map        Map       @relation(fields: [mapId], references: [id])
   workspace  Workspace @relation(fields: [workspaceId], references: [id])
@@ -447,6 +507,7 @@ model Path {
   storyFrom  Chapter?  @relation("PathStoryFrom", fields: [storyFromChapterId], references: [id])
   storyTo    Chapter?  @relation("PathStoryTo", fields: [storyToChapterId], references: [id])
   relatedEvent Event?  @relation(fields: [relatedEventId], references: [id])
+  markerStyle MarkerStyle? @relation(fields: [markerStyleId], references: [id])
 
   @@index([workspaceId, mapId])
 }
@@ -474,6 +535,26 @@ model Asset {
   maps      Map[]
 
   @@index([workspaceId])
+}
+
+model MarkerStyle {
+  id           String       @id @default(cuid())
+  workspaceId  String
+  name         String
+  target       MarkerTarget
+  eventType    EventType?
+  locationType LocationType?
+  shape        MarkerShape
+  color        String
+  iconKey      String?
+  createdAt    DateTime     @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  pins      Pin[]
+  events    Event[]
+  paths     Path[]
+
+  @@index([workspaceId, target])
 }
 
 model AuditLog {

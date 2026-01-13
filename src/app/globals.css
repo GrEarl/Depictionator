@@ -176,7 +176,8 @@ main {
   gap: 12px;
 }
 
-.panel h2 {
+.panel h2,
+.panel h3 {
   margin: 0;
 }
 
@@ -197,7 +198,8 @@ main {
   font-size: 13px;
 }
 
-.form-grid input {
+.form-grid input,
+.form-grid select {
   padding: 8px 10px;
   border-radius: 8px;
   border: 1px solid var(--border);
@@ -223,6 +225,19 @@ main {
   border-radius: 10px;
   border: 1px solid var(--border);
   background: #f8f7f4;
+}
+
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.list-row:last-child {
+  border-bottom: none;
 }
 
 .muted {
