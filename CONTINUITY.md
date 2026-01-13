@@ -3,7 +3,7 @@ Goal (incl. success criteria):
 - Provide map/diagram visualization primitives (shape/color/type) for clear classification.
 - Implement LLM integration switching: Gemini (AI Studio or Vertex) and GPT-5.2 via Codex CLI exec with fixed options.
 - Keep VPS-ready deployment (Docker, health, docs) and use git for versioning, with changes pushed to origin.
-- Docs and UI display product name as Depictionator; default branch is main.
+- Docs and UI display product name as Depictionator; branch is main.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -19,7 +19,7 @@ Key decisions:
 - LLM panel stays as draft-only; executions logged; provider switching handled server-side.
 
 State:
-- In progress (rename default branch to main and push).
+- Ready (branch main pushed; note: origin/HEAD still points to master until updated in GitHub settings).
 
 Done:
 - Full Prisma schema + minimal UI/API for entities, articles, overlays, timelines, events, maps, pins, paths, eras, chapters, viewpoints, marker styles, assets.
@@ -31,10 +31,10 @@ Done:
 - Ran npm run lint (clean).
 - agent-browser validation: /login loads, /maps redirects to /login (no auth).
 - Docker CLI not available in environment (could not run docker compose).
-- Git push to origin completed.
+- Git push to origin completed for main.
 
 Now:
-- Switch branch to main and push; update remote HEAD if possible.
+- If desired: switch default branch to main in GitHub repo settings and delete master.
 
 Next:
 - If needed: run docker compose on VPS and complete runtime smoke tests.
@@ -45,4 +45,4 @@ Open questions (UNCONFIRMED if needed):
 Working set (files/ids/commands):
 - git branch -M main
 - git push -u origin main
-- git remote set-head origin -a
+- git remote set-head origin -a (reported origin/HEAD still master)
