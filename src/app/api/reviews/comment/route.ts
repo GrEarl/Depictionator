@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { createNotification, notifyWatchers } from "@/lib/notifications";
+import { notifyMentions } from "@/lib/mentions";
 
 export async function POST(request: Request) {
   let session;
@@ -41,6 +42,13 @@ export async function POST(request: Request) {
       bodyMd: body,
       workspaceId
     }
+  });
+
+  await notifyMentions({
+    workspaceId,
+    actorUserId: session.userId,
+    text: body,
+    context: { reviewId, commentId: comment.id }
   });
 
   await logAudit({

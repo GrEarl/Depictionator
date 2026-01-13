@@ -1,77 +1,77 @@
-# WorldLore Atlas フロントエンド外注ブリーフ（Gemini向け）
+﻿# WorldLore Atlas フロントエンド要件（Gemini向け）
 
-目的:
-- WorldLore Atlas（世界観設定・資料集約アプリ）の最適なUI/UXを設計・実装してほしい。
-- 既存のバックエンドは最小UIで機能を網羅済み。UIは「使いやすさ」「一貫したフィルタ」「編集導線の明確化」を重視。
+目的
+- WorldLore Atlas（世界観資料集約アプリ）のUI/UXを完成させる。
+- バックエンドは最小UIで機能網羅済み。フロントは「使いやすさ」と「情報の区別」を最優先。
 
-必須要件（AGENTS.md要約）
-- グローバルフィルタ（最重要）: World（Era/日付範囲）、Story（章/シーン）、Viewpoint（Canon/Player/Faction/Character）、表示モード（Canon / As Viewpoint / Compare）
-- Canon と Belief（視点情報）の分離表示
-- World Time と Story Progress の分離表示
-- 記事・地図・タイムラインでフィルタ状態が常に一致
-- 監査ログ、レビュー（承認/差戻し）、通知/既読/未読、ウォッチ
-- 地図（階層、ピン、動線）+ タイムライン（世界史/ストーリー）
-- PDF出力（印刷セット）
-- LLMパネル（Gemini/Codex CLI）
+最重要コンセプト（必ずUIに反映）
+1) World Time（世界史時間）
+2) Story Progress（ストーリー進行）
+3) Viewpoint（視点/認識主体）
+- 上記3軸が全画面で一貫して効くこと。
+- Canon（正史）と Belief（視点情報）を明確に分離表示。
 
-画面/機能一覧（最低限）
+グローバルフィルタ（最重要UI）
+- World: Era（必須） + 日付/範囲（任意）
+- Story: Chapter（任意）
+- Viewpoint: Omni(Canon)/Player/Faction/Character
+- 表示モード: Canon / As Viewpoint / Compare（左右分割）
+- どの画面でも常時可視、変更が全画面に反映されること。
+
+主要画面（最低限の完成形）
 1) ダッシュボード
-   - ワークスペース切替/参加
-   - 通知一覧（未読/既読）
-2) 記事一覧
-   - 左：エンティティ一覧（type/tag/status/検索/未読）
-   - 右：本文（Markdown+Mermaid）
-   - Revision 履歴/差分/復元、Review 申請
-   - Compareモード（Canon vs Viewpoint を左右比較）
+- ワークスペース切替/参加
+- 通知（未読/既読）
+
+2) 記事ビュー
+- 左: エンティティ一覧（type/tag/status/全文検索/未読）
+- 右: 記事本文（Markdown + Mermaid）
+- Revision履歴、diff、復元、レビュー申請
+- Compareモード: CanonとViewpointを左右で比較
+
 3) 記事詳細
-   - Base + Overlay 表示（視点別・時代/章により切替）
-   - TruthFlag（canonical/rumor/mistaken/propaganda/unknown）表示
+- Base + Overlay をフィルタ条件で切替
+- TruthFlag（canonical/rumor/mistaken/propaganda/unknown）を視覚的に明示
+
 4) 地図ビュー
-   - 階層地図（世界→地域→都市）
-   - ピン/動線 CRUD（クリック操作 + 手入力）
-   - マーカー形状/色/タイプ別の凡例
-   - フィルタ連動（Viewpoint/World/Story）
+- 階層地図（世界→地域→都市）
+- ピン/動線 CRUD
+- マーカー形状・色・タイプ分類を視覚化（MarkerStyle/EventType/LocationType）
+- 編集モードと閲覧モードを分離
+- フィルタ（World/Story/Viewpoint）連動
+
 5) タイムライン
-   - タブ：World History / Game Storyline
-   - Eventに世界時刻とストーリー順を両方持たせて表示
+- タブ: World History / Game Storyline
+- Eventに「世界史時刻」と「ストーリー順」を併記
+- Event → 地図位置/エンティティへジャンプ
+
 6) レビュー/監査
-   - Review一覧、コメント、承認/差戻し
+- Review一覧、コメント、承認/差し戻し
+- 監査ログ閲覧
+
 7) 設定
-   - Viewpoint管理
-   - Asset管理（ライセンス/クレジット）
-   - PDF出力（印刷セットビルダー）
-   - LLM設定
+- Viewpoint管理
+- Asset管理（ライセンス/クレジット）
+- PDF出力（印刷セットビルダー）
+- LLM設定
 
-UI/UX 方針
-- 最小構成でも「何ができるか一目でわかる」UIにする。
-- 「グローバルフィルタ」が常に見える/切り替えしやすい配置。
-- 記事・地図・タイムラインの切替導線は明確に。
-- Compareモードは左右2カラムで分割表示（CanonとViewpoint）。
-- Map/Timelineは凡例とフィルタの適用状況を明確に表示。
-
-地図UIの要件（重要）
-- ピン/動線の形状・色分け（MarkerStyle, EventType, LocationType）を視覚化
+地図UIの必須要件（強調）
 - クリックでピン配置/移動、動線描画
-- 編集モードと閲覧モードを分離（誤操作防止）
-- ViewpointやStory進行によって「見せる/隠す」を即時反映
+- ピン/動線は形状・色・種別の凡例で明示
+- Viewpoint/Story進行に応じて即時表示切替
 
-技術的前提（バックエンド/DB）
-- Next.js + Prisma（すでに実装済）
-- APIは form POST を中心にあるが、UI側で fetch 呼び出しも可
-- ソフトデリート前提（削除は復元可能）
-- Assetsは storage/ に保存、/api/assets/file/:id で参照可能
+UI/UXの明確化ポイント
+- フィルタ状態が常に見える
+- Draft/Review/Approvedなどの状態が視覚的に分かる
+- Canon/Beliefが混ざらない
+- Compareモードは必ず左右分割で比較可能
 
-デザイン要求（自由裁量）
-- 簡素でも良いが、情報の区別（Canon/Belief, World/Story, Viewpoint）が直感的に分かること。
-- 使う色は抑えめでも良い。必要なら色を決めてよい。
-- アイコン/ラベルで状態（Draft/Review/Approved）を明示。
-- 表示密度は高すぎず低すぎず、チーム運用向け。
+成果物（Geminiが提供すべきもの）
+- React/Next.jsベースのUI実装
+- 各画面でグローバルフィルタが一貫して機能
+- Map/Timeline/Articleの可視化が統一感を持つ
+- 最小操作で「何ができるか」が分かる
 
-成果物の期待
-- 実装可能なReact/Next.js UI
-- Map/Timeline/Articleで同じフィルタが効いていることが明確
-- 主要操作が「迷わずクリックできる」配置
-
-追加の注意
-- フロント実装はユーザー体験が最優先。バックエンドは既に最小機能が入っているためUIは大胆に再設計して良い。
-- ただし、AGENTS.mdの要件を欠落させないこと。
+補足
+- デザインは自由裁量。ただし可読性・操作性を優先。
+- AGENTS.md 要件の欠落は禁止。

@@ -33,14 +33,55 @@ npm run dev
 5) Health check:
 
 ```bash
-curl http://localhost:3000/api/health
+curl http://localhost:3000/health
 ```
 
 ## Docker (app + db)
 
 ```bash
-docker-compose up --build
+docker compose up --build
 ```
+
+## Ubuntu VPS deployment (easy)
+
+1) Install Docker + Compose:
+
+```bash
+sudo apt update
+sudo apt install -y docker.io docker-compose-plugin
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+2) Clone and configure:
+
+```bash
+git clone <your-repo> depictionator
+cd depictionator
+cp .env.example .env
+```
+
+Edit `.env`:
+- Set `AUTH_SECRET` to a strong random value.
+- Set `APP_BASE_URL` to your public URL (e.g. https://your-domain).
+- Set `GEMINI_API_KEY` if using Gemini.
+- Keep `DATABASE_URL` pointing at `db` for compose (default is fine).
+
+3) Build + start:
+
+```bash
+docker compose up -d --build
+```
+
+4) Verify:
+
+```bash
+curl http://localhost:3000/health
+```
+
+Notes:
+- The container entrypoint runs `prisma migrate deploy` if migrations exist; otherwise it runs `prisma db push` automatically.
+- Assets are stored in the `assets-data` volume; DB in `db-data`.
 
 ## LLM
 

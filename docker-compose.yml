@@ -3,26 +3,31 @@
     build: .
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/worldlore?schema=public"
-      APP_BASE_URL: "http://localhost:3000"
-      AUTH_SECRET: "change-me"
-      SESSION_MAX_AGE_DAYS: "14"
-      GEMINI_API_KEY: ""
-      GEMINI_MODEL: "gemini-1.5-flash"
-      CODEX_EXEC_ALLOWLIST: ""
+      DATABASE_URL: "${DATABASE_URL}"
+      APP_BASE_URL: "${APP_BASE_URL}"
+      AUTH_SECRET: "${AUTH_SECRET}"
+      SESSION_MAX_AGE_DAYS: "${SESSION_MAX_AGE_DAYS}"
+      GEMINI_API_KEY: "${GEMINI_API_KEY}"
+      GEMINI_MODEL: "${GEMINI_MODEL}"
+      CODEX_EXEC_ALLOWLIST: "${CODEX_EXEC_ALLOWLIST}"
     depends_on:
       - db
+    restart: unless-stopped
     volumes:
       - assets-data:/app/storage
 
   db:
     image: postgres:16
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: worldlore
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+      POSTGRES_DB: "${POSTGRES_DB}"
     ports:
       - "5432:5432"
     volumes:

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { createNotification } from "@/lib/notifications";
+import { notifyMentions } from "@/lib/mentions";
 
 export async function POST(request: Request) {
   let session;
@@ -46,13 +47,20 @@ export async function POST(request: Request) {
   });
 
   if (reason) {
-    await prisma.reviewComment.create({
+    const comment = await prisma.reviewComment.create({
       data: {
         reviewRequestId: reviewId,
         userId: session.userId,
         bodyMd: reason,
         workspaceId
       }
+    });
+
+    await notifyMentions({
+      workspaceId,
+      actorUserId: session.userId,
+      text: reason,
+      context: { reviewId, commentId: comment.id }
     });
   }
 

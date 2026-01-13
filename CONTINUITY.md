@@ -17,7 +17,7 @@ Key decisions:
 - Add map visualization primitives via MarkerStyle + event/location types for shape/color differentiation.
 
 State:
-- In progress (core CRUD + markdown/Mermaid + map preview in place; remaining gaps are interactive map editing UI and some notification triggers).
+- In progress (need VPS-ready deployment instructions/config, final UI requirements doc, and notification gap sweep).
 
 Done:
 - Added archive/restore UI across entities/maps/timelines/chapters/eras/overlays/viewpoints/marker styles.
@@ -64,8 +64,16 @@ Done:
 - Fixed /app route usage to root paths and removed duplicate root page.
 - Updated cookies() usage to await in auth/api routes.
 - Browser validation: /login loads and /maps redirects to /login (DB not configured blocks auth).
+- Added Docker entrypoint for prisma migrate/db push and production env tweaks.
+- Added /health endpoint and updated README for VPS deployment.
+- Rewrote Gemini.md UI requirements in clean Japanese.
+- Added /health route, Docker entrypoint, docker-compose env_file setup, and VPS deployment docs.
+- Ran npm run lint (passed).
+- Added @mention notifications for review comments/rejections.
+- Ran npm run lint (passed).
 
 Now:
+- Verify VPS deployment readiness changes are committed.
 - Scan for remaining AGENTS.md gaps (notification completeness).
 
 Next:
