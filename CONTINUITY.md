@@ -1,5 +1,5 @@
 ﻿Goal (incl. success criteria):
-- Build the WorldLore Atlas system per AGENTS.md in this repo.
+- Build the WorldLore Atlas system per AGENTS.md in this repo (full MVP scaffolding across modules).
 - Use git for versioning of changes in this workspace.
 - Maintain CONTINUITY.md updates each turn until the overall work is complete.
 
@@ -11,31 +11,34 @@ Constraints/Assumptions:
 Key decisions:
 - Use git commits to record changes going forward.
 - Manual Next.js scaffold instead of create-next-app (directory name had uppercase, causing npm name restriction).
+- Implement full Prisma schema to relate all entities per AGENTS.md, then build minimal UI/API shell for each area.
 
 State:
-- In progress (Milestone 1 scaffold and DB setup done; auth/RBAC next).
+- In progress (Milestone 1 scaffold + schema + auth + UI shell complete; further CRUD and features pending).
 
 Done:
-- Created base Next.js App Router scaffold (manual): `src/app`, `layout.tsx`, `page.tsx`, `globals.css`.
-- Added `/api/health` endpoint.
-- Added Prisma schema with User/Workspace/WorkspaceMember and DB client.
-- Added Dockerfile, docker-compose.yml, .env.example, .gitignore.
-- Installed npm deps and ran `npm run lint` successfully (Next.js emitted warning about workspace root; fixed via outputFileTracingRoot).
+- Expanded Prisma schema to full AGENTS.md model set with relations/enums and uniqueness where needed.
+- Added credential auth routes (login/register/logout) with session cookies.
+- Added workspace create/join endpoints and dashboard shell.
+- Added global filter context + UI and app layout shell with placeholder pages (Articles/Maps/Timeline/Reviews/Settings).
+- Added README with docker/env/backup instructions; updated .env.example, docker-compose.yml, .gitignore, and UI styles.
+- Fixed BOM issues in package.json and prisma/schema.prisma; ran `npx prisma generate` and `npm run lint` successfully.
 
 Now:
-- Implement auth + RBAC and workspace create/join flow (Milestone 1).
+- Commit current changes.
 
 Next:
-- Add global filter UI shell and placeholder sections for Articles/Maps/Timeline.
+- Implement CRUD flows for articles, overlays, revisions, maps, pins, paths, and timelines.
+- Add RBAC enforcement and review workflow logic beyond placeholders.
 
 Open questions (UNCONFIRMED if needed):
-- Preferred auth approach (Credentials vs external provider) and any UI/UX preferences for login/workspace setup?
+- None.
 
 Working set (files/ids/commands):
-- package.json, package-lock.json
-- next.config.js, tsconfig.json, next-env.d.ts, .eslintrc.json, .gitignore
-- src/app/layout.tsx, src/app/page.tsx, src/app/globals.css, src/app/api/health/route.ts
-- src/lib/db.ts
 - prisma/schema.prisma
-- Dockerfile, docker-compose.yml, .env.example
-- npm install, npm run lint
+- src/lib/auth.ts, src/lib/password.ts, src/lib/slug.ts
+- src/app/(app)/* pages, src/app/login, src/app/register, src/app/api/*
+- src/components/*
+- package.json, package-lock.json
+- README.md, .env.example, docker-compose.yml, .gitignore, src/app/globals.css
+- npx prisma generate, npm run lint

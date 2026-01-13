@@ -1,4 +1,4 @@
-﻿// Datasource uses PostgreSQL for deployment readiness.
+// Datasource uses PostgreSQL for deployment readiness.
 
 datasource db {
   provider = "postgresql"
@@ -16,6 +16,75 @@ enum WorkspaceRole {
   viewer
 }
 
+enum EntityType {
+  nation
+  faction
+  character
+  location
+  building
+  item
+  event
+  map
+  concept
+}
+
+enum EntityStatus {
+  draft
+  in_review
+  approved
+  deprecated
+}
+
+enum RevisionStatus {
+  draft
+  submitted
+  approved
+  rejected
+}
+
+enum ArticleTargetType {
+  base
+  overlay
+}
+
+enum TruthFlag {
+  canonical
+  rumor
+  mistaken
+  propaganda
+  unknown
+}
+
+enum TimelineType {
+  world_history
+  game_storyline
+  dev_meta
+}
+
+enum ViewpointType {
+  player
+  faction
+  character
+  omniscient
+}
+
+enum AssetKind {
+  image
+  file
+}
+
+enum ArrowStyle {
+  arrow
+  dashed
+  dotted
+}
+
+enum ReviewStatus {
+  open
+  approved
+  rejected
+}
+
 model User {
   id           String            @id @default(cuid())
   email        String            @unique
@@ -23,15 +92,72 @@ model User {
   passwordHash String
   avatarUrl    String?
   createdAt    DateTime          @default(now())
-  memberships  WorkspaceMember[]
+  updatedAt    DateTime          @updatedAt
+
+  memberships              WorkspaceMember[]
+  sessions                 Session[]
+  createdWorkspaces         Workspace[]        @relation("WorkspaceCreatedBy")
+  auditLogs                AuditLog[]          @relation("AuditActor")
+  reviewRequests           ReviewRequest[]     @relation("ReviewRequestedBy")
+  reviewComments           ReviewComment[]
+  reviewAssignments        ReviewAssignment[]
+  notifications            Notification[]
+  readStates               ReadState[]
+  watches                  Watch[]
+  articleRevisionsCreated  ArticleRevision[]   @relation("RevisionCreatedBy")
+  articleRevisionsApproved ArticleRevision[]   @relation("RevisionApprovedBy")
+  entitiesCreated          Entity[]            @relation("EntityCreatedBy")
+  entitiesUpdated          Entity[]            @relation("EntityUpdatedBy")
+  eventsCreated            Event[]             @relation("EventCreatedBy")
+  eventsUpdated            Event[]             @relation("EventUpdatedBy")
+  mapsCreated              Map[]               @relation("MapCreatedBy")
+  mapsUpdated              Map[]               @relation("MapUpdatedBy")
+  assetsCreated            Asset[]             @relation("AssetCreatedBy")
+}
+
+model Session {
+  id                 String    @id
+  userId             String
+  activeWorkspaceId  String?
+  createdAt          DateTime  @default(now())
+  expiresAt          DateTime
+
+  user      User       @relation(fields: [userId], references: [id])
+  workspace Workspace? @relation("WorkspaceSessions", fields: [activeWorkspaceId], references: [id])
+
+  @@index([userId])
 }
 
 model Workspace {
-  id        String            @id @default(cuid())
-  name      String
-  slug      String            @unique
-  createdAt DateTime          @default(now())
-  members   WorkspaceMember[]
+  id          String             @id @default(cuid())
+  name        String
+  slug        String             @unique
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  createdById String?
+
+  createdBy   User?              @relation("WorkspaceCreatedBy", fields: [createdById], references: [id])
+  members     WorkspaceMember[]
+  sessions    Session[]          @relation("WorkspaceSessions")
+  entities    Entity[]
+  articles    Article[]
+  overlays    ArticleOverlay[]
+  revisions   ArticleRevision[]
+  viewpoints  Viewpoint[]
+  timelines   Timeline[]
+  events      Event[]
+  eras        Era[]
+  chapters    Chapter[]
+  maps        Map[]
+  pins        Pin[]
+  paths       Path[]
+  assets      Asset[]
+  auditLogs   AuditLog[]
+  reviewRequests ReviewRequest[]
+  reviewComments ReviewComment[]
+  watches     Watch[]
+  notifications Notification[]
+  readStates  ReadState[]
 }
 
 model WorkspaceMember {
@@ -39,9 +165,417 @@ model WorkspaceMember {
   workspaceId String
   userId      String
   role        WorkspaceRole
+  createdAt   DateTime       @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   user      User      @relation(fields: [userId], references: [id])
 
   @@unique([workspaceId, userId])
+  @@index([userId])
 }
+
+model Entity {
+  id                 String        @id @default(cuid())
+  workspaceId        String
+  type               EntityType
+  title              String
+  aliases            String[]
+  tags               String[]
+  status             EntityStatus
+  worldExistFrom     String?
+  worldExistTo       String?
+  storyIntroChapterId String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  createdById        String?
+  updatedById        String?
+  softDeletedAt      DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  storyIntroChapter Chapter? @relation(fields: [storyIntroChapterId], references: [id])
+  createdBy User? @relation("EntityCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("EntityUpdatedBy", fields: [updatedById], references: [id])
+
+  article   Article?
+  overlays  ArticleOverlay[]
+  viewpoints Viewpoint[]
+  pins      Pin[]
+
+  @@index([workspaceId, type])
+}
+
+model Article {
+  entityId       String   @id
+  workspaceId    String
+  baseRevisionId String?  @unique
+
+  entity       Entity          @relation(fields: [entityId], references: [id])
+  workspace    Workspace       @relation(fields: [workspaceId], references: [id])
+  baseRevision ArticleRevision? @relation("ArticleBaseRevision", fields: [baseRevisionId], references: [id])
+  revisions    ArticleRevision[] @relation("ArticleRevisions")
+
+  @@index([workspaceId])
+}
+
+model ArticleOverlay {
+  id                   String     @id @default(cuid())
+  entityId             String
+  workspaceId          String
+  viewpointId          String?
+  worldFrom            String?
+  worldTo              String?
+  storyFromChapterId   String?
+  storyToChapterId     String?
+  truthFlag            TruthFlag
+  title                String
+  activeRevisionId     String? @unique
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+
+  entity        Entity     @relation(fields: [entityId], references: [id])
+  workspace     Workspace  @relation(fields: [workspaceId], references: [id])
+  viewpoint     Viewpoint? @relation(fields: [viewpointId], references: [id])
+  storyFrom     Chapter?   @relation("OverlayStoryFrom", fields: [storyFromChapterId], references: [id])
+  storyTo       Chapter?   @relation("OverlayStoryTo", fields: [storyToChapterId], references: [id])
+  activeRevision ArticleRevision? @relation("OverlayActiveRevision", fields: [activeRevisionId], references: [id])
+  revisions     ArticleRevision[] @relation("OverlayRevisions")
+
+  @@index([workspaceId, entityId])
+}
+
+model ArticleRevision {
+  id               String            @id @default(cuid())
+  workspaceId      String
+  targetType       ArticleTargetType
+  articleId        String?
+  overlayId        String?
+  bodyMd           String
+  changeSummary    String
+  createdAt        DateTime          @default(now())
+  createdById      String?
+  status           RevisionStatus
+  approvedAt       DateTime?
+  approvedById     String?
+  parentRevisionId String?
+
+  workspace    Workspace  @relation(fields: [workspaceId], references: [id])
+  article      Article?   @relation("ArticleRevisions", fields: [articleId], references: [entityId])
+  overlay      ArticleOverlay? @relation("OverlayRevisions", fields: [overlayId], references: [id])
+  baseOf       Article? @relation("ArticleBaseRevision")
+  activeForOverlay ArticleOverlay? @relation("OverlayActiveRevision")
+  createdBy    User? @relation("RevisionCreatedBy", fields: [createdById], references: [id])
+  approvedBy   User? @relation("RevisionApprovedBy", fields: [approvedById], references: [id])
+  parentRevision ArticleRevision? @relation("RevisionParent", fields: [parentRevisionId], references: [id])
+  childRevisions  ArticleRevision[] @relation("RevisionParent")
+
+  reviewRequests ReviewRequest[]
+
+  @@index([workspaceId])
+}
+
+model Viewpoint {
+  id          String        @id @default(cuid())
+  workspaceId String
+  type        ViewpointType
+  entityId    String?
+  name        String
+  description String?
+  createdAt   DateTime      @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  entity    Entity?   @relation(fields: [entityId], references: [id])
+  overlays  ArticleOverlay[]
+  pins      Pin[]
+  paths     Path[]
+
+  @@index([workspaceId])
+}
+
+model Timeline {
+  id          String       @id @default(cuid())
+  workspaceId String
+  type        TimelineType
+  name        String
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  events    Event[]
+
+  @@index([workspaceId])
+}
+
+model Event {
+  id              String     @id @default(cuid())
+  workspaceId     String
+  timelineId      String
+  title           String
+  worldStart      String?
+  worldEnd        String?
+  storyOrder      Int?
+  storyChapterId  String?
+  summaryMd       String?
+  involvedEntityIds String[]
+  locationMapId   String?
+  locationPinId   String?
+  locationX       Float?
+  locationY       Float?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  createdById     String?
+  updatedById     String?
+  softDeletedAt   DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  timeline  Timeline  @relation(fields: [timelineId], references: [id])
+  storyChapter Chapter? @relation(fields: [storyChapterId], references: [id])
+  locationMap Map? @relation("EventLocationMap", fields: [locationMapId], references: [id])
+  locationPin Pin? @relation("EventLocationPin", fields: [locationPinId], references: [id])
+  createdBy User? @relation("EventCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("EventUpdatedBy", fields: [updatedById], references: [id])
+
+  paths Path[]
+
+  @@index([workspaceId, timelineId])
+}
+
+model Era {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  worldStart  String?
+  worldEnd    String?
+  sortKey     Int
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId])
+}
+
+model Chapter {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  orderIndex  Int
+  description String?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  entities  Entity[]
+  overlaysFrom ArticleOverlay[] @relation("OverlayStoryFrom")
+  overlaysTo   ArticleOverlay[] @relation("OverlayStoryTo")
+  events    Event[]
+  pinsFrom  Pin[] @relation("PinStoryFrom")
+  pinsTo    Pin[] @relation("PinStoryTo")
+  pathsFrom Path[] @relation("PathStoryFrom")
+  pathsTo   Path[] @relation("PathStoryTo")
+
+  @@index([workspaceId])
+}
+
+model Map {
+  id          String   @id @default(cuid())
+  workspaceId String
+  title       String
+  parentMapId String?
+  imageAssetId String?
+  crs         String   @default("simple")
+  bounds      Json?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+  updatedById String?
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  parent    Map?      @relation("MapParent", fields: [parentMapId], references: [id])
+  children  Map[]     @relation("MapParent")
+  imageAsset Asset?   @relation(fields: [imageAssetId], references: [id])
+  createdBy User? @relation("MapCreatedBy", fields: [createdById], references: [id])
+  updatedBy User? @relation("MapUpdatedBy", fields: [updatedById], references: [id])
+
+  pins  Pin[]
+  paths Path[]
+  events Event[] @relation("EventLocationMap")
+
+  @@index([workspaceId])
+}
+
+model Pin {
+  id                String    @id @default(cuid())
+  mapId             String
+  workspaceId       String
+  x                 Float
+  y                 Float
+  entityId          String?
+  worldFrom         String?
+  worldTo           String?
+  storyFromChapterId String?
+  storyToChapterId   String?
+  viewpointId       String?
+  truthFlag         TruthFlag
+  label             String?
+  iconKey           String?
+
+  map        Map       @relation(fields: [mapId], references: [id])
+  workspace  Workspace @relation(fields: [workspaceId], references: [id])
+  entity     Entity?   @relation(fields: [entityId], references: [id])
+  viewpoint  Viewpoint? @relation(fields: [viewpointId], references: [id])
+  storyFrom  Chapter?  @relation("PinStoryFrom", fields: [storyFromChapterId], references: [id])
+  storyTo    Chapter?  @relation("PinStoryTo", fields: [storyToChapterId], references: [id])
+
+  events Event[] @relation("EventLocationPin")
+
+  @@index([workspaceId, mapId])
+}
+
+model Path {
+  id                String   @id @default(cuid())
+  mapId             String
+  workspaceId       String
+  polyline          Json
+  worldFrom         String?
+  worldTo           String?
+  storyFromChapterId String?
+  storyToChapterId   String?
+  viewpointId       String?
+  truthFlag         TruthFlag
+  arrowStyle        ArrowStyle
+  relatedEntityIds  String[]
+  relatedEventId    String?
+
+  map        Map       @relation(fields: [mapId], references: [id])
+  workspace  Workspace @relation(fields: [workspaceId], references: [id])
+  viewpoint  Viewpoint? @relation(fields: [viewpointId], references: [id])
+  storyFrom  Chapter?  @relation("PathStoryFrom", fields: [storyFromChapterId], references: [id])
+  storyTo    Chapter?  @relation("PathStoryTo", fields: [storyToChapterId], references: [id])
+  relatedEvent Event?  @relation(fields: [relatedEventId], references: [id])
+
+  @@index([workspaceId, mapId])
+}
+
+model Asset {
+  id              String    @id @default(cuid())
+  workspaceId     String
+  kind            AssetKind
+  storageKey      String
+  mimeType        String
+  size            Int
+  width           Int?
+  height          Int?
+  createdAt       DateTime  @default(now())
+  createdById     String?
+  sourceUrl       String?
+  author          String?
+  licenseId       String?
+  licenseUrl      String?
+  attributionText String?
+  retrievedAt     DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy User? @relation("AssetCreatedBy", fields: [createdById], references: [id])
+  maps      Map[]
+
+  @@index([workspaceId])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  actorUserId String
+  action      String
+  targetType  String
+  targetId    String
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  actorUser User @relation("AuditActor", fields: [actorUserId], references: [id])
+
+  @@index([workspaceId, targetType, targetId])
+}
+
+model ReviewRequest {
+  id           String       @id @default(cuid())
+  workspaceId  String
+  revisionId   String
+  requestedById String
+  requestedAt  DateTime     @default(now())
+  status       ReviewStatus
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id])
+  revision   ArticleRevision @relation(fields: [revisionId], references: [id])
+  requestedBy User @relation("ReviewRequestedBy", fields: [requestedById], references: [id])
+  assignments ReviewAssignment[]
+  comments    ReviewComment[]
+
+  @@index([workspaceId, status])
+}
+
+model ReviewAssignment {
+  id              String   @id @default(cuid())
+  reviewRequestId String
+  reviewerId      String
+  assignedAt      DateTime @default(now())
+
+  reviewRequest ReviewRequest @relation(fields: [reviewRequestId], references: [id])
+  reviewer      User          @relation(fields: [reviewerId], references: [id])
+
+  @@unique([reviewRequestId, reviewerId])
+}
+
+model ReviewComment {
+  id              String   @id @default(cuid())
+  reviewRequestId String
+  userId          String
+  bodyMd          String
+  createdAt       DateTime @default(now())
+
+  reviewRequest ReviewRequest @relation(fields: [reviewRequestId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+  workspace     Workspace?    @relation(fields: [workspaceId], references: [id])
+  workspaceId   String?
+}
+
+model Watch {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  targetType  String
+  targetId    String
+  notifyInApp Boolean  @default(true)
+  notifyEmail Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([workspaceId, targetType, targetId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  workspaceId String
+  type        String
+  payload     Json
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@index([userId, readAt])
+}
+
+model ReadState {
+  userId      String
+  workspaceId String
+  targetType  String
+  targetId    String
+  lastReadAt  DateTime
+  lastReadRevisionId String?
+
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@id([userId, workspaceId, targetType, targetId])
+}
+
