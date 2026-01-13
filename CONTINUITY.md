@@ -52,6 +52,8 @@ Done:
 - Ran npm run lint (passed).
 - Added location/path marker-style fallbacks in map preview.
 - Ran npm run lint (passed).
+- Added auto-mark-read on article detail views.
+- Ran npm run lint (passed).
 
 Now:
 - Scan for remaining AGENTS.md gaps (map editor UI, notification completeness).

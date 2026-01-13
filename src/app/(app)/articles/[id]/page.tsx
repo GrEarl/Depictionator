@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { MarkdownView } from "@/components/MarkdownView";
+import { AutoMarkRead } from "@/components/AutoMarkRead";
 
 const TRUTH_FLAGS = ["canonical", "rumor", "mistaken", "propaganda", "unknown"];
 
@@ -87,6 +88,12 @@ export default async function ArticleDetailPage({
           baseRevisionId: entity.article?.baseRevisionId ?? null,
           overlayIds: entity.overlays.map((overlay) => overlay.id)
         }}
+      />
+      <AutoMarkRead
+        workspaceId={workspace.id}
+        targetType="entity"
+        targetId={entity.id}
+        lastReadRevisionId={entity.article?.baseRevisionId ?? null}
       />
       <h2>{entity.title}</h2>
       <p className="muted">Type: {entity.type}</p>
