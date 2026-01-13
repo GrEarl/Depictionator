@@ -2,7 +2,7 @@ Goal (incl. success criteria):
 - Implement all AGENTS.md requirements into a usable system (backend + minimal UI), with robust, foolproof behavior.
 - Provide map/diagram visualization primitives (shape/color/type) for clear classification.
 - Implement LLM integration switching: Gemini (AI Studio or Vertex) and GPT-5.2 via Codex CLI exec with fixed options.
-- Keep VPS-ready deployment (Docker, health, docs) and use git for versioning, including pushing to origin.
+- Keep VPS-ready deployment (Docker, health, docs) and use git for versioning, with changes pushed to origin.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -18,7 +18,7 @@ Key decisions:
 - LLM panel stays as draft-only; executions logged; provider switching handled server-side.
 
 State:
-- In progress (commit + push remaining).
+- In progress (push completed; remaining: mention auth required for git push, no further code changes).
 
 Done:
 - Full Prisma schema + minimal UI/API for entities, articles, overlays, timelines, events, maps, pins, paths, eras, chapters, viewpoints, marker styles, assets.
@@ -30,22 +30,22 @@ Done:
 - Ran npm run lint (clean).
 - agent-browser validation: /login loads, /maps redirects to /login (no auth).
 - Docker CLI not available in environment (could not run docker compose).
+- Git push to origin: up-to-date; authentication step required in browser if not already done.
 
 Now:
-- Commit changes and push to https://github.com/GrEarl/Depictionator.git.
+- Nothing pending for code changes.
 
 Next:
-- Re-check for any remaining AGENTS.md gaps if needed.
+- If push auth not completed, user must finish GitHub auth in browser and rerun push.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- src/components/LLMPanel.tsx
+- DEPLOY.md
+- README.md
+- src/components/LlmPanel.tsx
 - src/app/api/llm/execute/route.ts
 - src/app/(app)/layout.tsx
-- src/app/(app)/settings/page.tsx
-- src/app/globals.css
-- .env.example, README.md, DEPLOY.md
-- npm run lint, agent-browser
-- git commit, git push origin
+- .env.example
+- npm run lint, agent-browser, git push origin
