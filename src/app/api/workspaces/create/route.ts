@@ -17,7 +17,8 @@ async function ensureUniqueSlug(base: string) {
 }
 
 export async function POST(request: Request) {
-  const sessionId = cookies().get(SESSION_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
   if (!sessionId) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
@@ -57,5 +58,5 @@ export async function POST(request: Request) {
     data: { activeWorkspaceId: workspace.id }
   });
 
-  return NextResponse.redirect(new URL(`/app/workspaces/${workspace.slug}`, request.url));
+  return NextResponse.redirect(new URL(`/workspaces/${workspace.slug}`, request.url));
 }

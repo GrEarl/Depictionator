@@ -65,5 +65,5 @@ export async function POST(request: Request) {
     meta: { storageKey }
   });
 
-  return NextResponse.redirect(new URL("/app/settings", request.url));
+  return NextResponse.redirect(new URL("/settings", request.url));
 }

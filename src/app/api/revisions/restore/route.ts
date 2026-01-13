@@ -56,5 +56,5 @@ export async function POST(request: Request) {
     meta: { from: revisionId }
   });
 
-  return NextResponse.redirect(new URL(`/app/revisions/${restored.id}`, request.url));
+  return NextResponse.redirect(new URL(`/revisions/${restored.id}`, request.url));
 }

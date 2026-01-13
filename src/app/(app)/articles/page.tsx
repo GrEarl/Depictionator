@@ -112,7 +112,7 @@ export default async function ArticlesPage() {
               {entities.map((entity) => (
                 <li key={entity.id} className="list-row">
                   <div>
-                    <Link href={`/app/articles/${entity.id}`}>{entity.title}</Link>
+                    <Link href={`/articles/${entity.id}`}>{entity.title}</Link>
                     <span className="muted"> · {entity.type}</span>
                     {(() => {
                       const baseRevisionId = entity.article?.baseRevisionId ?? null;

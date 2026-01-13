@@ -183,7 +183,7 @@ export default async function ArticleDetailPage({
             {entity.article?.revisions.map((rev) => (
               <li key={rev.id} className="list-row">
                 <div>
-                  <a href={`/app/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
+                  <a href={`/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
                 </div>
                 {rev.status === "draft" && (
                   <form action="/api/revisions/submit" method="post">
@@ -271,7 +271,7 @@ export default async function ArticleDetailPage({
                   {overlay.revisions.map((rev) => (
                     <li key={rev.id} className="list-row">
                       <div>
-                        <a href={`/app/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
+                        <a href={`/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
                       </div>
                       {rev.status === "draft" && (
                         <form action="/api/revisions/submit" method="post">

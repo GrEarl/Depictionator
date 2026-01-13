@@ -82,5 +82,5 @@ export async function POST(request: Request) {
     targetId
   });
 
-  return NextResponse.redirect(new URL(request.headers.get("referer") ?? "/app", request.url));
+  return NextResponse.redirect(new URL(request.headers.get("referer") ?? "/", request.url));
 }

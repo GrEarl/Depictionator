@@ -37,18 +37,18 @@ export default async function AppLayout({
       <div className="app-shell">
         <header className="app-header">
           <div className="brand">
-            <Link href="/app">WorldLore Atlas</Link>
+            <Link href="/">WorldLore Atlas</Link>
             <span className="workspace-pill">
               {session?.workspace?.name ?? "No workspace selected"}
             </span>
           </div>
           <nav className="app-nav">
-            <Link href="/app">Dashboard</Link>
-            <Link href="/app/articles">Articles</Link>
-            <Link href="/app/maps">Maps</Link>
-            <Link href="/app/timeline">Timeline</Link>
-            <Link href="/app/reviews">Reviews</Link>
-            <Link href="/app/settings">Settings</Link>
+            <Link href="/">Dashboard</Link>
+            <Link href="/articles">Articles</Link>
+            <Link href="/maps">Maps</Link>
+            <Link href="/timeline">Timeline</Link>
+            <Link href="/reviews">Reviews</Link>
+            <Link href="/settings">Settings</Link>
           </nav>
           <div className="user-actions">
             <span>{user.name ?? user.email}</span>

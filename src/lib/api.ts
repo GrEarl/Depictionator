@@ -5,7 +5,8 @@ import { SESSION_COOKIE } from "@/lib/auth";
 import { requireWorkspaceRole } from "@/lib/rbac";
 
 export async function requireApiSession() {
-  const sessionId = cookies().get(SESSION_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
   if (!sessionId) {
     throw new Error("UNAUTHORIZED");
   }

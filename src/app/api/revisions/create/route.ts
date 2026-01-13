@@ -68,5 +68,5 @@ export async function POST(request: Request) {
     meta: { targetType }
   });
 
-  return NextResponse.redirect(new URL(`/app/articles/${articleId || overlayId}`, request.url));
+  return NextResponse.redirect(new URL(`/articles/${articleId || overlayId}`, request.url));
 }

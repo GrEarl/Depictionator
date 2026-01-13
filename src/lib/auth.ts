@@ -8,7 +8,8 @@ export const SESSION_COOKIE = "wl_session";
 const SESSION_MAX_AGE_DAYS = Number(process.env.SESSION_MAX_AGE_DAYS ?? "14");
 
 export const getCurrentSession = cache(async () => {
-  const sessionId = cookies().get(SESSION_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
   if (!sessionId) return null;
 
   return prisma.session.findFirst({
@@ -41,7 +42,7 @@ export async function requireWorkspaceMembership(slug: string) {
     include: { workspace: true }
   });
 
-  if (!membership) redirect("/app");
+  if (!membership) redirect("/");
   return membership;
 }
 

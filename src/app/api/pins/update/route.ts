@@ -75,5 +75,5 @@ export async function POST(request: Request) {
     payload: { pinId }
   });
 
-  return NextResponse.redirect(new URL("/app/maps", request.url));
+  return NextResponse.redirect(new URL("/maps", request.url));
 }

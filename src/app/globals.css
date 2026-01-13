@@ -308,6 +308,13 @@ main {
   overflow: hidden;
 }
 
+.map-editor-controls {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
 .marker-icon {
   background: transparent;
   border: none;

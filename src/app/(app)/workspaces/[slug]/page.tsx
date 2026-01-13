@@ -13,11 +13,11 @@ export default async function WorkspacePage({
       <h2>{membership.workspace.name}</h2>
       <p className="muted">Role: {membership.role}</p>
       <div className="link-grid">
-        <Link href="/app/articles">Articles</Link>
-        <Link href="/app/maps">Maps</Link>
-        <Link href="/app/timeline">Timeline</Link>
-        <Link href="/app/reviews">Reviews</Link>
-        <Link href="/app/settings">Settings</Link>
+        <Link href="/articles">Articles</Link>
+        <Link href="/maps">Maps</Link>
+        <Link href="/timeline">Timeline</Link>
+        <Link href="/reviews">Reviews</Link>
+        <Link href="/settings">Settings</Link>
       </div>
     </div>
   );

@@ -67,5 +67,5 @@ export async function POST(request: Request) {
     targetId: map.id
   });
 
-  return NextResponse.redirect(new URL("/app/maps", request.url));
+  return NextResponse.redirect(new URL("/maps", request.url));
 }

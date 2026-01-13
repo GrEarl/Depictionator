@@ -4,7 +4,8 @@ import { clearSessionCookie, SESSION_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
-  const sessionId = cookies().get(SESSION_COOKIE)?.value;
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
   if (sessionId) {
     await prisma.session.delete({ where: { id: sessionId } }).catch(() => null);
   }

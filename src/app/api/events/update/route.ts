@@ -92,5 +92,5 @@ export async function POST(request: Request) {
     payload: { eventId }
   });
 
-  return NextResponse.redirect(new URL("/app/timeline", request.url));
+  return NextResponse.redirect(new URL("/timeline", request.url));
 }

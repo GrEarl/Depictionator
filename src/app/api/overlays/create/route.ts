@@ -85,5 +85,5 @@ export async function POST(request: Request) {
     meta: { targetType: "overlay" }
   });
 
-  return NextResponse.redirect(new URL(`/app/articles/${entityId}`, request.url));
+  return NextResponse.redirect(new URL(`/articles/${entityId}`, request.url));
 }

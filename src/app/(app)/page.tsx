@@ -23,7 +23,7 @@ export default async function DashboardPage() {
         <ul>
           {memberships.map((membership) => (
             <li key={membership.id}>
-              <Link href={`/app/workspaces/${membership.workspace.slug}`}>
+              <Link href={`/workspaces/${membership.workspace.slug}`}>
                 {membership.workspace.name}
               </Link>
               <span className="muted"> ({membership.role})</span>

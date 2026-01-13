@@ -56,9 +56,17 @@ Done:
 - Ran npm run lint (passed).
 - Added notification on review assignment.
 - Ran npm run lint (passed).
+- Added interactive map editor (Leaflet) with click-to-add pins/paths.
+- Added notifications for pin/path/event creation.
+- Ran npm run lint (passed).
+- Added MapEditor component and styling.
+- Added @playwright/test dev dependency for agent-browser validation.
+- Fixed /app route usage to root paths and removed duplicate root page.
+- Updated cookies() usage to await in auth/api routes.
+- Browser validation: /login loads and /maps redirects to /login (DB not configured blocks auth).
 
 Now:
-- Scan for remaining AGENTS.md gaps (map editor UI, notification completeness).
+- Scan for remaining AGENTS.md gaps (notification completeness).
 
 Next:
 - Extend notifications/watch triggers beyond review approvals where needed.

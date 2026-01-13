@@ -46,5 +46,5 @@ export async function POST(request: Request) {
     targetId: viewpoint.id
   });
 
-  return NextResponse.redirect(new URL("/app/settings", request.url));
+  return NextResponse.redirect(new URL("/settings", request.url));
 }

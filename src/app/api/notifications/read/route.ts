@@ -22,5 +22,5 @@ export async function POST(request: Request) {
     data: { readAt: new Date() }
   });
 
-  return NextResponse.redirect(new URL(request.headers.get("referer") ?? "/app", request.url));
+  return NextResponse.redirect(new URL(request.headers.get("referer") ?? "/", request.url));
 }

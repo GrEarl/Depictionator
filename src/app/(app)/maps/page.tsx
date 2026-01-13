@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
-import { MapViewer } from "@/components/MapViewer";
+import { MapEditor } from "@/components/MapEditor";
 
 const EVENT_TYPES = [
   "battle",
@@ -218,7 +218,7 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         <>
           <section className="panel">
             <h3>Map preview</h3>
-            <form action="/app/maps" method="get" className="form-grid">
+            <form action="/maps" method="get" className="form-grid">
               <label>
                 Map
                 <select name="map" defaultValue={selectedMapId}>
@@ -235,7 +235,14 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
               <input type="hidden" name="mode" value={mode} />
               <button type="submit">Load map</button>
             </form>
-            <MapViewer map={mapPayload} />
+            {workspace && (
+              <MapEditor
+                map={mapPayload}
+                workspaceId={workspace.id}
+                markerStyles={markerStyles}
+                locationTypes={LOCATION_TYPES}
+              />
+            )}
           </section>
 
           <section className="panel">

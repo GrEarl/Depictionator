@@ -71,5 +71,5 @@ export async function POST(request: Request) {
     payload: { reviewId, revisionId: review.revisionId, reason }
   });
 
-  return NextResponse.redirect(new URL("/app/reviews", request.url));
+  return NextResponse.redirect(new URL("/reviews", request.url));
 }

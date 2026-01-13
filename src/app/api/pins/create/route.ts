@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 import { parseOptionalFloat } from "@/lib/forms";
 
 export async function POST(request: Request) {
@@ -74,5 +75,23 @@ export async function POST(request: Request) {
     targetId: pin.id
   });
 
-  return NextResponse.redirect(new URL("/app/maps", request.url));
+  await notifyWatchers({
+    workspaceId,
+    targetType: "map",
+    targetId: mapId,
+    type: "pin_created",
+    payload: { pinId: pin.id, mapId }
+  });
+
+  if (pin.entityId) {
+    await notifyWatchers({
+      workspaceId,
+      targetType: "entity",
+      targetId: pin.entityId,
+      type: "pin_created",
+      payload: { pinId: pin.id }
+    });
+  }
+
+  return NextResponse.redirect(new URL("/maps", request.url));
 }

@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 import { parseOptionalFloat, parseOptionalInt, parseCsv } from "@/lib/forms";
 
 export async function POST(request: Request) {
@@ -76,5 +77,13 @@ export async function POST(request: Request) {
     targetId: event.id
   });
 
-  return NextResponse.redirect(new URL("/app/timeline", request.url));
+  await notifyWatchers({
+    workspaceId,
+    targetType: "timeline",
+    targetId: timelineId,
+    type: "event_created",
+    payload: { eventId: event.id, timelineId }
+  });
+
+  return NextResponse.redirect(new URL("/timeline", request.url));
 }

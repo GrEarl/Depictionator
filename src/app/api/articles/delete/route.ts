@@ -38,5 +38,5 @@ export async function POST(request: Request) {
     targetId: entityId
   });
 
-  return NextResponse.redirect(new URL("/app/articles", request.url));
+  return NextResponse.redirect(new URL("/articles", request.url));
 }

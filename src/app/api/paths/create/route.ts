@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 import { parseCsv } from "@/lib/forms";
 
 export async function POST(request: Request) {
@@ -81,5 +82,23 @@ export async function POST(request: Request) {
     targetId: path.id
   });
 
-  return NextResponse.redirect(new URL("/app/maps", request.url));
+  await notifyWatchers({
+    workspaceId,
+    targetType: "map",
+    targetId: mapId,
+    type: "path_created",
+    payload: { pathId: path.id, mapId }
+  });
+
+  if (path.relatedEventId) {
+    await notifyWatchers({
+      workspaceId,
+      targetType: "event",
+      targetId: path.relatedEventId,
+      type: "path_created",
+      payload: { pathId: path.id }
+    });
+  }
+
+  return NextResponse.redirect(new URL("/maps", request.url));
 }

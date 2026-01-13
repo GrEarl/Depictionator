@@ -81,5 +81,5 @@ export async function POST(request: Request) {
     meta: { targetType: "base" }
   });
 
-  return NextResponse.redirect(new URL(`/app/articles/${entity.id}`, request.url));
+  return NextResponse.redirect(new URL(`/articles/${entity.id}`, request.url));
 }
