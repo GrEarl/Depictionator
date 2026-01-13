@@ -19,7 +19,7 @@ Key decisions:
 - LLM panel stays as draft-only; executions logged; provider switching handled server-side.
 
 State:
-- Ready (name updated).
+- Ready (Depictionator naming updated and pushed).
 
 Done:
 - Full Prisma schema + minimal UI/API for entities, articles, overlays, timelines, events, maps, pins, paths, eras, chapters, viewpoints, marker styles, assets.
@@ -27,17 +27,17 @@ Done:
 - Revision diff/restore, Markdown renderer + Mermaid, map viewer/editor (Leaflet) with pin/path creation.
 - Print set builder endpoint + UI, asset serving, /health endpoint, Docker entrypoint.
 - LLM provider switching (Gemini AI Studio/Vertex + GPT-5.2 via Codex CLI), UI inputs, API handling, and env/docs updates.
-- Added DEPLOY.md (Ubuntu VPS guide), README updated with repo URL.
+- Added DEPLOY.md (Ubuntu VPS guide), README updated with repo URL and Depictionator name.
 - Ran npm run lint (clean).
 - agent-browser validation: /login loads, /maps redirects to /login (no auth).
 - Docker CLI not available in environment (could not run docker compose).
 - Git push to origin completed.
 
 Now:
-- Rename done across UI/docs.
+- No pending code tasks.
 
 Next:
-- Commit + push rename changes.
+- If needed: run docker compose on VPS and complete runtime smoke tests.
 
 Open questions (UNCONFIRMED if needed):
 - None.
@@ -47,8 +47,5 @@ Working set (files/ids/commands):
 - DEPLOY.md
 - src/app/(app)/layout.tsx
 - src/app/login/page.tsx
-- src/app/register/page.tsx
 - Gemini.md
-- git commit, git push
-
-
+- git push
