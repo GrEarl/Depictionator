@@ -1,77 +1,78 @@
-﻿# WorldLore Atlas フロントエンド要件（Gemini向け）
+# Depictionator �t�����g�G���h�v���iGemini�����j
 
-目的
-- WorldLore Atlas（世界観資料集約アプリ）のUI/UXを完成させる。
-- バックエンドは最小UIで機能網羅済み。フロントは「使いやすさ」と「情報の区別」を最優先。
+�ړI
+- Depictionator�i���E�ώ����W��A�v���j��UI/UX������������B
+- �o�b�N�G���h�͍ŏ�UI�ŋ@�\�ԗ��ς݁B�t�����g�́u�g���₷���v�Ɓu���̋�ʁv���ŗD��B
 
-最重要コンセプト（必ずUIに反映）
-1) World Time（世界史時間）
-2) Story Progress（ストーリー進行）
-3) Viewpoint（視点/認識主体）
-- 上記3軸が全画面で一貫して効くこと。
-- Canon（正史）と Belief（視点情報）を明確に分離表示。
+�ŏd�v�R���Z�v�g�i�K��UI�ɔ��f�j
+1) World Time�i���E�j���ԁj
+2) Story Progress�i�X�g�[���[�i�s�j
+3) Viewpoint�i���_/�F����́j
+- ��L3�����S��ʂň�т��Č������ƁB
+- Canon�i���j�j�� Belief�i���_���j�𖾊m�ɕ����\���B
 
-グローバルフィルタ（最重要UI）
-- World: Era（必須） + 日付/範囲（任意）
-- Story: Chapter（任意）
+�O���[�o���t�B���^�i�ŏd�vUI�j
+- World: Era�i�K�{�j + ���t/�͈́i�C�Ӂj
+- Story: Chapter�i�C�Ӂj
 - Viewpoint: Omni(Canon)/Player/Faction/Character
-- 表示モード: Canon / As Viewpoint / Compare（左右分割）
-- どの画面でも常時可視、変更が全画面に反映されること。
+- �\�����[�h: Canon / As Viewpoint / Compare�i���E�����j
+- �ǂ̉�ʂł��펞���A�ύX���S��ʂɔ��f����邱�ƁB
 
-主要画面（最低限の完成形）
-1) ダッシュボード
-- ワークスペース切替/参加
-- 通知（未読/既読）
+��v��ʁi�Œ���̊����`�j
+1) �_�b�V���{�[�h
+- ���[�N�X�y�[�X�ؑ�/�Q��
+- �ʒm�i����/���ǁj
 
-2) 記事ビュー
-- 左: エンティティ一覧（type/tag/status/全文検索/未読）
-- 右: 記事本文（Markdown + Mermaid）
-- Revision履歴、diff、復元、レビュー申請
-- Compareモード: CanonとViewpointを左右で比較
+2) �L���r���[
+- ��: �G���e�B�e�B�ꗗ�itype/tag/status/�S������/���ǁj
+- �E: �L���{���iMarkdown + Mermaid�j
+- Revision�����Adiff�A�����A���r���[�\��
+- Compare���[�h: Canon��Viewpoint�����E�Ŕ�r
 
-3) 記事詳細
-- Base + Overlay をフィルタ条件で切替
-- TruthFlag（canonical/rumor/mistaken/propaganda/unknown）を視覚的に明示
+3) �L���ڍ�
+- Base + Overlay ���t�B���^�����Őؑ�
+- TruthFlag�icanonical/rumor/mistaken/propaganda/unknown�j�����o�I�ɖ���
 
-4) 地図ビュー
-- 階層地図（世界→地域→都市）
-- ピン/動線 CRUD
-- マーカー形状・色・タイプ分類を視覚化（MarkerStyle/EventType/LocationType）
-- 編集モードと閲覧モードを分離
-- フィルタ（World/Story/Viewpoint）連動
+4) �n�}�r���[
+- �K�w�n�}�i���E���n�恨�s�s�j
+- �s��/���� CRUD
+- �}�[�J�[�`��E�F�E�^�C�v���ނ����o���iMarkerStyle/EventType/LocationType�j
+- �ҏW���[�h�Ɖ{�����[�h�𕪗�
+- �t�B���^�iWorld/Story/Viewpoint�j�A��
 
-5) タイムライン
-- タブ: World History / Game Storyline
-- Eventに「世界史時刻」と「ストーリー順」を併記
-- Event → 地図位置/エンティティへジャンプ
+5) �^�C�����C��
+- �^�u: World History / Game Storyline
+- Event�Ɂu���E�j�����v�Ɓu�X�g�[���[���v�𕹋L
+- Event �� �n�}�ʒu/�G���e�B�e�B�փW�����v
 
-6) レビュー/監査
-- Review一覧、コメント、承認/差し戻し
-- 監査ログ閲覧
+6) ���r���[/�č�
+- Review�ꗗ�A�R�����g�A���F/�����߂�
+- �č����O�{��
 
-7) 設定
-- Viewpoint管理
-- Asset管理（ライセンス/クレジット）
-- PDF出力（印刷セットビルダー）
-- LLM設定
+7) �ݒ�
+- Viewpoint�Ǘ�
+- Asset�Ǘ��i���C�Z���X/�N���W�b�g�j
+- PDF�o�́i����Z�b�g�r���_�[�j
+- LLM�ݒ�
 
-地図UIの必須要件（強調）
-- クリックでピン配置/移動、動線描画
-- ピン/動線は形状・色・種別の凡例で明示
-- Viewpoint/Story進行に応じて即時表示切替
+�n�}UI�̕K�{�v���i�����j
+- �N���b�N�Ńs���z�u/�ړ��A�����`��
+- �s��/�����͌`��E�F�E��ʂ̖}��Ŗ���
+- Viewpoint/Story�i�s�ɉ����đ����\���ؑ�
 
-UI/UXの明確化ポイント
-- フィルタ状態が常に見える
-- Draft/Review/Approvedなどの状態が視覚的に分かる
-- Canon/Beliefが混ざらない
-- Compareモードは必ず左右分割で比較可能
+UI/UX�̖��m���|�C���g
+- �t�B���^��Ԃ���Ɍ�����
+- Draft/Review/Approved�Ȃǂ̏�Ԃ����o�I�ɕ�����
+- Canon/Belief��������Ȃ�
+- Compare���[�h�͕K�����E�����Ŕ�r�\
 
-成果物（Geminiが提供すべきもの）
-- React/Next.jsベースのUI実装
-- 各画面でグローバルフィルタが一貫して機能
-- Map/Timeline/Articleの可視化が統一感を持つ
-- 最小操作で「何ができるか」が分かる
+���ʕ��iGemini���񋟂��ׂ����́j
+- React/Next.js�x�[�X��UI����
+- �e��ʂŃO���[�o���t�B���^����т��ċ@�\
+- Map/Timeline/Article�̉��������ꊴ������
+- �ŏ�����Łu�����ł��邩�v��������
 
-補足
-- デザインは自由裁量。ただし可読性・操作性を優先。
-- AGENTS.md 要件の欠落は禁止。
+�⑫
+- �f�U�C���͎��R�ٗʁB�������ǐ��E���쐫��D��B
+- AGENTS.md �v���̌����͋֎~�B
+

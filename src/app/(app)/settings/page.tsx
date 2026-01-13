@@ -1,4 +1,4 @@
-﻿import { requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { prisma } from "@/lib/db";
 
@@ -136,7 +136,7 @@ export default async function SettingsPage() {
               {assets.map((asset) => (
                 <li key={asset.id} className="list-row">
                   <div>
-                    {asset.storageKey} · {Math.round(asset.size / 1024)} KB
+                    {asset.storageKey} �E {Math.round(asset.size / 1024)} KB
                   </div>
                   <form action="/api/archive" method="post">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
@@ -171,7 +171,7 @@ export default async function SettingsPage() {
               <input type="hidden" name="workspaceId" value={workspace.id} />
               <label>
                 HTML to render
-                <textarea name="html" rows={6} defaultValue={`<html><body><h1>WorldLore Atlas</h1><p>PDF export test</p></body></html>`} />
+                <textarea name="html" rows={6} defaultValue={`<html><body><h1>Depictionator</h1><p>PDF export test</p></body></html>`} />
               </label>
               <label>
                 Include credits
@@ -224,3 +224,4 @@ export default async function SettingsPage() {
     </div>
   );
 }
+

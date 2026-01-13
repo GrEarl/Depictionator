@@ -1,4 +1,4 @@
-# WorldLore Atlas
+# Depictionator
 
 Worldbuilding atlas for game development teams. This repo follows the rules in `AGENTS.md`.
 
@@ -109,6 +109,7 @@ pg_dump -h localhost -U postgres -d worldlore > backup.sql
 
 - This is an MVP scaffold with minimal UI and full backend endpoints for core features.
 - PDF export uses Puppeteer in `/api/pdf/export`.
+
 
 
 

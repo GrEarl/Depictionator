@@ -61,7 +61,7 @@ export default async function AppLayout({
       <div className="app-shell">
         <header className="app-header">
           <div className="brand">
-            <Link href="/">WorldLore Atlas</Link>
+            <Link href="/">Depictionator</Link>
             <span className="workspace-pill">{session?.workspace?.name ?? "No workspace selected"}</span>
           </div>
           <nav className="app-nav">
@@ -94,3 +94,4 @@ export default async function AppLayout({
     </GlobalFilterProvider>
   );
 }
+

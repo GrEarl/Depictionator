@@ -1,14 +1,14 @@
-ï»¿# Depictionator / WorldLore Atlas ãƒ‡ãƒ—ãƒ­ã‚¤ã‚¬ã‚¤ãƒ‰ï¼ˆUbuntu VPSï¼‰
+# Depictionator ƒfƒvƒƒCƒKƒCƒhiUbuntu VPSj
 
-ç›®çš„
-- Docker + docker compose ã§æ‰‹è»½ã«æœ¬ç•ªé‹ç”¨ã§ãã‚‹çŠ¶æ…‹ã«ã™ã‚‹ã€‚
-- `.env` ã®è¨­å®šã ã‘ã§èµ·å‹•ã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹ã€‚
+–Ú“I
+- Docker + docker compose ‚ÅŽèŒy‚É–{”Ô‰^—p‚Å‚«‚éó‘Ô‚É‚·‚éB
+- `.env` ‚ÌÝ’è‚¾‚¯‚Å‹N“®‚Å‚«‚é‚æ‚¤‚É‚·‚éB
 
-å‰æ
-- Ubuntu 22.04+ ã® VPS
-- ãƒ‰ãƒ¡ã‚¤ãƒ³ãŒã‚ã‚‹å ´åˆã¯ãƒªãƒãƒ¼ã‚¹ãƒ—ãƒ­ã‚­ã‚·ã§ TLS çµ‚ç«¯ã‚’æŽ¨å¥¨
+‘O’ñ
+- Ubuntu 22.04+ ‚Ì VPS
+- ƒhƒƒCƒ“‚ª‚ ‚éê‡‚ÍƒŠƒo[ƒXƒvƒƒLƒV‚Å TLS I’[‚ð„§
 
-1) Docker / Compose ã®ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«
+1) Docker / Compose ‚ÌƒCƒ“ƒXƒg[ƒ‹
 
 ```bash
 sudo apt update
@@ -17,47 +17,47 @@ sudo usermod -aG docker $USER
 newgrp docker
 ```
 
-2) ãƒªãƒã‚¸ãƒˆãƒªå–å¾—
+2) ƒŠƒ|ƒWƒgƒŠŽæ“¾
 
 ```bash
 git clone https://github.com/GrEarl/Depictionator.git depictionator
 cd depictionator
 ```
 
-3) ç’°å¢ƒå¤‰æ•°ã®æº–å‚™
+3) ŠÂ‹«•Ï”‚Ì€”õ
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` ã§æœ€ä½Žé™è¨­å®šã™ã‚‹ã‚‚ã®:
-- `AUTH_SECRET`: å¼·ã„ãƒ©ãƒ³ãƒ€ãƒ å€¤
-- `APP_BASE_URL`: å…¬é–‹URL (https://your-domain)
-- `DATABASE_URL`: compose ã§ `db` ã‚’æŒ‡ã™è¨­å®šã®ã¾ã¾ã§OK
-- LLM ã‚’ä½¿ã†å ´åˆã¯ `GEMINI_API_KEY` / `VERTEX_GEMINI_*` / `CODEX_CLI_PATH` ã‚’è¨­å®š
+`.env` ‚ÅÅ’áŒÀÝ’è‚·‚é‚à‚Ì:
+- `AUTH_SECRET`: ‹­‚¢ƒ‰ƒ“ƒ_ƒ€’l
+- `APP_BASE_URL`: ŒöŠJURL (https://your-domain)
+- `DATABASE_URL`: compose ‚Å `db` ‚ðŽw‚·Ý’è‚Ì‚Ü‚Ü‚ÅOK
+- LLM ‚ðŽg‚¤ê‡‚Í `GEMINI_API_KEY` / `VERTEX_GEMINI_*` / `CODEX_CLI_PATH` ‚ðÝ’è
 
-4) èµ·å‹•
+4) ‹N“®
 
 ```bash
 docker compose up -d --build
 ```
 
-5) ãƒ˜ãƒ«ã‚¹ãƒã‚§ãƒƒã‚¯
+5) ƒwƒ‹ƒXƒ`ƒFƒbƒN
 
 ```bash
 curl http://localhost:3000/health
 ```
 
-6) TLS çµ‚ç«¯ï¼ˆæŽ¨å¥¨ï¼‰
-- Caddy or Nginx ã§ `APP_BASE_URL` ã«åˆã‚ã›ã¦ãƒªãƒãƒ¼ã‚¹ãƒ—ãƒ­ã‚­ã‚·
-- `/health` ã‚’ä½¿ã£ã¦æ­»æ´»ç›£è¦–
+6) TLS I’[i„§j
+- Caddy or Nginx ‚Å `APP_BASE_URL` ‚É‡‚í‚¹‚ÄƒŠƒo[ƒXƒvƒƒLƒV
+- `/health` ‚ðŽg‚Á‚ÄŽ€ŠˆŠÄŽ‹
 
-7) Codex CLI ã®åˆ©ç”¨ï¼ˆä»»æ„ï¼‰
-- VPS å´ã« `codex` ã‚’ã‚¤ãƒ³ã‚¹ãƒˆãƒ¼ãƒ«ã—ã¦ PATH ã«é€šã™
-- ã‚‚ã—ãã¯ `.env` ã® `CODEX_CLI_PATH` ã«ãƒ•ãƒ«ãƒ‘ã‚¹æŒ‡å®š
-- èªè¨¼æƒ…å ±ã¯ `~/.codex/auth.json` ã‚’ä½¿ç”¨
+7) Codex CLI ‚Ì—˜—pi”CˆÓj
+- VPS ‘¤‚É `codex` ‚ðƒCƒ“ƒXƒg[ƒ‹‚µ‚Ä PATH ‚É’Ê‚·
+- ‚à‚µ‚­‚Í `.env` ‚Ì `CODEX_CLI_PATH` ‚Éƒtƒ‹ƒpƒXŽw’è
+- ”FØî•ñ‚Í `~/.codex/auth.json` ‚ðŽg—p
 
-8) ã‚¢ãƒƒãƒ—ãƒ‡ãƒ¼ãƒˆæ‰‹é †
+8) ƒAƒbƒvƒf[ƒgŽè‡
 
 ```bash
 git pull
@@ -65,13 +65,14 @@ git pull
 docker compose up -d --build
 ```
 
-â€» èµ·å‹•æ™‚ã« entrypoint ãŒ `prisma migrate deploy` ã¾ãŸã¯ `prisma db push` ã‚’è‡ªå‹•å®Ÿè¡Œ
+¦ ‹N“®Žž‚É entrypoint ‚ª `prisma migrate deploy` ‚Ü‚½‚Í `prisma db push` ‚ðŽ©“®ŽÀs
 
-9) ãƒãƒƒã‚¯ã‚¢ãƒƒãƒ—
-- DB: `pg_dump` ã§å®šæœŸãƒãƒƒã‚¯ã‚¢ãƒƒãƒ—
-- Assets: compose ã® `assets-data` ãƒœãƒªãƒ¥ãƒ¼ãƒ ã‚’ã‚¹ãƒŠãƒƒãƒ—ã‚·ãƒ§ãƒƒãƒˆ
+9) ƒoƒbƒNƒAƒbƒv
+- DB: `pg_dump` ‚Å’èŠúƒoƒbƒNƒAƒbƒv
+- Assets: compose ‚Ì `assets-data` ƒ{ƒŠƒ…[ƒ€‚ðƒXƒiƒbƒvƒVƒ‡ƒbƒg
 
-10) ãƒˆãƒ©ãƒ–ãƒ«ã‚·ãƒ¥ãƒ¼ãƒˆ
-- èµ·å‹•ã«å¤±æ•—ã—ãŸã‚‰ `docker compose logs -f` ã‚’ç¢ºèª
-- `.env` ã® `DATABASE_URL` ãŒ `db` ã‚’æŒ‡ã—ã¦ã„ã‚‹ã‹ç¢ºèª
-- `/health` ãŒ 200 ã‚’è¿”ã™ã‹ç¢ºèª
+10) ƒgƒ‰ƒuƒ‹ƒVƒ…[ƒg
+- ‹N“®‚ÉŽ¸”s‚µ‚½‚ç `docker compose logs -f` ‚ðŠm”F
+- `.env` ‚Ì `DATABASE_URL` ‚ª `db` ‚ðŽw‚µ‚Ä‚¢‚é‚©Šm”F
+- `/health` ‚ª 200 ‚ð•Ô‚·‚©Šm”F
+

@@ -1,9 +1,9 @@
-ï»¿export default function LoginPage() {
+export default function LoginPage() {
   return (
     <main className="auth">
       <div className="auth-card">
-        <h1>WorldLore Atlas</h1>
-        <p>ãƒ­ã‚°ã‚¤ãƒ³ã—ã¦ãƒ¯ãƒ¼ã‚¯ã‚¹ãƒšãƒ¼ã‚¹ã¸</p>
+        <h1>Depictionator</h1>
+        <p>ƒƒOƒCƒ“‚µ‚Äƒ[ƒNƒXƒy[ƒX‚Ö</p>
         <form action="/api/auth/login" method="post" className="auth-form">
           <label>
             Email
@@ -16,10 +16,11 @@
           <button type="submit">Login</button>
         </form>
         <div className="auth-links">
-          <span>åˆã‚ã¦ã§ã™ã‹ï¼Ÿ</span>
-          <a href="/register">æ–°è¦ç™»éŒ²</a>
+          <span>‰‚ß‚Ä‚Å‚·‚©H</span>
+          <a href="/register">V‹K“o˜^</a>
         </div>
       </div>
     </main>
   );
 }
+

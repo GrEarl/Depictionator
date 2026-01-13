@@ -1,7 +1,7 @@
-﻿import "./globals.css";
+import "./globals.css";
 
 export const metadata = {
-  title: "WorldLore Atlas",
+  title: "Depictionator",
   description: "Worldbuilding atlas for game development teams"
 };
 
@@ -18,3 +18,4 @@ export default function RootLayout({
     </html>
   );
 }
+
