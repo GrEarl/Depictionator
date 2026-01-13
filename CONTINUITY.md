@@ -39,6 +39,9 @@ Done:
 - Added related entity/event fields for path create.
 - Added watch toggles on maps/timelines/events list UI.
 - Ran npm run lint (passed).
+- Added unread indicators for articles and maps with read-state support.
+- Added map mark-read actions and badge styling.
+- Ran npm run lint (passed).
 
 Now:
 - Confirm audit logging and workspace scoping on new update routes.

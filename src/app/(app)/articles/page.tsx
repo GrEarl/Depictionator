@@ -22,9 +22,22 @@ export default async function ArticlesPage() {
   const entities = workspace
     ? await prisma.entity.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
+        include: { article: { select: { baseRevisionId: true } } },
         orderBy: { updatedAt: "desc" }
       })
     : [];
+  const readStates = workspace
+    ? await prisma.readState.findMany({
+        where: {
+          workspaceId: workspace.id,
+          userId: user.id,
+          targetType: "entity"
+        }
+      })
+    : [];
+  const readStateMap = new Map(
+    readStates.map((state) => [state.targetId, state])
+  );
   const archivedEntities = workspace
     ? await prisma.entity.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
@@ -94,6 +107,14 @@ export default async function ArticlesPage() {
                   <div>
                     <Link href={`/app/articles/${entity.id}`}>{entity.title}</Link>
                     <span className="muted"> · {entity.type}</span>
+                    {(() => {
+                      const baseRevisionId = entity.article?.baseRevisionId ?? null;
+                      const readState = readStateMap.get(entity.id);
+                      const isUnread =
+                        baseRevisionId &&
+                        readState?.lastReadRevisionId !== baseRevisionId;
+                      return isUnread ? <span className="badge">Unread</span> : null;
+                    })()}
                   </div>
                   <form action="/api/archive" method="post">
                     <input type="hidden" name="workspaceId" value={workspace.id} />

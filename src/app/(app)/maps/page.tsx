@@ -108,6 +108,18 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         orderBy: { createdAt: "desc" }
       })
     : [];
+  const mapReadStates = workspace
+    ? await prisma.readState.findMany({
+        where: {
+          workspaceId: workspace.id,
+          userId: user.id,
+          targetType: "map"
+        }
+      })
+    : [];
+  const mapReadMap = new Map(
+    mapReadStates.map((state) => [state.targetId, state])
+  );
   const allPins = workspace
     ? await prisma.pin.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
@@ -657,7 +669,14 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
             <h3>Maps overview</h3>
             {maps.map((map) => (
               <div key={map.id} className="panel">
-                <strong>{map.title}</strong>
+                <div className="list-row">
+                  <strong>{map.title}</strong>
+                  {(() => {
+                    const readState = mapReadMap.get(map.id);
+                    const isUnread = !readState || map.updatedAt > readState.lastReadAt;
+                    return isUnread ? <span className="badge">Unread</span> : null;
+                  })()}
+                </div>
                 <div className="muted">Pins: {map.pins.length} · Paths: {map.paths.length}</div>
                 <div className="list-row">
                   <form action="/api/watches/toggle" method="post">
@@ -665,6 +684,12 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
                     <input type="hidden" name="targetType" value="map" />
                     <input type="hidden" name="targetId" value={map.id} />
                     <button type="submit" className="link-button">Toggle Watch</button>
+                  </form>
+                  <form action="/api/read-state/mark" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="map" />
+                    <input type="hidden" name="targetId" value={map.id} />
+                    <button type="submit" className="link-button">Mark Read</button>
                   </form>
                   <form action="/api/archive" method="post">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
