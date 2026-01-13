@@ -18,6 +18,7 @@ export async function POST(request: Request) {
   const x = parseOptionalFloat(form.get("x"));
   const y = parseOptionalFloat(form.get("y"));
   const label = String(form.get("label") ?? "").trim();
+  const entityId = String(form.get("entityId") ?? "").trim();
   const locationType = String(form.get("locationType") ?? "other");
   const markerStyleId = String(form.get("markerStyleId") ?? "").trim();
   const markerShape = String(form.get("markerShape") ?? "").trim();
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
       mapId,
       x,
       y,
+      entityId: entityId || null,
       label: label || null,
       locationType,
       truthFlag,

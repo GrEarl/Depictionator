@@ -302,6 +302,10 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
                 <input name="label" />
               </label>
               <label>
+                Entity ID (optional)
+                <input name="entityId" />
+              </label>
+              <label>
                 Location type
                 <select name="locationType">
                   {LOCATION_TYPES.map((type) => (
@@ -396,6 +400,10 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
               <label>
                 Label
                 <input name="label" />
+              </label>
+              <label>
+                Entity ID (optional)
+                <input name="entityId" />
               </label>
               <label>
                 Location type
@@ -544,6 +552,14 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
                   ))}
                 </select>
               </label>
+              <label>
+                Related event ID
+                <input name="relatedEventId" />
+              </label>
+              <label>
+                Related entity IDs (comma)
+                <input name="relatedEntityIds" />
+              </label>
               <button type="submit">Add path</button>
             </form>
           </section>
@@ -643,12 +659,20 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
               <div key={map.id} className="panel">
                 <strong>{map.title}</strong>
                 <div className="muted">Pins: {map.pins.length} · Paths: {map.paths.length}</div>
-                <form action="/api/archive" method="post">
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <input type="hidden" name="targetType" value="map" />
-                  <input type="hidden" name="targetId" value={map.id} />
-                  <button type="submit" className="link-button">Archive</button>
-                </form>
+                <div className="list-row">
+                  <form action="/api/watches/toggle" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="map" />
+                    <input type="hidden" name="targetId" value={map.id} />
+                    <button type="submit" className="link-button">Toggle Watch</button>
+                  </form>
+                  <form action="/api/archive" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="map" />
+                    <input type="hidden" name="targetId" value={map.id} />
+                    <button type="submit" className="link-button">Archive</button>
+                  </form>
+                </div>
               </div>
             ))}
           </section>

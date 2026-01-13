@@ -34,6 +34,8 @@ export async function POST(request: Request) {
   if (y !== null) data.y = y;
   const label = parseOptionalString(form.get("label"));
   if (label !== null) data.label = label;
+  const entityId = parseOptionalString(form.get("entityId"));
+  if (entityId !== null) data.entityId = entityId;
   const locationType = parseOptionalString(form.get("locationType"));
   if (locationType !== null) data.locationType = locationType;
   const markerStyleId = parseOptionalString(form.get("markerStyleId"));

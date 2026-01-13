@@ -35,10 +35,14 @@ Done:
 - Added asset listing with archive/restore in settings.
 - Added watcher notifications on update routes for maps/pins/paths/timelines/events.
 - Ran npm run lint (passed).
+- Added entityId support on pin create/update forms/routes.
+- Added related entity/event fields for path create.
+- Added watch toggles on maps/timelines/events list UI.
+- Ran npm run lint (passed).
 
 Now:
 - Confirm audit logging and workspace scoping on new update routes.
-- Scan for remaining AGENTS.md gaps (watch toggles on non-article items, map/timeline visualization).
+- Scan for remaining AGENTS.md gaps (markdown rendering, map visualization, remaining notifications).
 
 Next:
 - Add/confirm update forms on maps/timeline pages.

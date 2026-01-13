@@ -502,6 +502,12 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
                     <li key={event.id} className="list-row">
                       <div>{event.title}</div>
                       <span className="muted">{event.eventType}</span>
+                      <form action="/api/watches/toggle" method="post">
+                        <input type="hidden" name="workspaceId" value={workspace.id} />
+                        <input type="hidden" name="targetType" value="event" />
+                        <input type="hidden" name="targetId" value={event.id} />
+                        <button type="submit" className="link-button">Watch</button>
+                      </form>
                       <form action="/api/archive" method="post">
                         <input type="hidden" name="workspaceId" value={workspace.id} />
                         <input type="hidden" name="targetType" value="event" />
@@ -512,12 +518,20 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
                   ))}
                   {timeline.events.length === 0 && <li className="muted">No events.</li>}
                 </ul>
-                <form action="/api/archive" method="post">
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <input type="hidden" name="targetType" value="timeline" />
-                  <input type="hidden" name="targetId" value={timeline.id} />
-                  <button type="submit" className="link-button">Archive timeline</button>
-                </form>
+                <div className="list-row">
+                  <form action="/api/watches/toggle" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="timeline" />
+                    <input type="hidden" name="targetId" value={timeline.id} />
+                    <button type="submit" className="link-button">Watch</button>
+                  </form>
+                  <form action="/api/archive" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="timeline" />
+                    <input type="hidden" name="targetId" value={timeline.id} />
+                    <button type="submit" className="link-button">Archive timeline</button>
+                  </form>
+                </div>
               </div>
             ))}
           </section>

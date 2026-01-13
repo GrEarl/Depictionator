@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { parseCsv } from "@/lib/forms";
 
 export async function POST(request: Request) {
   let session;
@@ -19,6 +20,8 @@ export async function POST(request: Request) {
   const strokeColor = String(form.get("strokeColor") ?? "").trim();
   const strokeWidthRaw = String(form.get("strokeWidth") ?? "").trim();
   const markerStyleId = String(form.get("markerStyleId") ?? "").trim();
+  const relatedEventId = String(form.get("relatedEventId") ?? "").trim();
+  const relatedEntityIds = parseCsv(form.get("relatedEntityIds"));
   const worldFrom = String(form.get("worldFrom") ?? "").trim();
   const worldTo = String(form.get("worldTo") ?? "").trim();
   const storyFromChapterId = String(form.get("storyFromChapterId") ?? "").trim();
@@ -59,7 +62,8 @@ export async function POST(request: Request) {
       arrowStyle,
       strokeColor: strokeColor || null,
       strokeWidth: strokeWidth ?? null,
-      relatedEntityIds: [],
+      relatedEntityIds,
+      relatedEventId: relatedEventId || null,
       markerStyleId: markerStyleId || null,
       worldFrom: worldFrom || null,
       worldTo: worldTo || null,
