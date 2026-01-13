@@ -3,6 +3,7 @@ import { FilterSummary } from "@/components/FilterSummary";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
+import { LlmContext } from "@/components/LlmContext";
 
 const ENTITY_TYPES = [
   "nation",
@@ -47,6 +48,12 @@ export default async function ArticlesPage() {
 
   return (
     <div className="panel">
+      <LlmContext
+        value={{
+          type: "articles",
+          entityIds: entities.map((entity) => entity.id)
+        }}
+      />
       <h2>Articles</h2>
       <FilterSummary />
       {!workspace && <p className="muted">Select a workspace to manage articles.</p>}

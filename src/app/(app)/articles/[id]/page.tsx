@@ -1,6 +1,7 @@
 ﻿import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
+import { LlmContext } from "@/components/LlmContext";
 
 const TRUTH_FLAGS = ["canonical", "rumor", "mistaken", "propaganda", "unknown"];
 
@@ -72,6 +73,19 @@ export default async function ArticleDetailPage({
 
   return (
     <div className="panel">
+      <LlmContext
+        value={{
+          type: "entity",
+          entityId: entity.id,
+          title: entity.title,
+          mode,
+          viewpoint,
+          eraFilter,
+          chapterFilter,
+          baseRevisionId: entity.article?.baseRevisionId ?? null,
+          overlayIds: entity.overlays.map((overlay) => overlay.id)
+        }}
+      />
       <h2>{entity.title}</h2>
       <p className="muted">Type: {entity.type}</p>
       <div className="list-row">

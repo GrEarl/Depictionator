@@ -2,6 +2,7 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
+import { LlmContext } from "@/components/LlmContext";
 
 const EVENT_TYPES = [
   "battle",
@@ -93,6 +94,13 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
 
   return (
     <div className="panel">
+      <LlmContext
+        value={{
+          type: "timeline",
+          timelineIds: timelines.map((timeline) => timeline.id),
+          filters: { eraFilter, chapterFilter }
+        }}
+      />
       <h2>Timeline</h2>
       <FilterSummary />
       {!workspace && <p className="muted">Select a workspace to manage timelines.</p>}

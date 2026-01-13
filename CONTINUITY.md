@@ -42,6 +42,8 @@ Done:
 - Added unread indicators for articles and maps with read-state support.
 - Added map mark-read actions and badge styling.
 - Ran npm run lint (passed).
+- Added LLM context plumbing (page context tags + API handling).
+- Ran npm run lint (passed).
 
 Now:
 - Confirm audit logging and workspace scoping on new update routes.

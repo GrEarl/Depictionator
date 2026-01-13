@@ -17,7 +17,21 @@ export function LlmPanel({ workspaceId }: { workspaceId?: string | null }) {
     form.append("provider", provider);
     form.append("prompt", prompt);
     if (workspaceId) form.append("workspaceId", workspaceId);
-
+    const contextEl = document.getElementById("llm-context");
+    let pageContext: unknown = null;
+    if (contextEl?.textContent) {
+      try {
+        pageContext = JSON.parse(contextEl.textContent);
+      } catch {
+        pageContext = contextEl.textContent;
+      }
+    }
+    const contextPayload = {
+      url: window.location.href,
+      title: document.title,
+      page: pageContext
+    };
+    form.append("context", JSON.stringify(contextPayload));
     const res = await fetch("/api/llm/execute", {
       method: "POST",
       body: form

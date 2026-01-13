@@ -2,6 +2,7 @@
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
+import { LlmContext } from "@/components/LlmContext";
 
 const EVENT_TYPES = [
   "battle",
@@ -143,6 +144,13 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
 
   return (
     <div className="panel">
+      <LlmContext
+        value={{
+          type: "maps",
+          mapIds: maps.map((map) => map.id),
+          filters: { eraFilter, chapterFilter, viewpointFilter, mode }
+        }}
+      />
       <h2>Maps</h2>
       <FilterSummary />
       {!workspace && (

@@ -54,6 +54,7 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const provider = String(form.get("provider") ?? "gemini");
   const prompt = String(form.get("prompt") ?? "").trim();
+  const context = String(form.get("context") ?? "").trim();
   const workspaceId = String(form.get("workspaceId") ?? "").trim();
 
   if (!prompt) {
@@ -71,18 +72,20 @@ export async function POST(request: Request) {
   const log = await prisma.llmLog.create({
     data: {
       provider: provider === "codex_cli" ? "codex_cli" : "gemini",
-      input: { prompt },
+      input: { prompt, context: context || null },
       status: "pending",
       userId: session.userId,
       workspaceId: workspaceId || null
     }
   });
 
+  const fullPrompt = context ? `${prompt}\n\n[Context]\n${context}` : prompt;
+
   let result;
   if (provider === "codex_cli") {
-    result = await callCodexCli(prompt);
+    result = await callCodexCli(fullPrompt);
   } else {
-    result = await callGemini(prompt);
+    result = await callGemini(fullPrompt);
   }
 
   const status = result.error ? "error" : "ok";
