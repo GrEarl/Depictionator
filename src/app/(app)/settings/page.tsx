@@ -1,11 +1,24 @@
 ﻿import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
+import { prisma } from "@/lib/db";
 
 const VIEWPOINT_TYPES = ["player", "faction", "character", "omniscient"];
 
 export default async function SettingsPage() {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
+  const viewpoints = workspace
+    ? await prisma.viewpoint.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: null },
+        orderBy: { createdAt: "asc" }
+      })
+    : [];
+  const archivedViewpoints = workspace
+    ? await prisma.viewpoint.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
+        orderBy: { createdAt: "asc" }
+      })
+    : [];
 
   return (
     <div className="panel">
@@ -42,6 +55,35 @@ export default async function SettingsPage() {
               </label>
               <button type="submit">Add viewpoint</button>
             </form>
+            <ul>
+              {viewpoints.map((viewpoint) => (
+                <li key={viewpoint.id} className="list-row">
+                  <span>{viewpoint.name}</span>
+                  <form action="/api/archive" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="viewpoint" />
+                    <input type="hidden" name="targetId" value={viewpoint.id} />
+                    <button type="submit" className="link-button">Archive</button>
+                  </form>
+                </li>
+              ))}
+              {viewpoints.length === 0 && <li className="muted">No viewpoints.</li>}
+            </ul>
+            <h4>Archived viewpoints</h4>
+            <ul>
+              {archivedViewpoints.map((viewpoint) => (
+                <li key={viewpoint.id} className="list-row">
+                  <span>{viewpoint.name}</span>
+                  <form action="/api/restore" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="viewpoint" />
+                    <input type="hidden" name="targetId" value={viewpoint.id} />
+                    <button type="submit" className="link-button">Restore</button>
+                  </form>
+                </li>
+              ))}
+              {archivedViewpoints.length === 0 && <li className="muted">No archived viewpoints.</li>}
+            </ul>
           </section>
 
           <section className="panel">

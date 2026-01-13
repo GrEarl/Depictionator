@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
-import { parseOptionalFloat, parseOptionalInt } from "@/lib/forms";
+import { parseOptionalFloat, parseOptionalInt, parseCsv } from "@/lib/forms";
 
 export async function POST(request: Request) {
   let session;
@@ -27,6 +27,7 @@ export async function POST(request: Request) {
   const locationX = parseOptionalFloat(form.get("locationX"));
   const locationY = parseOptionalFloat(form.get("locationY"));
   const markerStyleId = String(form.get("markerStyleId") ?? "").trim();
+  const involvedEntityIds = parseCsv(form.get("involvedEntityIds"));
 
   if (!workspaceId || !timelineId || !title) {
     return apiError("Missing fields", 400);
@@ -56,7 +57,7 @@ export async function POST(request: Request) {
       storyOrder: storyOrder ?? null,
       storyChapterId: storyChapterId || null,
       summaryMd: summaryMd || null,
-      involvedEntityIds: [],
+      involvedEntityIds,
       locationMapId: locationMapId || null,
       locationPinId: locationPinId || null,
       locationX: locationX ?? null,

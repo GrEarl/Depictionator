@@ -17,32 +17,33 @@ Key decisions:
 - Add map visualization primitives via MarkerStyle + event/location types for shape/color differentiation.
 
 State:
-- In progress (expanded CRUD + filtering + soft-delete/restore coverage; remaining gaps still pending).
+- In progress (CRUD coverage expanded with diff/restore and soft-delete; remaining gaps still pending).
 
 Done:
-- Added soft-delete fields across major models (overlays, viewpoints, timelines, eras, chapters, pins, paths, assets, marker styles).
-- Added archive/restore API routes with workspace-scoped safety checks.
-- Added more robust CRUD validation for revisions/reviews/events/maps/pins/paths.
-- Added review assignments endpoint + UI; watcher/notification helpers + watch/read endpoints.
-- Added global filter options sourced from DB; filters now sync via URL and apply to maps/timeline/overlays.
-- Added PDF export with credits inclusion and LLM panel endpoint updates.
-- Added marker-style, map, pin, path, timeline archive/restore controls in UI.
+- Added archive/restore UI across entities/maps/timelines/chapters/eras/overlays/viewpoints/marker styles.
+- Added revision diff page + restore-as-new-draft endpoint.
+- Added entity metadata update endpoint + form.
+- Strengthened server-side validation: workspace scoping and map/timeline existence checks.
+- Added involved entities for events; added timeline/map filter application from global filters.
+- Added review assignment endpoint + UI.
+- Added diff dependency and updated global filter options from DB.
 - Ran prisma generate and lint successfully.
 
 Now:
-- Finish remaining AGENTS.md requirements: complete CRUD (updates), review comments UI, audit coverage for all mutations, link entities to maps/events, and strengthen filter consistency.
+- Continue remaining AGENTS.md requirements: full update endpoints for maps/pins/paths/events/timelines, review comments UI, audit coverage for all mutations, asset listing/restore, and global filter consistency across all views.
 
 Next:
-- Implement update/edit endpoints for core models and minimal UI to edit existing records.
-- Add PDF credit aggregation improvements and LLM allowlist enforcement.
+- Implement edit/update endpoints + minimal UI for maps/pins/paths/events/timelines/eras/chapters.
+- Extend notifications/watch triggers for updates beyond review approvals.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
 - prisma/schema.prisma
-- src/lib/* (api, rbac, audit, notifications, forms)
-- src/app/(app)/* pages (articles/maps/timeline/reviews/settings)
-- src/app/api/* (archive/restore, CRUD, llm, pdf)
-- src/components/*
+- src/app/(app)/articles/[id]/page.tsx, src/app/(app)/articles/page.tsx
+- src/app/(app)/maps/page.tsx, src/app/(app)/timeline/page.tsx, src/app/(app)/settings/page.tsx
+- src/app/(app)/revisions/[id]/page.tsx
+- src/app/api/* (archive/restore, revisions/restore, reviews/assign, articles/update)
+- src/components/GlobalFilters.tsx, src/app/(app)/layout.tsx
 - npx prisma generate, npm run lint

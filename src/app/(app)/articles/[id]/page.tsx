@@ -63,6 +63,10 @@ export default async function ArticleDetailPage({
 
   if (!entity) return <div className="panel">Not found.</div>;
 
+  const archivedOverlays = await prisma.articleOverlay.findMany({
+    where: { entityId: entity.id, workspaceId: workspace.id, softDeletedAt: { not: null } }
+  });
+
   const showBase = mode === "canon" || mode === "compare" || viewpoint === "canon";
   const showOverlays = mode === "viewpoint" || mode === "compare";
 
@@ -85,6 +89,47 @@ export default async function ArticleDetailPage({
           <button type="submit" className="link-button">Mark Read</button>
         </form>
       </div>
+      <section className="panel">
+        <h3>Entity metadata</h3>
+        <form action="/api/articles/update" method="post" className="form-grid">
+          <input type="hidden" name="workspaceId" value={workspace.id} />
+          <input type="hidden" name="entityId" value={entity.id} />
+          <label>
+            Title
+            <input name="title" defaultValue={entity.title} />
+          </label>
+          <label>
+            Status
+            <select name="status" defaultValue={entity.status}>
+              <option value="draft">draft</option>
+              <option value="in_review">in_review</option>
+              <option value="approved">approved</option>
+              <option value="deprecated">deprecated</option>
+            </select>
+          </label>
+          <label>
+            Aliases (comma)
+            <input name="aliases" defaultValue={entity.aliases.join(", ")} />
+          </label>
+          <label>
+            Tags (comma)
+            <input name="tags" defaultValue={entity.tags.join(", ")} />
+          </label>
+          <label>
+            World exist from
+            <input name="worldExistFrom" defaultValue={entity.worldExistFrom ?? ""} />
+          </label>
+          <label>
+            World exist to
+            <input name="worldExistTo" defaultValue={entity.worldExistTo ?? ""} />
+          </label>
+          <label>
+            Story intro chapter ID
+            <input name="storyIntroChapterId" defaultValue={entity.storyIntroChapterId ?? ""} />
+          </label>
+          <button type="submit">Update entity</button>
+        </form>
+      </section>
 
       {showBase && (
         <section className="panel">
@@ -115,7 +160,7 @@ export default async function ArticleDetailPage({
             {entity.article?.revisions.map((rev) => (
               <li key={rev.id} className="list-row">
                 <div>
-                  {rev.status} · {rev.changeSummary}
+                  <a href={`/app/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
                 </div>
                 {rev.status === "draft" && (
                   <form action="/api/revisions/submit" method="post">
@@ -195,7 +240,9 @@ export default async function ArticleDetailPage({
                 <ul>
                   {overlay.revisions.map((rev) => (
                     <li key={rev.id} className="list-row">
-                      <div>{rev.status} · {rev.changeSummary}</div>
+                      <div>
+                        <a href={`/app/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
+                      </div>
                       {rev.status === "draft" && (
                         <form action="/api/revisions/submit" method="post">
                           <input type="hidden" name="workspaceId" value={workspace.id} />
@@ -209,6 +256,21 @@ export default async function ArticleDetailPage({
               </li>
             ))}
             {entity.overlays.length === 0 && <li className="muted">No overlays yet.</li>}
+          </ul>
+          <h4>Archived overlays</h4>
+          <ul>
+            {archivedOverlays.map((overlay) => (
+              <li key={overlay.id} className="list-row">
+                <span>{overlay.title}</span>
+                <form action="/api/restore" method="post">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <input type="hidden" name="targetType" value="overlay" />
+                  <input type="hidden" name="targetId" value={overlay.id} />
+                  <button type="submit" className="link-button">Restore</button>
+                </form>
+              </li>
+            ))}
+            {archivedOverlays.length === 0 && <li className="muted">No archived overlays.</li>}
           </ul>
         </section>
       )}

@@ -78,6 +78,12 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
         orderBy: { createdAt: "desc" }
       })
     : [];
+  const archivedMarkerStyles = workspace
+    ? await prisma.markerStyle.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
   const maps = workspace
     ? await prisma.map.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
@@ -195,6 +201,21 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
               {markerStyles.length === 0 && (
                 <li className="muted">No marker styles yet.</li>
               )}
+            </ul>
+            <h4>Archived marker styles</h4>
+            <ul>
+              {archivedMarkerStyles.map((style) => (
+                <li key={style.id} className="list-row">
+                  <span>{style.name}</span>
+                  <form action="/api/restore" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="marker_style" />
+                    <input type="hidden" name="targetId" value={style.id} />
+                    <button type="submit" className="link-button">Restore</button>
+                  </form>
+                </li>
+              ))}
+              {archivedMarkerStyles.length === 0 && <li className="muted">No archived styles.</li>}
             </ul>
           </section>
 

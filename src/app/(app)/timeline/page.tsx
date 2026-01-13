@@ -293,6 +293,10 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
                 Summary (Markdown)
                 <textarea name="summaryMd" rows={3} />
               </label>
+              <label>
+                Involved Entity IDs (comma)
+                <input name="involvedEntityIds" />
+              </label>
               <button type="submit">Add event</button>
             </form>
           </section>
