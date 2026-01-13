@@ -17,7 +17,7 @@ Key decisions:
 - Add map visualization primitives via MarkerStyle + event/location types for shape/color differentiation.
 
 State:
-- In progress (core CRUD largely in place; remaining gaps are markdown rendering, mermaid display, and actual map visualization).
+- In progress (core CRUD + markdown/Mermaid + map preview in place; remaining gaps are interactive map editing UI and some notification triggers).
 
 Done:
 - Added archive/restore UI across entities/maps/timelines/chapters/eras/overlays/viewpoints/marker styles.
