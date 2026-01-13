@@ -79,9 +79,17 @@ export default async function SettingsPage() {
           <section className="panel">
             <h3>PDF Export</h3>
             <form action="/api/pdf/export" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
               <label>
                 HTML to render
                 <textarea name="html" rows={6} defaultValue={`<html><body><h1>WorldLore Atlas</h1><p>PDF export test</p></body></html>`} />
+              </label>
+              <label>
+                Include credits
+                <select name="includeCredits">
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
               </label>
               <button type="submit">Generate PDF</button>
             </form>

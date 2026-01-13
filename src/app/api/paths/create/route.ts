@@ -19,6 +19,12 @@ export async function POST(request: Request) {
   const strokeColor = String(form.get("strokeColor") ?? "").trim();
   const strokeWidthRaw = String(form.get("strokeWidth") ?? "").trim();
   const markerStyleId = String(form.get("markerStyleId") ?? "").trim();
+  const worldFrom = String(form.get("worldFrom") ?? "").trim();
+  const worldTo = String(form.get("worldTo") ?? "").trim();
+  const storyFromChapterId = String(form.get("storyFromChapterId") ?? "").trim();
+  const storyToChapterId = String(form.get("storyToChapterId") ?? "").trim();
+  const viewpointId = String(form.get("viewpointId") ?? "").trim();
+  const truthFlag = String(form.get("truthFlag") ?? "canonical").trim();
 
   if (!workspaceId || !mapId) {
     return apiError("Missing fields", 400);
@@ -37,6 +43,11 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  const map = await prisma.map.findFirst({ where: { id: mapId, workspaceId, softDeletedAt: null } });
+  if (!map) {
+    return apiError("Map not found", 404);
+  }
+
   const strokeWidth = strokeWidthRaw ? Number(strokeWidthRaw) : null;
 
   const path = await prisma.path.create({
@@ -44,12 +55,17 @@ export async function POST(request: Request) {
       workspaceId,
       mapId,
       polyline: parsedPolyline as object,
-      truthFlag: "canonical",
+      truthFlag,
       arrowStyle,
       strokeColor: strokeColor || null,
       strokeWidth: strokeWidth ?? null,
       relatedEntityIds: [],
-      markerStyleId: markerStyleId || null
+      markerStyleId: markerStyleId || null,
+      worldFrom: worldFrom || null,
+      worldTo: worldTo || null,
+      storyFromChapterId: storyFromChapterId || null,
+      storyToChapterId: storyToChapterId || null,
+      viewpointId: viewpointId || null
     }
   });
 

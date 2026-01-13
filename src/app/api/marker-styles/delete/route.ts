@@ -25,7 +25,10 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
-  await prisma.markerStyle.delete({ where: { id: styleId } });
+  await prisma.markerStyle.update({
+    where: { id: styleId, workspaceId },
+    data: { softDeletedAt: new Date() }
+  });
 
   await logAudit({
     workspaceId,

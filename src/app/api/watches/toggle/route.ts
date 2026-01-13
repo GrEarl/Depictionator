@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireApiSession, apiError } from "@/lib/api";
+import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
 export async function POST(request: Request) {
@@ -18,6 +18,12 @@ export async function POST(request: Request) {
 
   if (!workspaceId || !targetType || !targetId) {
     return apiError("Missing fields", 400);
+  }
+
+  try {
+    await requireWorkspaceAccess(session.userId, workspaceId, "viewer");
+  } catch {
+    return apiError("Forbidden", 403);
   }
 
   const existing = await prisma.watch.findFirst({

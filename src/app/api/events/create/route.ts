@@ -26,6 +26,7 @@ export async function POST(request: Request) {
   const locationPinId = String(form.get("locationPinId") ?? "").trim();
   const locationX = parseOptionalFloat(form.get("locationX"));
   const locationY = parseOptionalFloat(form.get("locationY"));
+  const markerStyleId = String(form.get("markerStyleId") ?? "").trim();
 
   if (!workspaceId || !timelineId || !title) {
     return apiError("Missing fields", 400);
@@ -35,6 +36,13 @@ export async function POST(request: Request) {
     await requireWorkspaceAccess(session.userId, workspaceId, "editor");
   } catch {
     return apiError("Forbidden", 403);
+  }
+
+  const timeline = await prisma.timeline.findFirst({
+    where: { id: timelineId, workspaceId, softDeletedAt: null }
+  });
+  if (!timeline) {
+    return apiError("Timeline not found", 404);
   }
 
   const event = await prisma.event.create({
@@ -53,6 +61,7 @@ export async function POST(request: Request) {
       locationPinId: locationPinId || null,
       locationX: locationX ?? null,
       locationY: locationY ?? null,
+      markerStyleId: markerStyleId || null,
       createdById: session.userId,
       updatedById: session.userId
     }

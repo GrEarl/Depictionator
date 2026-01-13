@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireApiSession, apiError } from "@/lib/api";
+import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
@@ -58,6 +58,14 @@ export async function POST(request: Request) {
 
   if (!prompt) {
     return apiError("Prompt required", 400);
+  }
+
+  if (workspaceId) {
+    try {
+      await requireWorkspaceAccess(session.userId, workspaceId, "viewer");
+    } catch {
+      return apiError("Forbidden", 403);
+    }
   }
 
   const log = await prisma.llmLog.create({

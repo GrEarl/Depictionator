@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireApiSession, apiError } from "@/lib/api";
+import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 
 export async function POST(request: Request) {
   let session;
@@ -18,6 +18,12 @@ export async function POST(request: Request) {
 
   if (!workspaceId || !targetType || !targetId) {
     return apiError("Missing fields", 400);
+  }
+
+  try {
+    await requireWorkspaceAccess(session.userId, workspaceId, "viewer");
+  } catch {
+    return apiError("Forbidden", 403);
   }
 
   await prisma.readState.upsert({

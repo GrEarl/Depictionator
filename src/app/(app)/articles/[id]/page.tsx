@@ -21,6 +21,27 @@ export default async function ArticleDetailPage({
 
   const mode = String(searchParams.mode ?? "canon");
   const viewpoint = String(searchParams.viewpoint ?? "canon");
+  const eraFilter = String(searchParams.era ?? "all");
+  const chapterFilter = String(searchParams.chapter ?? "all");
+
+  const overlayWhere = {
+    ...(viewpoint === "canon" ? {} : { viewpointId: viewpoint }),
+    softDeletedAt: null,
+    ...(eraFilter === "all"
+      ? {}
+      : {
+          OR: [{ worldFrom: eraFilter }, { worldTo: eraFilter }, { worldFrom: null, worldTo: null }]
+        }),
+    ...(chapterFilter === "all"
+      ? {}
+      : {
+          OR: [
+            { storyFromChapterId: chapterFilter },
+            { storyToChapterId: chapterFilter },
+            { storyFromChapterId: null, storyToChapterId: null }
+          ]
+        })
+  };
 
   const entity = await prisma.entity.findUnique({
     where: { id: params.id },
@@ -32,7 +53,7 @@ export default async function ArticleDetailPage({
         }
       },
       overlays: {
-        where: viewpoint === "canon" ? undefined : { viewpointId: viewpoint },
+        where: overlayWhere,
         include: {
           revisions: { orderBy: { createdAt: "desc" } }
         }
@@ -134,6 +155,22 @@ export default async function ArticleDetailPage({
               <input name="viewpointId" />
             </label>
             <label>
+              World from (era/date)
+              <input name="worldFrom" />
+            </label>
+            <label>
+              World to (era/date)
+              <input name="worldTo" />
+            </label>
+            <label>
+              Story from chapter ID
+              <input name="storyFromChapterId" />
+            </label>
+            <label>
+              Story to chapter ID
+              <input name="storyToChapterId" />
+            </label>
+            <label>
               Body (Markdown)
               <textarea name="bodyMd" rows={6} />
             </label>
@@ -149,6 +186,12 @@ export default async function ArticleDetailPage({
               <li key={overlay.id} className="panel">
                 <strong>{overlay.title}</strong>
                 <div className="muted">Truth: {overlay.truthFlag}</div>
+                <form action="/api/archive" method="post">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <input type="hidden" name="targetType" value="overlay" />
+                  <input type="hidden" name="targetId" value={overlay.id} />
+                  <button type="submit" className="link-button">Archive overlay</button>
+                </form>
                 <ul>
                   {overlay.revisions.map((rev) => (
                     <li key={rev.id} className="list-row">

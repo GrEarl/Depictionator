@@ -27,10 +27,17 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
-  const review = await prisma.reviewRequest.update({
-    where: { id: reviewId },
-    data: { status: "rejected" },
+  const review = await prisma.reviewRequest.findFirst({
+    where: { id: reviewId, workspaceId },
     include: { revision: true }
+  });
+  if (!review) {
+    return apiError("Review not found", 404);
+  }
+
+  await prisma.reviewRequest.update({
+    where: { id: reviewId },
+    data: { status: "rejected" }
   });
 
   await prisma.articleRevision.update({

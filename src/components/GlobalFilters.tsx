@@ -3,13 +3,17 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useGlobalFilters } from "./GlobalFilterProvider";
 
-const ERA_OPTIONS = [{ value: "all", label: "All Eras" }];
+type Option = { value: string; label: string };
 
-const CHAPTER_OPTIONS = [{ value: "all", label: "All Chapters" }];
-
-const VIEWPOINT_OPTIONS = [{ value: "canon", label: "Omni (Canon)" }];
-
-export function GlobalFilters() {
+export function GlobalFilters({
+  eras,
+  chapters,
+  viewpoints
+}: {
+  eras: Option[];
+  chapters: Option[];
+  viewpoints: Option[];
+}) {
   const router = useRouter();
   const params = useSearchParams();
   const { eraId, chapterId, viewpointId, mode, setFilters } = useGlobalFilters();
@@ -34,7 +38,7 @@ export function GlobalFilters() {
             updateUrl({ eraId: event.target.value });
           }}
         >
-          {ERA_OPTIONS.map((option) => (
+          {eras.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -50,7 +54,7 @@ export function GlobalFilters() {
             updateUrl({ chapterId: event.target.value });
           }}
         >
-          {CHAPTER_OPTIONS.map((option) => (
+          {chapters.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>
@@ -66,7 +70,7 @@ export function GlobalFilters() {
             updateUrl({ viewpointId: event.target.value });
           }}
         >
-          {VIEWPOINT_OPTIONS.map((option) => (
+          {viewpoints.map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>

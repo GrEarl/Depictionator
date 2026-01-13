@@ -29,6 +29,23 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  if (targetType === "base") {
+    const article = await prisma.article.findFirst({
+      where: { entityId: articleId, workspaceId }
+    });
+    if (!article) {
+      return apiError("Article not found", 404);
+    }
+  }
+  if (targetType === "overlay") {
+    const overlay = await prisma.articleOverlay.findFirst({
+      where: { id: overlayId, workspaceId, softDeletedAt: null }
+    });
+    if (!overlay) {
+      return apiError("Overlay not found", 404);
+    }
+  }
+
   const revision = await prisma.articleRevision.create({
     data: {
       workspaceId,

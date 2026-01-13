@@ -17,33 +17,32 @@ Key decisions:
 - Add map visualization primitives via MarkerStyle + event/location types for shape/color differentiation.
 
 State:
-- In progress (major CRUD coverage added; remaining features still pending).
+- In progress (expanded CRUD + filtering + soft-delete/restore coverage; remaining gaps still pending).
 
 Done:
-- Added LLM logging model and LLM execute endpoint + global panel.
-- Added Articles CRUD (entity create/archive, base/overlay drafts, review submit/approve/reject) with minimal UI.
-- Added Timeline CRUD (timelines, eras, chapters, events) with minimal UI.
-- Added Map CRUD (maps, pins, paths) with marker styles UI.
-- Added notifications, watch toggle, read-state endpoints + dashboard notification list.
-- Added asset upload endpoint (local storage) and settings UI.
-- Added PDF export endpoint using Puppeteer and settings UI.
-- Updated global filters to sync to URL.
-- Installed Puppeteer, ran prisma generate and lint successfully.
+- Added soft-delete fields across major models (overlays, viewpoints, timelines, eras, chapters, pins, paths, assets, marker styles).
+- Added archive/restore API routes with workspace-scoped safety checks.
+- Added more robust CRUD validation for revisions/reviews/events/maps/pins/paths.
+- Added review assignments endpoint + UI; watcher/notification helpers + watch/read endpoints.
+- Added global filter options sourced from DB; filters now sync via URL and apply to maps/timeline/overlays.
+- Added PDF export with credits inclusion and LLM panel endpoint updates.
+- Added marker-style, map, pin, path, timeline archive/restore controls in UI.
+- Ran prisma generate and lint successfully.
 
 Now:
-- Continue implementing remaining AGENTS.md features: RBAC enforcement across all endpoints, audit logs for all mutations, overlays filtering by time/chapters, diff/history UI, watch/notification triggers on updates, PDF credit inclusion, LLM exec allowlist, and any missing CRUD.
+- Finish remaining AGENTS.md requirements: complete CRUD (updates), review comments UI, audit coverage for all mutations, link entities to maps/events, and strengthen filter consistency.
 
 Next:
-- Add missing CRUD for Viewpoints listing, Entities updates, Map/Event linking, Review assignments/comments UI, and soft-delete safeguards.
-- Ensure global filter affects map/timeline overlays consistently.
+- Implement update/edit endpoints for core models and minimal UI to edit existing records.
+- Add PDF credit aggregation improvements and LLM allowlist enforcement.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
 - prisma/schema.prisma
-- src/lib/api.ts, src/lib/rbac.ts, src/lib/audit.ts, src/lib/workspaces.ts, src/lib/forms.ts, src/lib/notifications.ts
-- src/app/(app)/* pages, src/app/api/* (articles, reviews, maps, timelines, markers, assets, pdf, llm)
-- src/components/LlmPanel.tsx, GlobalFilters, GlobalFilterProvider
-- package.json, package-lock.json, README.md, .env.example, docker-compose.yml
+- src/lib/* (api, rbac, audit, notifications, forms)
+- src/app/(app)/* pages (articles/maps/timeline/reviews/settings)
+- src/app/api/* (archive/restore, CRUD, llm, pdf)
+- src/components/*
 - npx prisma generate, npm run lint

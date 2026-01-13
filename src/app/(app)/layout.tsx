@@ -3,6 +3,7 @@ import { GlobalFilterProvider } from "@/components/GlobalFilterProvider";
 import { GlobalFilters } from "@/components/GlobalFilters";
 import { LlmPanel } from "@/components/LlmPanel";
 import { getCurrentSession, requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 
 export default async function AppLayout({
   children
@@ -11,6 +12,25 @@ export default async function AppLayout({
 }) {
   const user = await requireUser();
   const session = await getCurrentSession();
+  const workspaceId = session?.workspace?.id;
+
+  const [eras, chapters, viewpoints] = workspaceId
+    ? await Promise.all([
+        prisma.era.findMany({ where: { workspaceId, softDeletedAt: null }, orderBy: { sortKey: "asc" } }),
+        prisma.chapter.findMany({ where: { workspaceId, softDeletedAt: null }, orderBy: { orderIndex: "asc" } }),
+        prisma.viewpoint.findMany({ where: { workspaceId, softDeletedAt: null }, orderBy: { createdAt: "asc" } })
+      ])
+    : [[], [], []];
+
+  const eraOptions = [{ value: "all", label: "All Eras" }].concat(
+    eras.map((era) => ({ value: era.id, label: era.name }))
+  );
+  const chapterOptions = [{ value: "all", label: "All Chapters" }].concat(
+    chapters.map((chapter) => ({ value: chapter.id, label: chapter.name }))
+  );
+  const viewpointOptions = [{ value: "canon", label: "Omni (Canon)" }].concat(
+    viewpoints.map((viewpoint) => ({ value: viewpoint.id, label: viewpoint.name }))
+  );
 
   return (
     <GlobalFilterProvider>
@@ -37,7 +57,7 @@ export default async function AppLayout({
             </form>
           </div>
         </header>
-        <GlobalFilters />
+        <GlobalFilters eras={eraOptions} chapters={chapterOptions} viewpoints={viewpointOptions} />
         <div className="app-body">{children}</div>
         <LlmPanel workspaceId={session?.workspace?.id} />
       </div>

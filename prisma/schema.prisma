@@ -287,6 +287,7 @@ model ArticleOverlay {
   activeRevisionId     String? @unique
   createdAt            DateTime   @default(now())
   updatedAt            DateTime   @updatedAt
+  softDeletedAt        DateTime?
 
   entity        Entity     @relation(fields: [entityId], references: [id])
   workspace     Workspace  @relation(fields: [workspaceId], references: [id])
@@ -337,6 +338,7 @@ model Viewpoint {
   name        String
   description String?
   createdAt   DateTime      @default(now())
+  softDeletedAt DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   entity    Entity?   @relation(fields: [entityId], references: [id])
@@ -352,6 +354,7 @@ model Timeline {
   workspaceId String
   type        TimelineType
   name        String
+  softDeletedAt DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   events    Event[]
@@ -403,6 +406,7 @@ model Era {
   worldStart  String?
   worldEnd    String?
   sortKey     Int
+  softDeletedAt DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
 
@@ -415,6 +419,7 @@ model Chapter {
   name        String
   orderIndex  Int
   description String?
+  softDeletedAt DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   entities  Entity[]
@@ -476,6 +481,7 @@ model Pin {
   markerShape       MarkerShape?
   markerColor       String?
   markerStyleId     String?
+  softDeletedAt     DateTime?
 
   map        Map       @relation(fields: [mapId], references: [id])
   workspace  Workspace @relation(fields: [workspaceId], references: [id])
@@ -507,6 +513,7 @@ model Path {
   relatedEntityIds  String[]
   relatedEventId    String?
   markerStyleId     String?
+  softDeletedAt     DateTime?
 
   map        Map       @relation(fields: [mapId], references: [id])
   workspace  Workspace @relation(fields: [workspaceId], references: [id])
@@ -536,6 +543,7 @@ model Asset {
   licenseUrl      String?
   attributionText String?
   retrievedAt     DateTime?
+  softDeletedAt   DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   createdBy User? @relation("AssetCreatedBy", fields: [createdById], references: [id])
@@ -555,6 +563,7 @@ model MarkerStyle {
   color        String
   iconKey      String?
   createdAt    DateTime     @default(now())
+  softDeletedAt DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   pins      Pin[]

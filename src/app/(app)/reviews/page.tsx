@@ -29,6 +29,15 @@ export default async function ReviewsPage() {
                   <div className="muted">Status: {review.revision.status}</div>
                 </div>
                 <div className="review-actions">
+                  <form action="/api/reviews/assign" method="post" className="form-grid">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="reviewId" value={review.id} />
+                    <label>
+                      Assign reviewer ID
+                      <input name="reviewerId" />
+                    </label>
+                    <button type="submit" className="link-button">Assign</button>
+                  </form>
                   <form action="/api/reviews/approve" method="post">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
                     <input type="hidden" name="reviewId" value={review.id} />

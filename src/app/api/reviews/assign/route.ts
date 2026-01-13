@@ -13,30 +13,34 @@ export async function POST(request: Request) {
 
   const form = await request.formData();
   const workspaceId = String(form.get("workspaceId") ?? "");
-  const entityId = String(form.get("entityId") ?? "");
+  const reviewId = String(form.get("reviewId") ?? "");
+  const reviewerId = String(form.get("reviewerId") ?? "");
 
-  if (!workspaceId || !entityId) {
+  if (!workspaceId || !reviewId || !reviewerId) {
     return apiError("Missing fields", 400);
   }
 
   try {
-    await requireWorkspaceAccess(session.userId, workspaceId, "editor");
+    await requireWorkspaceAccess(session.userId, workspaceId, "admin");
   } catch {
     return apiError("Forbidden", 403);
   }
 
-  await prisma.entity.update({
-    where: { id: entityId, workspaceId },
-    data: { softDeletedAt: new Date(), updatedById: session.userId }
+  await prisma.reviewAssignment.create({
+    data: {
+      reviewRequestId: reviewId,
+      reviewerId
+    }
   });
 
   await logAudit({
     workspaceId,
     actorUserId: session.userId,
-    action: "delete",
-    targetType: "entity",
-    targetId: entityId
+    action: "assign_reviewer",
+    targetType: "review",
+    targetId: reviewId,
+    meta: { reviewerId }
   });
 
-  return NextResponse.redirect(new URL("/app/articles", request.url));
+  return NextResponse.redirect(new URL("/app/reviews", request.url));
 }

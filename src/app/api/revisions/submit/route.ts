@@ -25,6 +25,13 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  const revision = await prisma.articleRevision.findFirst({
+    where: { id: revisionId, workspaceId }
+  });
+  if (!revision) {
+    return apiError("Revision not found", 404);
+  }
+
   await prisma.articleRevision.update({
     where: { id: revisionId },
     data: { status: "submitted" }

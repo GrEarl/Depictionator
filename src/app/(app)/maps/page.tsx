@@ -38,19 +38,73 @@ const LOCATION_TYPES = [
 
 const SHAPES = ["circle", "square", "diamond", "triangle", "hex", "star"];
 
-export default async function MapsPage() {
+type SearchParams = { [key: string]: string | string[] | undefined };
+
+export default async function MapsPage({ searchParams }: { searchParams: SearchParams }) {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
+  const eraFilter = String(searchParams.era ?? "all");
+  const chapterFilter = String(searchParams.chapter ?? "all");
+  const viewpointFilter = String(searchParams.viewpoint ?? "canon");
+  const mode = String(searchParams.mode ?? "canon");
+
+  const viewpointCondition =
+    mode === "canon"
+      ? { viewpointId: null }
+      : mode === "viewpoint"
+        ? { viewpointId: viewpointFilter === "canon" ? null : viewpointFilter }
+        : { OR: [{ viewpointId: null }, { viewpointId: viewpointFilter === "canon" ? null : viewpointFilter }] };
+
+  const worldCondition =
+    eraFilter === "all"
+      ? {}
+      : {
+          OR: [{ worldFrom: eraFilter }, { worldTo: eraFilter }, { worldFrom: null, worldTo: null }]
+        };
+
+  const storyCondition =
+    chapterFilter === "all"
+      ? {}
+      : {
+          OR: [
+            { storyFromChapterId: chapterFilter },
+            { storyToChapterId: chapterFilter },
+            { storyFromChapterId: null, storyToChapterId: null }
+          ]
+        };
   const markerStyles = workspace
     ? await prisma.markerStyle.findMany({
-        where: { workspaceId: workspace.id },
+        where: { workspaceId: workspace.id, softDeletedAt: null },
         orderBy: { createdAt: "desc" }
       })
     : [];
   const maps = workspace
     ? await prisma.map.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
-        include: { pins: true, paths: true },
+        include: {
+          pins: {
+            where: {
+              softDeletedAt: null,
+              ...viewpointCondition,
+              ...worldCondition,
+              ...storyCondition
+            }
+          },
+          paths: {
+            where: {
+              softDeletedAt: null,
+              ...viewpointCondition,
+              ...worldCondition,
+              ...storyCondition
+            }
+          }
+        },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
+  const archivedMaps = workspace
+    ? await prisma.map.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
         orderBy: { createdAt: "desc" }
       })
     : [];
@@ -197,6 +251,36 @@ export default async function MapsPage() {
                 </select>
               </label>
               <label>
+                Truth flag
+                <select name="truthFlag">
+                  <option value="canonical">canonical</option>
+                  <option value="rumor">rumor</option>
+                  <option value="mistaken">mistaken</option>
+                  <option value="propaganda">propaganda</option>
+                  <option value="unknown">unknown</option>
+                </select>
+              </label>
+              <label>
+                Viewpoint ID
+                <input name="viewpointId" />
+              </label>
+              <label>
+                World from
+                <input name="worldFrom" />
+              </label>
+              <label>
+                World to
+                <input name="worldTo" />
+              </label>
+              <label>
+                Story from chapter ID
+                <input name="storyFromChapterId" />
+              </label>
+              <label>
+                Story to chapter ID
+                <input name="storyToChapterId" />
+              </label>
+              <label>
                 Marker style
                 <select name="markerStyleId">
                   <option value="">--</option>
@@ -253,6 +337,36 @@ export default async function MapsPage() {
                 </select>
               </label>
               <label>
+                Truth flag
+                <select name="truthFlag">
+                  <option value="canonical">canonical</option>
+                  <option value="rumor">rumor</option>
+                  <option value="mistaken">mistaken</option>
+                  <option value="propaganda">propaganda</option>
+                  <option value="unknown">unknown</option>
+                </select>
+              </label>
+              <label>
+                Viewpoint ID
+                <input name="viewpointId" />
+              </label>
+              <label>
+                World from
+                <input name="worldFrom" />
+              </label>
+              <label>
+                World to
+                <input name="worldTo" />
+              </label>
+              <label>
+                Story from chapter ID
+                <input name="storyFromChapterId" />
+              </label>
+              <label>
+                Story to chapter ID
+                <input name="storyToChapterId" />
+              </label>
+              <label>
                 Stroke color
                 <input name="strokeColor" />
               </label>
@@ -281,8 +395,31 @@ export default async function MapsPage() {
               <div key={map.id} className="panel">
                 <strong>{map.title}</strong>
                 <div className="muted">Pins: {map.pins.length} · Paths: {map.paths.length}</div>
+                <form action="/api/archive" method="post">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <input type="hidden" name="targetType" value="map" />
+                  <input type="hidden" name="targetId" value={map.id} />
+                  <button type="submit" className="link-button">Archive</button>
+                </form>
               </div>
             ))}
+          </section>
+          <section className="panel">
+            <h3>Archived maps</h3>
+            <ul>
+              {archivedMaps.map((map) => (
+                <li key={map.id} className="list-row">
+                  <span>{map.title}</span>
+                  <form action="/api/restore" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="map" />
+                    <input type="hidden" name="targetId" value={map.id} />
+                    <button type="submit" className="link-button">Restore</button>
+                  </form>
+                </li>
+              ))}
+              {archivedMaps.length === 0 && <li className="muted">No archived maps.</li>}
+            </ul>
           </section>
         </>
       )}

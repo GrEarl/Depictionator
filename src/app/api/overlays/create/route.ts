@@ -17,6 +17,10 @@ export async function POST(request: Request) {
   const title = String(form.get("title") ?? "").trim();
   const truthFlag = String(form.get("truthFlag") ?? "canonical");
   const viewpointId = String(form.get("viewpointId") ?? "");
+  const worldFrom = String(form.get("worldFrom") ?? "").trim();
+  const worldTo = String(form.get("worldTo") ?? "").trim();
+  const storyFromChapterId = String(form.get("storyFromChapterId") ?? "").trim();
+  const storyToChapterId = String(form.get("storyToChapterId") ?? "").trim();
   const bodyMd = String(form.get("bodyMd") ?? "");
   const changeSummary = String(form.get("changeSummary") ?? "Overlay draft");
 
@@ -30,13 +34,24 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  const entity = await prisma.entity.findFirst({
+    where: { id: entityId, workspaceId, softDeletedAt: null }
+  });
+  if (!entity) {
+    return apiError("Entity not found", 404);
+  }
+
   const overlay = await prisma.articleOverlay.create({
     data: {
       workspaceId,
       entityId,
       viewpointId: viewpointId || null,
       title,
-      truthFlag
+      truthFlag,
+      worldFrom: worldFrom || null,
+      worldTo: worldTo || null,
+      storyFromChapterId: storyFromChapterId || null,
+      storyToChapterId: storyToChapterId || null
     }
   });
 

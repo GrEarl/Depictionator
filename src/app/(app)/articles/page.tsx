@@ -25,6 +25,12 @@ export default async function ArticlesPage() {
         orderBy: { updatedAt: "desc" }
       })
     : [];
+  const archivedEntities = workspace
+    ? await prisma.entity.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
+        orderBy: { updatedAt: "desc" }
+      })
+    : [];
 
   return (
     <div className="panel">
@@ -89,14 +95,32 @@ export default async function ArticlesPage() {
                     <Link href={`/app/articles/${entity.id}`}>{entity.title}</Link>
                     <span className="muted"> · {entity.type}</span>
                   </div>
-                  <form action="/api/articles/delete" method="post">
+                  <form action="/api/archive" method="post">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="entityId" value={entity.id} />
+                    <input type="hidden" name="targetType" value="entity" />
+                    <input type="hidden" name="targetId" value={entity.id} />
                     <button type="submit" className="link-button">Archive</button>
                   </form>
                 </li>
               ))}
               {entities.length === 0 && <li className="muted">No entities yet.</li>}
+            </ul>
+          </section>
+          <section className="panel">
+            <h3>Archived entities</h3>
+            <ul>
+              {archivedEntities.map((entity) => (
+                <li key={entity.id} className="list-row">
+                  <span>{entity.title}</span>
+                  <form action="/api/restore" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="targetType" value="entity" />
+                    <input type="hidden" name="targetId" value={entity.id} />
+                    <button type="submit" className="link-button">Restore</button>
+                  </form>
+                </li>
+              ))}
+              {archivedEntities.length === 0 && <li className="muted">No archived entities.</li>}
             </ul>
           </section>
         </>
