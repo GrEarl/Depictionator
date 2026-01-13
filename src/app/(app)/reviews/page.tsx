@@ -1,8 +1,55 @@
-﻿export default function ReviewsPage() {
+﻿import { requireUser } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { getActiveWorkspace } from "@/lib/workspaces";
+
+export default async function ReviewsPage() {
+  const user = await requireUser();
+  const workspace = await getActiveWorkspace(user.id);
+  const reviews = workspace
+    ? await prisma.reviewRequest.findMany({
+        where: { workspaceId: workspace.id, status: "open" },
+        include: { revision: true },
+        orderBy: { requestedAt: "desc" }
+      })
+    : [];
+
   return (
     <div className="panel">
       <h2>Reviews</h2>
-      <p className="muted">Review requests, approvals, and comments will appear here.</p>
+      {!workspace && <p className="muted">Select a workspace to review drafts.</p>}
+
+      {workspace && (
+        <section className="panel">
+          <h3>Open review requests</h3>
+          <ul>
+            {reviews.map((review) => (
+              <li key={review.id} className="panel">
+                <div>
+                  Revision: {review.revisionId}
+                  <div className="muted">Status: {review.revision.status}</div>
+                </div>
+                <div className="review-actions">
+                  <form action="/api/reviews/approve" method="post">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="reviewId" value={review.id} />
+                    <button type="submit" className="link-button">Approve</button>
+                  </form>
+                  <form action="/api/reviews/reject" method="post" className="form-grid">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="reviewId" value={review.id} />
+                    <label>
+                      Reject reason
+                      <input name="reason" />
+                    </label>
+                    <button type="submit" className="link-button">Reject</button>
+                  </form>
+                </div>
+              </li>
+            ))}
+            {reviews.length === 0 && <li className="muted">No pending reviews.</li>}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

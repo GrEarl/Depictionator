@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { GlobalFilterProvider } from "@/components/GlobalFilterProvider";
 import { GlobalFilters } from "@/components/GlobalFilters";
+import { LlmPanel } from "@/components/LlmPanel";
 import { getCurrentSession, requireUser } from "@/lib/auth";
 
 export default async function AppLayout({
@@ -38,6 +39,7 @@ export default async function AppLayout({
         </header>
         <GlobalFilters />
         <div className="app-body">{children}</div>
+        <LlmPanel workspaceId={session?.workspace?.id} />
       </div>
     </GlobalFilterProvider>
   );

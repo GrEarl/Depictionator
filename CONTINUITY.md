@@ -1,5 +1,6 @@
 ﻿Goal (incl. success criteria):
 - Fully implement all AGENTS.md requirements into a usable system (backend + minimal UI), with robust, foolproof behavior.
+- Add map/diagram visualization primitives (shape/color/type) and other necessary classification features.
 - Use git for versioning of changes in this workspace.
 - Maintain CONTINUITY.md updates each turn until the overall work is complete.
 
@@ -16,28 +17,33 @@ Key decisions:
 - Add map visualization primitives via MarkerStyle + event/location types for shape/color differentiation.
 
 State:
-- In progress (foundation complete; full feature implementation underway).
+- In progress (major CRUD coverage added; remaining features still pending).
 
 Done:
-- Added RBAC, audit, API helpers (rbac.ts, audit.ts, api.ts).
-- Extended schema with EventType/LocationType/MarkerStyle and marker fields for Event/Pin/Path.
-- Added marker-style CRUD endpoints and minimal UI in Maps page to manage shapes/colors.
-- Updated styles and workspace helper; ran prisma generate after schema changes.
+- Added LLM logging model and LLM execute endpoint + global panel.
+- Added Articles CRUD (entity create/archive, base/overlay drafts, review submit/approve/reject) with minimal UI.
+- Added Timeline CRUD (timelines, eras, chapters, events) with minimal UI.
+- Added Map CRUD (maps, pins, paths) with marker styles UI.
+- Added notifications, watch toggle, read-state endpoints + dashboard notification list.
+- Added asset upload endpoint (local storage) and settings UI.
+- Added PDF export endpoint using Puppeteer and settings UI.
+- Updated global filters to sync to URL.
+- Installed Puppeteer, ran prisma generate and lint successfully.
 
 Now:
-- Build CRUD/workflows for Articles/Overlays/Revisions, Maps/Pins/Paths, Timelines/Events/Eras/Chapters, Reviews, Notifications, ReadState, Assets, PDF, LLM logging.
+- Continue implementing remaining AGENTS.md features: RBAC enforcement across all endpoints, audit logs for all mutations, overlays filtering by time/chapters, diff/history UI, watch/notification triggers on updates, PDF credit inclusion, LLM exec allowlist, and any missing CRUD.
 
 Next:
-- Implement server-side RBAC enforcement and audit logging across all mutations.
-- Add minimal UI pages/forms for CRUD and workflows.
+- Add missing CRUD for Viewpoints listing, Entities updates, Map/Event linking, Review assignments/comments UI, and soft-delete safeguards.
+- Ensure global filter affects map/timeline overlays consistently.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
 - prisma/schema.prisma
-- src/lib/api.ts, src/lib/rbac.ts, src/lib/audit.ts, src/lib/workspaces.ts
-- src/app/(app)/maps/page.tsx
-- src/app/api/marker-styles/*
-- src/app/globals.css
-- npx prisma generate
+- src/lib/api.ts, src/lib/rbac.ts, src/lib/audit.ts, src/lib/workspaces.ts, src/lib/forms.ts, src/lib/notifications.ts
+- src/app/(app)/* pages, src/app/api/* (articles, reviews, maps, timelines, markers, assets, pdf, llm)
+- src/components/LlmPanel.tsx, GlobalFilters, GlobalFilterProvider
+- package.json, package-lock.json, README.md, .env.example, docker-compose.yml
+- npx prisma generate, npm run lint

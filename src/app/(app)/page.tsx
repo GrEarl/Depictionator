@@ -9,6 +9,11 @@ export default async function DashboardPage() {
     where: { userId: user.id },
     include: { workspace: true }
   });
+  const notifications = await prisma.notification.findMany({
+    where: { userId: user.id, readAt: null },
+    orderBy: { createdAt: "desc" },
+    take: 10
+  });
 
   return (
     <div className="dashboard">
@@ -25,6 +30,22 @@ export default async function DashboardPage() {
             </li>
           ))}
           {memberships.length === 0 && <li className="muted">No workspaces yet.</li>}
+        </ul>
+      </section>
+
+      <section className="panel">
+        <h2>Notifications</h2>
+        <ul>
+          {notifications.map((note) => (
+            <li key={note.id} className="list-row">
+              <span>{note.type}</span>
+              <form action="/api/notifications/read" method="post">
+                <input type="hidden" name="notificationId" value={note.id} />
+                <button type="submit" className="link-button">Mark read</button>
+              </form>
+            </li>
+          ))}
+          {notifications.length === 0 && <li className="muted">No unread notifications.</li>}
         </ul>
       </section>
 

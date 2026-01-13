@@ -47,6 +47,13 @@ export default async function MapsPage() {
         orderBy: { createdAt: "desc" }
       })
     : [];
+  const maps = workspace
+    ? await prisma.map.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: null },
+        include: { pins: true, paths: true },
+        orderBy: { createdAt: "desc" }
+      })
+    : [];
 
   return (
     <div className="panel">
@@ -138,11 +145,144 @@ export default async function MapsPage() {
           </section>
 
           <section className="panel">
-            <h3>Map layers & pins</h3>
-            <p className="muted">
-              Map hierarchy, pins, and paths will appear here. Marker styles above control shapes/colors
-              by event type or location type.
-            </p>
+            <h3>Create map</h3>
+            <form action="/api/maps/create" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Title
+                <input name="title" required />
+              </label>
+              <label>
+                Parent map ID (optional)
+                <input name="parentMapId" />
+              </label>
+              <button type="submit">Add map</button>
+            </form>
+          </section>
+
+          <section className="panel">
+            <h3>Create pin</h3>
+            <form action="/api/pins/create" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Map
+                <select name="mapId" required>
+                  {maps.map((map) => (
+                    <option key={map.id} value={map.id}>
+                      {map.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                X
+                <input name="x" type="number" step="0.1" required />
+              </label>
+              <label>
+                Y
+                <input name="y" type="number" step="0.1" required />
+              </label>
+              <label>
+                Label
+                <input name="label" />
+              </label>
+              <label>
+                Location type
+                <select name="locationType">
+                  {LOCATION_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Marker style
+                <select name="markerStyleId">
+                  <option value="">--</option>
+                  {markerStyles.map((style) => (
+                    <option key={style.id} value={style.id}>
+                      {style.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Override shape (optional)
+                <select name="markerShape">
+                  <option value="">--</option>
+                  {SHAPES.map((shape) => (
+                    <option key={shape} value={shape}>
+                      {shape}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Override color (optional)
+                <input name="markerColor" />
+              </label>
+              <button type="submit">Add pin</button>
+            </form>
+          </section>
+
+          <section className="panel">
+            <h3>Create path</h3>
+            <form action="/api/paths/create" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Map
+                <select name="mapId" required>
+                  {maps.map((map) => (
+                    <option key={map.id} value={map.id}>
+                      {map.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                Polyline JSON
+                <textarea name="polyline" rows={3} defaultValue="[]" />
+              </label>
+              <label>
+                Arrow style
+                <select name="arrowStyle">
+                  <option value="arrow">Arrow</option>
+                  <option value="dashed">Dashed</option>
+                  <option value="dotted">Dotted</option>
+                </select>
+              </label>
+              <label>
+                Stroke color
+                <input name="strokeColor" />
+              </label>
+              <label>
+                Stroke width
+                <input name="strokeWidth" type="number" />
+              </label>
+              <label>
+                Marker style
+                <select name="markerStyleId">
+                  <option value="">--</option>
+                  {markerStyles.map((style) => (
+                    <option key={style.id} value={style.id}>
+                      {style.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button type="submit">Add path</button>
+            </form>
+          </section>
+
+          <section className="panel">
+            <h3>Maps overview</h3>
+            {maps.map((map) => (
+              <div key={map.id} className="panel">
+                <strong>{map.title}</strong>
+                <div className="muted">Pins: {map.pins.length} · Paths: {map.paths.length}</div>
+              </div>
+            ))}
           </section>
         </>
       )}

@@ -1,6 +1,7 @@
 ﻿"use client";
 
-import { createContext, useContext, useMemo, useState } from "react";
+import { createContext, useContext, useMemo, useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 
 type DisplayMode = "canon" | "viewpoint" | "compare";
 
@@ -18,12 +19,22 @@ type FilterContextValue = FilterState & {
 const FilterContext = createContext<FilterContextValue | null>(null);
 
 export function GlobalFilterProvider({ children }: { children: React.ReactNode }) {
+  const params = useSearchParams();
   const [state, setState] = useState<FilterState>({
-    eraId: "all",
-    chapterId: "all",
-    viewpointId: "canon",
-    mode: "canon"
+    eraId: params.get("era") ?? "all",
+    chapterId: params.get("chapter") ?? "all",
+    viewpointId: params.get("viewpoint") ?? "canon",
+    mode: (params.get("mode") as DisplayMode) ?? "canon"
   });
+
+  useEffect(() => {
+    setState({
+      eraId: params.get("era") ?? "all",
+      chapterId: params.get("chapter") ?? "all",
+      viewpointId: params.get("viewpoint") ?? "canon",
+      mode: (params.get("mode") as DisplayMode) ?? "canon"
+    });
+  }, [params]);
 
   const value = useMemo(
     () => ({

@@ -42,6 +42,11 @@ curl http://localhost:3000/api/health
 docker-compose up --build
 ```
 
+## LLM
+
+- Set `GEMINI_API_KEY` and optionally `GEMINI_MODEL` for Gemini requests.
+- `CODEX_EXEC_ALLOWLIST` must be set to allow Codex CLI execution (currently stubbed for safety).
+
 ## Backups
 
 - Database (example):
@@ -54,5 +59,5 @@ pg_dump -h localhost -U postgres -d worldlore > backup.sql
 
 ## Notes
 
-- This is an MVP scaffold. Modules are wired with the global filter shell and placeholders for articles/maps/timelines.
-- The Prisma schema models all entities per `AGENTS.md`; app logic will iterate on top.
+- This is an MVP scaffold with minimal UI and full backend endpoints for core features.
+- PDF export uses Puppeteer in `/api/pdf/export`.

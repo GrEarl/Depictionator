@@ -116,6 +116,11 @@ enum MarkerTarget {
   path
 }
 
+enum LlmProvider {
+  gemini
+  codex_cli
+}
+
 enum AssetKind {
   image
   file
@@ -161,6 +166,7 @@ model User {
   mapsCreated              Map[]               @relation("MapCreatedBy")
   mapsUpdated              Map[]               @relation("MapUpdatedBy")
   assetsCreated            Asset[]             @relation("AssetCreatedBy")
+  llmLogs                  LlmLog[]
 }
 
 model Session {
@@ -201,6 +207,7 @@ model Workspace {
   paths       Path[]
   assets      Asset[]
   markerStyles MarkerStyle[]
+  llmLogs     LlmLog[]
   auditLogs   AuditLog[]
   reviewRequests ReviewRequest[]
   reviewComments ReviewComment[]
@@ -555,6 +562,22 @@ model MarkerStyle {
   paths     Path[]
 
   @@index([workspaceId, target])
+}
+
+model LlmLog {
+  id          String       @id @default(cuid())
+  workspaceId String?
+  userId      String?
+  provider    LlmProvider
+  input       Json
+  output      Json?
+  status      String
+  createdAt   DateTime     @default(now())
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+  user      User?      @relation(fields: [userId], references: [id])
+
+  @@index([workspaceId])
 }
 
 model AuditLog {
