@@ -3,7 +3,7 @@ Goal (incl. success criteria):
 - Provide map/diagram visualization primitives (shape/color/type) for clear classification.
 - Implement LLM integration switching: Gemini (AI Studio or Vertex) and GPT-5.2 via Codex CLI exec with fixed options.
 - Keep VPS-ready deployment (Docker, health, docs) and use git for versioning, with changes pushed to origin.
-- Update docs to match repo URL and deployment expectations.
+- Docs match repo URL and deployment expectations.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -19,7 +19,7 @@ Key decisions:
 - LLM panel stays as draft-only; executions logged; provider switching handled server-side.
 
 State:
-- In progress (doc URL corrections + push).
+- Ready (docs updated and pushed).
 
 Done:
 - Full Prisma schema + minimal UI/API for entities, articles, overlays, timelines, events, maps, pins, paths, eras, chapters, viewpoints, marker styles, assets.
@@ -27,17 +27,17 @@ Done:
 - Revision diff/restore, Markdown renderer + Mermaid, map viewer/editor (Leaflet) with pin/path creation.
 - Print set builder endpoint + UI, asset serving, /health endpoint, Docker entrypoint.
 - LLM provider switching (Gemini AI Studio/Vertex + GPT-5.2 via Codex CLI), UI inputs, API handling, and env/docs updates.
-- Added DEPLOY.md (Ubuntu VPS guide), README updated.
+- Added DEPLOY.md (Ubuntu VPS guide), README updated with repo URL.
 - Ran npm run lint (clean).
 - agent-browser validation: /login loads, /maps redirects to /login (no auth).
 - Docker CLI not available in environment (could not run docker compose).
-- Git push to origin: up-to-date after auth.
+- Git push to origin completed.
 
 Now:
-- Update README/DEPLOY docs to use actual repo URL.
+- No pending code tasks.
 
 Next:
-- Commit + push doc updates.
+- If needed: run docker compose on VPS and complete runtime smoke tests.
 
 Open questions (UNCONFIRMED if needed):
 - None.
@@ -45,4 +45,4 @@ Open questions (UNCONFIRMED if needed):
 Working set (files/ids/commands):
 - README.md
 - DEPLOY.md
-- git commit, git push
+- git push
