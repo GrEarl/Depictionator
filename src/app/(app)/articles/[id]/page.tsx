@@ -9,23 +9,24 @@ const TRUTH_FLAGS = ["canonical", "rumor", "mistaken", "propaganda", "unknown"];
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
-export default async function ArticleDetailPage({
-  params,
-  searchParams
-}: {
-  params: { id: string };
-  searchParams: SearchParams;
-}) {
+type PageProps = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<SearchParams>;
+};
+
+export default async function ArticleDetailPage({ params, searchParams }: PageProps) {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
   if (!workspace) {
     return <div className="panel">Select a workspace.</div>;
   }
+  const { id } = await params;
+  const resolvedSearchParams = await searchParams;
 
-  const mode = String(searchParams.mode ?? "canon");
-  const viewpoint = String(searchParams.viewpoint ?? "canon");
-  const eraFilter = String(searchParams.era ?? "all");
-  const chapterFilter = String(searchParams.chapter ?? "all");
+  const mode = String(resolvedSearchParams.mode ?? "canon");
+  const viewpoint = String(resolvedSearchParams.viewpoint ?? "canon");
+  const eraFilter = String(resolvedSearchParams.era ?? "all");
+  const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
 
   const overlayWhere = {
     ...(viewpoint === "canon" ? {} : { viewpointId: viewpoint }),
@@ -47,7 +48,7 @@ export default async function ArticleDetailPage({
   };
 
   const entity = await prisma.entity.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       article: {
         include: {
