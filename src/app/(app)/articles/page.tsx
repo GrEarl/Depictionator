@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { FilterSummary } from "@/components/FilterSummary";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
@@ -123,7 +123,7 @@ export default async function ArticlesPage() {
                 <li key={entity.id} className="list-row">
                   <div>
                     <Link href={`/articles/${entity.id}`}>{entity.title}</Link>
-                    <span className="muted"> �E {entity.type}</span>
+                    <span className="muted"> ・ {entity.type}</span>
                     {(() => {
                       const baseRevisionId = entity.article?.baseRevisionId ?? null;
                       const readState = readStateMap.get(entity.id);
@@ -166,4 +166,5 @@ export default async function ArticlesPage() {
     </div>
   );
 }
+
 

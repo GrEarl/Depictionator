@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix implicit any in articles page entity list map.
+- Fix UTF-8 encoding for articles list page to unblock Docker build.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Add explicit type annotation in entity list map.
+- Re-encode articles page as UTF-8.
 
 State:
-- In progress (patching articles page and redeploying).
+- In progress (encoding fix and redeploying).
 
 Done:
-- Fixed readState and entityIds map types.
+- Added entity map type annotations.
 
 Now:
-- Commit entity list type fix and push.
+- Commit UTF-8 fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.
