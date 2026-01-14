@@ -1,12 +1,11 @@
 ﻿import { requireWorkspaceMembership } from "@/lib/auth";
 import Link from "next/link";
 
-export default async function WorkspacePage({
-  params
-}: {
-  params: { slug: string };
-}) {
-  const membership = await requireWorkspaceMembership(params.slug);
+type PageProps = { params: Promise<{ slug: string }> };
+
+export default async function WorkspacePage({ params }: PageProps) {
+  const { slug } = await params;
+  const membership = await requireWorkspaceMembership(slug);
 
   return (
     <div className="panel">
