@@ -7,7 +7,7 @@ import { prisma } from "@/lib/db";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 type EntitySummary = {
   title: string;
-  article: { baseRevision: { bodyMd: string } | null } | null;
+  article: { baseRevision: { id: string; bodyMd: string } | null } | null;
 };
 type MapSummary = {
   title: string;
