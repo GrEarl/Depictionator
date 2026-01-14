@@ -11,7 +11,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (apply review fix, then redeploy on VPS).
+- In progress (VPS redeploy completed; awaiting further tasks).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -58,17 +58,17 @@ Done:
 - Added public/.gitkeep to satisfy Docker copy.
 - Handled Codex CLI spawn/runtime errors in streaming route.
 - Guarded Codex CLI runtime error message typing.
+- Pulled latest on VPS, rebuilt Docker image, started containers, and verified /health.
 
 Now:
-- Pull latest on VPS and rebuild Docker image.
+- Await next user request.
 
 Next:
-- Rebuild Docker image on VPS, bring up containers, then /health check.
+- UNCONFIRMED.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts
-- git commit, git push
-- ssh-mcp rebuild
+- ssh-mcp deploy commands
