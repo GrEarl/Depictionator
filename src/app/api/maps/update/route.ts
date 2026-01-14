@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
-  const data: Prisma.MapUpdateInput = {};
+  const data: Prisma.MapUncheckedUpdateInput = {};
   if (title) data.title = title;
   if (parentMapId !== null) data.parentMapId = parentMapId;
   if (imageAssetId !== null) {
