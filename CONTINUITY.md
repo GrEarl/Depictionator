@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix UTF-8 encoding for article detail page to unblock Docker build.
+- Fix implicit any in articles list readState map.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Re-encode article detail page as UTF-8.
+- Add explicit type for readState map callback.
 
 State:
-- In progress (encoding fix and redeploying).
+- In progress (patching articles page and redeploying).
 
 Done:
-- Type fixes pushed.
+- Fixed multiple PageProps/route typing issues and encoding problems.
 
 Now:
-- Commit UTF-8 fix and push.
+- Commit articles page type fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.
@@ -26,6 +26,6 @@ Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- src/app/(app)/articles/[id]/page.tsx
+- src/app/(app)/articles/page.tsx
 - git commit, git push
 - ssh-mcp rebuild

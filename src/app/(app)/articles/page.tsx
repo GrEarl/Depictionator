@@ -47,7 +47,7 @@ export default async function ArticlesPage() {
       })
     : [];
   const readStateMap = new Map(
-    readStates.map((state) => [state.targetId, state])
+    readStates.map((state: { targetId: string }) => [state.targetId, state])
   );
   const archivedEntities = workspace
     ? await prisma.entity.findMany({
