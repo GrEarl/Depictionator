@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (configuring reverse proxy for Cloudflare/HTTPS).
+- In progress (Cloudflare domain now reachable; final verification reporting).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -69,15 +69,17 @@ Done:
 - Review workflow tested (revision -> review request -> approve).
 - Notifications/read-state/watch toggle endpoints tested via API.
 - PDF export endpoint returns 200 OK.
+- Added Caddy reverse proxy; HTTPS health check returns 200 via internal.copiqta.com.
+- HTTPS register redirect sets Secure cookie and redirects to https://internal.copiqta.com/.
 
 Now:
-- Add Caddy reverse proxy, redeploy, verify https://internal.copiqta.com/health and login.
+- Report current status and any remaining gaps.
 
 Next:
 - Confirm Cloudflare 521 resolved and browser login works under HTTPS.
 
 Open questions (UNCONFIRMED if needed):
-- Cloudflare SSL mode (Full/Strict) and HTTPS availability are UNCONFIRMED.
+- Browser UI login flow via agent-browser timed out; manual browser check still UNCONFIRMED.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts
