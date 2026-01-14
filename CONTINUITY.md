@@ -32,9 +32,10 @@ Done:
 - Re-encoded multiple files to UTF-8 after PowerShell edits.
 - Replaced corrupted dashboard selection string with ASCII.
 - Fixed PDF response body typing for NextResponse.
+- Typed PDF export route assets and response body.
 
 Now:
-- Commit PDF response body fix and push.
+- Commit PDF export route fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

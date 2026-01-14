@@ -1,7 +1,16 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import puppeteer from "puppeteer";
+import { Buffer } from "node:buffer";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 import { prisma } from "@/lib/db";
+
+type AssetSummary = {
+  storageKey: string;
+  author: string | null;
+  licenseId: string | null;
+  licenseUrl: string | null;
+  sourceUrl: string | null;
+};
 
 export async function POST(request: Request) {
   let session;
@@ -27,7 +36,7 @@ export async function POST(request: Request) {
     } catch {
       return apiError("Forbidden", 403);
     }
-    const assets = await prisma.asset.findMany({
+    const assets: AssetSummary[] = await prisma.asset.findMany({
       where: { workspaceId, softDeletedAt: null },
       orderBy: { createdAt: "desc" }
     });
@@ -48,7 +57,13 @@ export async function POST(request: Request) {
   const pdf = await page.pdf({ format: "A4", printBackground: true });
   await browser.close();
 
-  return new NextResponse(pdf, {
+  const pdfBuffer = Buffer.from(pdf);
+  const pdfBody = pdfBuffer.buffer.slice(
+    pdfBuffer.byteOffset,
+    pdfBuffer.byteOffset + pdfBuffer.byteLength
+  );
+
+  return new NextResponse(pdfBody, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": "attachment; filename=export.pdf"
