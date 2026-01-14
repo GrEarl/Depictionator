@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Perform end-to-end smoke checks against AGENTS.md features (register/login/workspace/entity/article/map/timeline/review/LLM/PDF).
+- Make internal.copiqta.com reachable via Cloudflare proxy with HTTPS and working app.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (smoke checks largely complete; final reporting pending).
+- In progress (configuring reverse proxy for Cloudflare/HTTPS).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -71,13 +71,13 @@ Done:
 - PDF export endpoint returns 200 OK.
 
 Now:
-- Summarize smoke check results and report any remaining gaps.
+- Add Caddy reverse proxy, redeploy, verify https://internal.copiqta.com/health and login.
 
 Next:
-- Resume UI/API smoke checks after redeploy.
+- Confirm Cloudflare 521 resolved and browser login works under HTTPS.
 
 Open questions (UNCONFIRMED if needed):
-- Browser UI flows over HTTPS (Secure cookie) are UNCONFIRMED.
+- Cloudflare SSL mode (Full/Strict) and HTTPS availability are UNCONFIRMED.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts
