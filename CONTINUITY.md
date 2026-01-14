@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix TypeScript types in article detail by introducing shared revision/overlay types.
+- Fix UTF-8 encoding for article detail page to unblock Docker build.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Introduce RevisionSummary/Overlay types to remove implicit any and missing fields.
+- Re-encode article detail page as UTF-8.
 
 State:
-- In progress (patching and redeploying).
+- In progress (encoding fix and redeploying).
 
 Done:
-- Prior PageProps and route param fixes pushed.
+- Type fixes pushed.
 
 Now:
-- Commit article detail type fixes and push.
+- Commit UTF-8 fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.

@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+Ôªøimport { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
@@ -194,7 +194,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
               {entity.article?.revisions.map((rev: RevisionSummary) => (
                 <li key={rev.id} className="list-row">
                   <div>
-                    <a href={`/revisions/${rev.id}`}>{rev.status} ÅE {rev.changeSummary}</a>
+                    <a href={`/revisions/${rev.id}`}>{rev.status} „Éª {rev.changeSummary}</a>
                   </div>
                   {rev.status === "draft" && (
                     <form action="/api/revisions/submit" method="post">
@@ -286,7 +286,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
                     {overlay.revisions.map((rev: RevisionSummary) => (
                       <li key={rev.id} className="list-row">
                         <div>
-                          <a href={`/revisions/${rev.id}`}>{rev.status} ÅE {rev.changeSummary}</a>
+                          <a href={`/revisions/${rev.id}`}>{rev.status} „Éª {rev.changeSummary}</a>
                         </div>
                         {rev.status === "draft" && (
                           <form action="/api/revisions/submit" method="post">
@@ -323,5 +323,6 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     </div>
   );
 }
+
 
 
