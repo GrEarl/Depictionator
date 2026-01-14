@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix TypeScript implicit any for overlay list maps in article detail.
+- Fix overlay list type annotations to include truthFlag.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Add explicit overlay type annotations in list maps.
+- Expand overlay type annotation to include truthFlag.
 
 State:
-- In progress (patching article page and redeploying).
+- In progress (patching and redeploying).
 
 Done:
-- Fixed revision map types.
+- Added overlay and revision annotations earlier.
 
 Now:
-- Commit overlay list annotation fix and push.
+- Commit overlay truthFlag type fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.
