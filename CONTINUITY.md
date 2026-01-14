@@ -56,9 +56,9 @@ Done:
 - Cast mention notification payload to Prisma JSON input.
 - Cast notification payloads to Prisma JSON input.
 - Added public/.gitkeep to satisfy Docker copy.
+- Handled Codex CLI spawn/runtime errors in streaming route.
 
 Now:
-- Apply Codex CLI spawn error handling fix in LLM execute route, commit/push.
 - Pull latest on VPS and rebuild Docker image.
 
 Next:
