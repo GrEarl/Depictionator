@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix Codex CLI streaming spawn error handling regression.
+- Add Wikipedia import fallback that can synthesize from non-JP languages using LLM when JP is missing, with source attribution.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -10,11 +10,15 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Codex CLI spawn error handling fix pushed; pending redeploy verification).
+- In progress (LLM-assisted multi-language Wikipedia import implemented; pending commit).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
 - Committed and pushed Codex CLI spawn error handling fix.
+- Added multi-language Wikipedia fallback resolution helpers.
+- Added LLM helper for Gemini/Codex text generation.
+- Updated Wikipedia article import to synthesize across languages via LLM.
+- Added wiki LLM env settings to .env.example.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -84,7 +88,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Redeploy and re-verify after push.
+- Commit/push Wikipedia LLM fallback changes.
 
 Next:
 - Redeploy and re-verify after push.
@@ -93,4 +97,7 @@ Open questions (UNCONFIRMED if needed):
 - Gemini UI/UX implementation pending.
 
 Working set (files/ids/commands):
-- src/app/api/llm/execute/route.ts
+- src/lib/wiki.ts
+- src/lib/llm.ts
+- src/app/api/wiki/import/article/route.ts
+- .env.example

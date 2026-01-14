@@ -27,13 +27,19 @@ type WikiImageInfo = {
   attributionText: string | null;
 };
 
+type WikiLangLink = {
+  lang: string;
+  title: string;
+  url: string;
+};
+
 const DEFAULT_WIKI_LANG = process.env.WIKI_DEFAULT_LANG ?? "en";
 
 const WIKI_AUTHOR = "Wikipedia contributors";
 const WIKI_LICENSE_ID = "CC BY-SA 4.0";
 const WIKI_LICENSE_URL = "https://creativecommons.org/licenses/by-sa/4.0/";
 
-function normalizeLang(lang?: string | null): string {
+export function normalizeLang(lang?: string | null): string {
   const raw = (lang ?? "").trim().toLowerCase();
   if (raw === "commons") return "commons";
   if (raw && /^[a-z]{2,3}(-[a-z0-9]+)?$/.test(raw)) return raw;
@@ -145,6 +151,84 @@ export async function fetchWikiPage(
     wikitext,
     images: (page.images ?? []).map((img) => img.title)
   };
+}
+
+export async function fetchWikiPageBySearch(
+  lang: string | null | undefined,
+  query: string
+): Promise<WikiPageResult | null> {
+  const results = await searchWiki(query, lang);
+  if (results.length === 0) return null;
+  const top = results[0];
+  return fetchWikiPage(lang, { pageId: String(top.pageId), title: top.title });
+}
+
+export async function fetchWikiLangLinks(
+  lang: string | null | undefined,
+  pageId: number
+): Promise<WikiLangLink[]> {
+  const resolvedLang = normalizeLang(lang);
+  const data = await fetchWikiJson<{
+    query?: {
+      pages?: Record<
+        string,
+        {
+          langlinks?: { lang?: string; "*"?: string; title?: string; url?: string }[];
+        }
+      >;
+    };
+  }>(resolvedLang, {
+    action: "query",
+    prop: "langlinks",
+    pageids: String(pageId),
+    lllimit: "500",
+    llprop: "url"
+  });
+
+  const pages = data.query?.pages ? Object.values(data.query.pages) : [];
+  const rawLinks = pages[0]?.langlinks ?? [];
+  return rawLinks
+    .map((link) => {
+      const langCode = (link.lang ?? "").trim().toLowerCase();
+      const title = link["*"] ?? link.title ?? "";
+      if (!langCode || !title) return null;
+      return {
+        lang: langCode,
+        title,
+        url: link.url ?? pageUrl(langCode, title)
+      };
+    })
+    .filter((entry): entry is WikiLangLink => Boolean(entry));
+}
+
+export async function resolveWikiPageWithFallback(
+  preferredLang: string | null | undefined,
+  input: { pageId?: string; title?: string },
+  fallbackLangs: string[]
+): Promise<{ page: WikiPageResult; lang: string } | null> {
+  const preferred = normalizeLang(preferredLang);
+  const preferredPage = await fetchWikiPage(preferred, input);
+  if (preferredPage) {
+    return { page: preferredPage, lang: preferred };
+  }
+
+  const query = input.title?.trim();
+  for (const lang of fallbackLangs) {
+    const normalized = normalizeLang(lang);
+    if (!normalized || normalized === preferred) continue;
+    let page: WikiPageResult | null = null;
+    if (query) {
+      page = await fetchWikiPage(normalized, { title: query });
+      if (!page) {
+        page = await fetchWikiPageBySearch(normalized, query);
+      }
+    }
+    if (page) {
+      return { page, lang: normalized };
+    }
+  }
+
+  return null;
 }
 
 export async function fetchWikiImageInfo(
