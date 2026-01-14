@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (fixing build error).
+- In progress (redeploying on VPS).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -18,9 +18,10 @@ Done:
 - Typed global filter option maps in app layout.
 - Typed map read state map source in maps page.
 - Typed marker style arrays in maps page.
+- Typed map/pin/path/archived map arrays in maps page.
 
 Now:
-- Commit maps page marker style types and push.
+- Commit maps page map/pin/path types and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

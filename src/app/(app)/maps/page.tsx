@@ -53,6 +53,42 @@ type MarkerStyleSummary = {
   eventType: string | null;
   locationType: string | null;
 };
+type MapPinSummary = {
+  id: string;
+  x: number;
+  y: number;
+  label: string | null;
+  markerShape: string | null;
+  markerColor: string | null;
+  markerStyle: MarkerStyleSummary | null;
+  truthFlag: string | null;
+  locationType: string | null;
+};
+type MapPathSummary = {
+  id: string;
+  polyline: unknown;
+  arrowStyle: string | null;
+  strokeColor: string | null;
+  strokeWidth: number | null;
+  markerStyle: MarkerStyleSummary | null;
+};
+type MapSummary = {
+  id: string;
+  title: string;
+  parentMapId: string | null;
+  bounds: unknown;
+  imageAssetId: string | null;
+  pins: MapPinSummary[];
+  paths: MapPathSummary[];
+  updatedAt: Date;
+};
+type ArchivedMapSummary = { id: string; title: string };
+type PinWithMapSummary = {
+  id: string;
+  label: string | null;
+  map: { title: string | null } | null;
+};
+type PathWithMapSummary = { id: string; map: { title: string | null } | null };
 
 export default async function MapsPage({ searchParams }: PageProps) {
   const user = await requireUser();
@@ -99,7 +135,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
         orderBy: { createdAt: "desc" }
       })
     : [];
-  const maps = workspace
+  const maps: MapSummary[] = workspace
     ? await prisma.map.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: {
@@ -137,14 +173,14 @@ export default async function MapsPage({ searchParams }: PageProps) {
   const mapReadMap = new Map(
     mapReadStates.map((state) => [state.targetId, state])
   );
-  const allPins = workspace
+  const allPins: PinWithMapSummary[] = workspace
     ? await prisma.pin.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: { map: true },
         // orderBy: { id: "desc" }
       })
     : [];
-  const allPaths = workspace
+  const allPaths: PathWithMapSummary[] = workspace
     ? await prisma.path.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: { map: true },
@@ -208,7 +244,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
         }))
       }
     : null;
-  const archivedMaps = workspace
+  const archivedMaps: ArchivedMapSummary[] = workspace
     ? await prisma.map.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
         orderBy: { createdAt: "desc" }
