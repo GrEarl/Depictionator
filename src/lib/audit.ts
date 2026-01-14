@@ -11,7 +11,7 @@ type AuditInput = {
 };
 
 export async function logAudit(input: AuditInput) {
-  const data: Prisma.AuditLogCreateInput = {
+  const data: Prisma.AuditLogUncheckedCreateInput = {
     workspaceId: input.workspaceId,
     actorUserId: input.actorUserId,
     action: input.action,

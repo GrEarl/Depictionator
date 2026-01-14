@@ -51,9 +51,10 @@ Done:
 - Normalized timeline type enum in create/update.
 - Normalized viewpoint type enum in create.
 - Fixed audit log meta JSON typing.
+- Switched audit log create input to unchecked type.
 
 Now:
-- Commit audit log meta typing fix and push.
+- Commit audit log unchecked create input and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
