@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { TimelineType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -31,7 +32,12 @@ export async function POST(request: Request) {
   const name = parseOptionalString(form.get("name"));
   if (name !== null) data.name = name;
   const type = parseOptionalString(form.get("type"));
-  if (type !== null) data.type = type;
+  if (type !== null) {
+    const typeValue = type.trim().toLowerCase();
+    data.type = (Object.values(TimelineType) as string[]).includes(typeValue)
+      ? (typeValue as TimelineType)
+      : TimelineType.world_history;
+  }
 
   await prisma.timeline.update({ where: { id: timelineId, workspaceId }, data });
 

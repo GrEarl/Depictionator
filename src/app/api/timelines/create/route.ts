@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { TimelineType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
@@ -14,7 +15,10 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const workspaceId = String(form.get("workspaceId") ?? "");
   const name = String(form.get("name") ?? "").trim();
-  const type = String(form.get("type") ?? "world_history");
+  const typeValue = String(form.get("type") ?? "world_history").trim().toLowerCase();
+  const type = (Object.values(TimelineType) as string[]).includes(typeValue)
+    ? (typeValue as TimelineType)
+    : TimelineType.world_history;
 
   if (!workspaceId || !name) {
     return apiError("Missing fields", 400);

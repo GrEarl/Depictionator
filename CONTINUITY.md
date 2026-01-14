@@ -48,9 +48,10 @@ Done:
 - Normalized overlay truthFlag to enum.
 - Normalized pin truth/location/shape enums in create/update.
 - Normalized path arrowStyle enum in create/update.
+- Normalized timeline type enum in create/update.
 
 Now:
-- Commit path arrowStyle normalization and push.
+- Commit timeline type normalization and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
