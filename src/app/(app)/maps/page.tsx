@@ -233,7 +233,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
           polyline: Array.isArray(path.polyline)
             ? (path.polyline as { x: number; y: number }[])
             : [],
-          arrowStyle: path.arrowStyle,
+          arrowStyle: path.arrowStyle ?? "arrow",
           strokeColor: path.strokeColor,
           strokeWidth: path.strokeWidth ?? null,
           markerStyle: path.markerStyle

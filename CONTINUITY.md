@@ -20,9 +20,10 @@ Done:
 - Typed marker style arrays in maps page.
 - Typed map/pin/path/archived map arrays in maps page.
 - Guarded null locationType when reading style map.
+- Defaulted null path arrowStyle for MapEditor payload.
 
 Now:
-- Commit locationType null guard fix and push.
+- Commit MapEditor arrowStyle default and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
