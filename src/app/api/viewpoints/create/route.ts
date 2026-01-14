@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { ViewpointType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
@@ -14,7 +15,10 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const workspaceId = String(form.get("workspaceId") ?? "");
   const name = String(form.get("name") ?? "").trim();
-  const type = String(form.get("type") ?? "player");
+  const typeValue = String(form.get("type") ?? "player").trim().toLowerCase();
+  const type = (Object.values(ViewpointType) as string[]).includes(typeValue)
+    ? (typeValue as ViewpointType)
+    : ViewpointType.player;
   const entityId = String(form.get("entityId") ?? "").trim();
   const description = String(form.get("description") ?? "").trim();
 

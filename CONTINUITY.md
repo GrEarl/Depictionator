@@ -49,9 +49,10 @@ Done:
 - Normalized pin truth/location/shape enums in create/update.
 - Normalized path arrowStyle enum in create/update.
 - Normalized timeline type enum in create/update.
+- Normalized viewpoint type enum in create.
 
 Now:
-- Commit timeline type normalization and push.
+- Commit viewpoint type normalization and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
