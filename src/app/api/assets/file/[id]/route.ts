@@ -6,7 +6,7 @@ import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   let session;
   try {
@@ -15,7 +15,7 @@ export async function GET(
     return apiError("Unauthorized", 401);
   }
 
-  const assetId = params.id;
+  const { id: assetId } = await params;
   if (!assetId) {
     return apiError("Missing asset id", 400);
   }

@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix Next.js PageProps typing for workspaces slug page.
+- Fix Next.js route handler params typing for asset file route.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Use Promise-based params for Next.js PageProps.
+- Use Promise-based params in Next.js route handlers.
 
 State:
-- In progress (patching workspaces page and redeploying).
+- In progress (patching asset route and redeploying).
 
 Done:
-- Fixed PageProps typing for maps, timeline, revisions, article detail.
+- Fixed PageProps typing for maps/timeline/revisions/workspace/article pages.
 
 Now:
-- Commit workspaces fix and push.
+- Commit asset route typing fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.
@@ -26,6 +26,6 @@ Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- src/app/(app)/workspaces/[slug]/page.tsx
+- src/app/api/assets/file/[id]/route.ts
 - git commit, git push
 - ssh-mcp rebuild
