@@ -48,7 +48,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const data: Prisma.MapCreateInput = {
+  const data: Prisma.MapUncheckedCreateInput = {
     workspaceId,
     title,
     parentMapId: parentMapId || null,
