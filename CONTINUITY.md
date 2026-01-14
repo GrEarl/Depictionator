@@ -10,10 +10,11 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Codex CLI spawn error handling fix applied; pending commit/push).
+- In progress (Codex CLI spawn error handling fix pushed; pending redeploy verification).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
+- Committed and pushed Codex CLI spawn error handling fix.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -83,7 +84,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Commit/push Codex CLI spawn error handling fix.
+- Redeploy and re-verify after push.
 
 Next:
 - Redeploy and re-verify after push.
