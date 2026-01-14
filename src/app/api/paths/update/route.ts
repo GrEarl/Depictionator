@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { TruthFlag } from "@prisma/client";
+import { ArrowStyle, TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -43,7 +43,12 @@ export async function POST(request: Request) {
   }
 
   const arrowStyle = parseOptionalString(form.get("arrowStyle"));
-  if (arrowStyle !== null) data.arrowStyle = arrowStyle;
+  if (arrowStyle !== null) {
+    const arrowValue = arrowStyle.trim().toLowerCase();
+    data.arrowStyle = (Object.values(ArrowStyle) as string[]).includes(arrowValue)
+      ? (arrowValue as ArrowStyle)
+      : ArrowStyle.arrow;
+  }
   const truthFlag = parseOptionalString(form.get("truthFlag"));
   if (truthFlag !== null) {
     const truthValue = truthFlag.trim().toLowerCase();

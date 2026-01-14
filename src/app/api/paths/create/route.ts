@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { TruthFlag } from "@prisma/client";
+import { ArrowStyle, TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -18,7 +18,12 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "");
   const mapId = String(form.get("mapId") ?? "");
   const polyline = String(form.get("polyline") ?? "[]");
-  const arrowStyle = String(form.get("arrowStyle") ?? "arrow");
+  const arrowStyleValue = String(form.get("arrowStyle") ?? "arrow")
+    .trim()
+    .toLowerCase();
+  const arrowStyle = (Object.values(ArrowStyle) as string[]).includes(arrowStyleValue)
+    ? (arrowStyleValue as ArrowStyle)
+    : ArrowStyle.arrow;
   const strokeColor = String(form.get("strokeColor") ?? "").trim();
   const strokeWidthRaw = String(form.get("strokeWidth") ?? "").trim();
   const markerStyleId = String(form.get("markerStyleId") ?? "").trim();
