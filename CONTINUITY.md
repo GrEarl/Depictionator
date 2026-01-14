@@ -37,9 +37,10 @@ Done:
 - Typed mention notification member list.
 - Typed watcher list in notifications helper.
 - Added prisma generate in Dockerfile build stage.
+- Normalized article entity type to Prisma enum.
 
 Now:
-- Commit Dockerfile prisma generate change and push.
+- Commit article type normalization fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

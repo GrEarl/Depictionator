@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EntityType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { parseCsv, parseOptionalString } from "@/lib/forms";
 import { logAudit } from "@/lib/audit";
@@ -14,7 +15,10 @@ export async function POST(request: Request) {
 
   const form = await request.formData();
   const workspaceId = String(form.get("workspaceId") ?? "");
-  const type = String(form.get("type") ?? "concept");
+  const typeValue = String(form.get("type") ?? "concept").trim().toLowerCase();
+  const type = (Object.values(EntityType) as string[]).includes(typeValue)
+    ? (typeValue as EntityType)
+    : EntityType.concept;
   const title = String(form.get("title") ?? "").trim();
   const bodyMd = String(form.get("bodyMd") ?? "").trim();
   const changeSummary = String(form.get("changeSummary") ?? "Initial draft").trim();
