@@ -16,6 +16,11 @@ enum WorkspaceRole {
   viewer
 }
 
+enum UiLocale {
+  ja
+  en
+}
+
 enum EntityType {
   nation
   faction
@@ -138,12 +143,23 @@ enum ReviewStatus {
   rejected
 }
 
+enum SourceTargetType {
+  entity
+  article_revision
+  overlay_revision
+  map
+  asset
+  event
+  timeline
+}
+
 model User {
   id           String            @id @default(cuid())
   email        String            @unique
   name         String?
   passwordHash String
   avatarUrl    String?
+  locale       UiLocale          @default(ja)
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
 
@@ -165,8 +181,9 @@ model User {
   eventsUpdated            Event[]             @relation("EventUpdatedBy")
   mapsCreated              Map[]               @relation("MapCreatedBy")
   mapsUpdated              Map[]               @relation("MapUpdatedBy")
-  assetsCreated            Asset[]             @relation("AssetCreatedBy")
+  assetsCreated            Asset[]             @relation("AssetCreatedBy")      
   llmLogs                  LlmLog[]
+  sourceRecordsCreated     SourceRecord[]      @relation("SourceRecordCreatedBy")
 }
 
 model Session {
@@ -214,6 +231,7 @@ model Workspace {
   watches     Watch[]
   notifications Notification[]
   readStates  ReadState[]
+  sourceRecords SourceRecord[]
 }
 
 model WorkspaceMember {
@@ -690,5 +708,27 @@ model ReadState {
   workspace Workspace @relation(fields: [workspaceId], references: [id])
 
   @@id([userId, workspaceId, targetType, targetId])
+}
+
+model SourceRecord {
+  id              String           @id @default(cuid())
+  workspaceId     String
+  targetType      SourceTargetType
+  targetId        String
+  sourceUrl       String
+  title           String?
+  author          String?
+  licenseId       String?
+  licenseUrl      String?
+  attributionText String?
+  retrievedAt     DateTime
+  note            String?
+  createdAt       DateTime         @default(now())
+  createdById     String?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy User? @relation("SourceRecordCreatedBy", fields: [createdById], references: [id])
+
+  @@index([workspaceId, targetType, targetId])
 }
 

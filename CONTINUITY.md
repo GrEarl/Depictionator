@@ -1,5 +1,6 @@
 Goal (incl. success criteria):
-- Make internal.copiqta.com reachable via Cloudflare proxy with HTTPS and working app.
+- Add Wikipedia/MediaWiki import backend + source tracking + i18n locale support.
+- Prepare Gemini UI brief for map editing, wiki import, and editor UX improvements.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -10,7 +11,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Cloudflare domain now reachable; final verification reporting).
+- In progress (wiki import + locale + source tracking implemented; pending commit/deploy verification).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -71,15 +72,21 @@ Done:
 - PDF export endpoint returns 200 OK.
 - Added Caddy reverse proxy; HTTPS health check returns 200 via internal.copiqta.com.
 - HTTPS register redirect sets Secure cookie and redirects to https://internal.copiqta.com/.
+- Added Caddy reverse proxy with Cloudflare TLS; domain reachable.
+- Added SourceRecord model + User locale enum, plus migration file.
+- Added wiki import/search/page endpoints and asset/map/article import.
+- Added locale helper and locale setting API.
+- Updated PDF build/export to include SourceRecord credits.
+- Drafted Gemini.md UI/UX brief.
 
 Now:
-- Report current status and any remaining gaps.
+- Commit/push changes, redeploy, and verify wiki import & PDF credits on VPS.
 
 Next:
-- Confirm Cloudflare 521 resolved and browser login works under HTTPS.
+- Commit/push and redeploy; verify wiki import and PDF credits on VPS.
 
 Open questions (UNCONFIRMED if needed):
-- Browser UI login flow via agent-browser timed out; manual browser check still UNCONFIRMED.
+- Gemini UI/UX implementation pending.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts

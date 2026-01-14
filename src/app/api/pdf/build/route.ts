@@ -24,6 +24,16 @@ type AssetSummary = {
   licenseUrl: string | null;
   sourceUrl: string | null;
 };
+type SourceRecordSummary = {
+  sourceUrl: string;
+  title: string | null;
+  author: string | null;
+  licenseId: string | null;
+  licenseUrl: string | null;
+  attributionText: string | null;
+  targetType: string;
+  targetId: string;
+};
 
 
 function escapeHtml(input: string) {
@@ -68,11 +78,16 @@ export async function POST(request: Request) {
   }
 
   const sections: string[] = [];
+  const revisionIds: string[] = [];
 
   if (entityIds.length > 0) {
     const entities: EntitySummary[] = await prisma.entity.findMany({
       where: { workspaceId, id: { in: entityIds } },
       include: { article: { include: { baseRevision: true } } }
+    });
+    entities.forEach((entity) => {
+      const revId = entity.article?.baseRevision?.id;
+      if (revId) revisionIds.push(revId);
     });
     const items = entities
       .map((entity) => {
@@ -135,15 +150,37 @@ export async function POST(request: Request) {
       where: { workspaceId, softDeletedAt: null },
       orderBy: { createdAt: "desc" }
     });
+    const sourceRecords: SourceRecordSummary[] = await prisma.sourceRecord.findMany({
+      where: {
+        workspaceId,
+        OR: [
+          { targetType: "article_revision", targetId: { in: revisionIds } },
+          { targetType: "map", targetId: { in: mapIds } }
+        ]
+      },
+      orderBy: { createdAt: "desc" }
+    });
     const credits = assets
       .map(
         (asset) =>
-          `<li>${escapeHtml(asset.storageKey)} ・ゑｽｷ ${escapeHtml(asset.author ?? "")} ・ゑｽｷ ${escapeHtml(asset.licenseId ?? "")} ・ゑｽｷ ${escapeHtml(asset.licenseUrl ?? "")} ・ゑｽｷ ${escapeHtml(asset.sourceUrl ?? "")}</li>`
+          `<li>${escapeHtml(asset.storageKey)} ・ゑｽ�E� ${escapeHtml(asset.author ?? "")} ・ゑｽ�E� ${escapeHtml(asset.licenseId ?? "")} ・ゑｽ�E� ${escapeHtml(asset.licenseUrl ?? "")} ・ゑｽ�E� ${escapeHtml(asset.sourceUrl ?? "")}</li>`
       )
       .join("");
-    html = `${html}<hr /><h2>Credits</h2><ul>${credits || "<li>No credits</li>"}</ul>`;
+    const sources = sourceRecords
+      .map((record) => {
+        const parts = [
+          record.title ? `Title: ${record.title}` : null,
+          record.author ? `Author: ${record.author}` : null,
+          record.sourceUrl ? `Source: ${record.sourceUrl}` : null,
+          record.licenseId ? `License: ${record.licenseId}` : null,
+          record.licenseUrl ? `License URL: ${record.licenseUrl}` : null,
+          record.attributionText ? `Attribution: ${record.attributionText}` : null
+        ].filter(Boolean);
+        return `<li>${escapeHtml(parts.join(" | "))}</li>`;
+      })
+      .join("");
+    html = `${html}<hr /><h2>Credits</h2><h3>Assets</h3><ul>${credits || "<li>No asset credits</li>"}</ul><h3>Sources</h3><ul>${sources || "<li>No sources</li>"}</ul>`;
   }
-
   const browser = await puppeteer.launch({
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
   });
@@ -165,4 +202,6 @@ export async function POST(request: Request) {
     }
   });
 }
+
+
 
