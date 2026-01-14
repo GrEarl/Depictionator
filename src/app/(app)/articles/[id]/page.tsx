@@ -1,4 +1,4 @@
-Ôªøimport { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
@@ -8,6 +8,15 @@ import { AutoMarkRead } from "@/components/AutoMarkRead";
 const TRUTH_FLAGS = ["canonical", "rumor", "mistaken", "propaganda", "unknown"];
 
 type SearchParams = { [key: string]: string | string[] | undefined };
+type RevisionSummary = { id: string; status: string; changeSummary: string; bodyMd: string };
+type OverlayWithRevisions = {
+  id: string;
+  title: string;
+  truthFlag: string;
+  activeRevision?: { bodyMd: string } | null;
+  revisions: RevisionSummary[];
+};
+type OverlayArchived = { id: string; title: string; truthFlag: string };
 
 type PageProps = {
   params: Promise<{ id: string }>;
@@ -182,10 +191,10 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
 
             <h4>Revisions</h4>
             <ul>
-              {entity.article?.revisions.map((rev: { id: string; status: string; changeSummary: string }) => (
+              {entity.article?.revisions.map((rev: RevisionSummary) => (
                 <li key={rev.id} className="list-row">
                   <div>
-                    <a href={`/revisions/${rev.id}`}>{rev.status} ¬∑ {rev.changeSummary}</a>
+                    <a href={`/revisions/${rev.id}`}>{rev.status} ÅE {rev.changeSummary}</a>
                   </div>
                   {rev.status === "draft" && (
                     <form action="/api/revisions/submit" method="post">
@@ -252,7 +261,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </form>
 
             <ul>
-              {entity.overlays.map((overlay: { id: string; title: string; truthFlag: string }) => (
+              {entity.overlays.map((overlay: OverlayWithRevisions) => (
                 <li key={overlay.id} className="panel">
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <strong>{overlay.title}</strong>
@@ -274,10 +283,10 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
                     <button type="submit" className="link-button">Archive overlay</button>
                   </form>
                   <ul>
-                    {overlay.revisions.map((rev: { id: string; status: string; changeSummary: string }) => (
+                    {overlay.revisions.map((rev: RevisionSummary) => (
                       <li key={rev.id} className="list-row">
                         <div>
-                          <a href={`/revisions/${rev.id}`}>{rev.status} ¬∑ {rev.changeSummary}</a>
+                          <a href={`/revisions/${rev.id}`}>{rev.status} ÅE {rev.changeSummary}</a>
                         </div>
                         {rev.status === "draft" && (
                           <form action="/api/revisions/submit" method="post">
@@ -295,7 +304,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </ul>
             <h4>Archived overlays</h4>
             <ul>
-              {archivedOverlays.map((overlay: { id: string; title: string; truthFlag: string }) => (
+              {archivedOverlays.map((overlay: OverlayArchived) => (
                 <li key={overlay.id} className="list-row">
                   <span>{overlay.title}</span>
                   <form action="/api/restore" method="post">
@@ -314,3 +323,5 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
     </div>
   );
 }
+
+
