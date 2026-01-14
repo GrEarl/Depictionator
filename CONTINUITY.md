@@ -22,9 +22,10 @@ Done:
 - Guarded null locationType when reading style map.
 - Defaulted null path arrowStyle for MapEditor payload.
 - Typed dashboard membership list.
+- Re-encoded dashboard page to UTF-8.
 
 Now:
-- Commit dashboard membership typing fix and push.
+- Commit UTF-8 fix for dashboard page and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

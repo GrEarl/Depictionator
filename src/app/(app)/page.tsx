@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     <div className="dashboard">
       <section className="panel">
         <h2>Workspaces</h2>
-        <p>‘I‘ğ’†: {session?.workspace?.name ?? "–¢‘I‘ğ"}</p>
+        <p>é¸æŠä¸­: {session?.workspace?.name ?? "æœªé¸æŠ"}</p>
         <ul>
           {memberships.map((membership) => (
             <li key={membership.id}>
