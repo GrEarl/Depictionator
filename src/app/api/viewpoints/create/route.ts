@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { ViewpointType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
@@ -50,5 +51,7 @@ export async function POST(request: Request) {
     targetId: viewpoint.id
   });
 
-  return NextResponse.redirect(new URL("/settings", request.url));
+  return NextResponse.redirect(toRedirectUrl(request, "/settings"));
 }
+
+

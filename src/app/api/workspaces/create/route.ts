@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/db";
 import { slugify } from "@/lib/slug";
@@ -20,12 +21,12 @@ export async function POST(request: Request) {
   const cookieStore = await cookies();
   const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
   if (!sessionId) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(toRedirectUrl(request, "/login"));
   }
 
   const session = await prisma.session.findUnique({ where: { id: sessionId } });
   if (!session) {
-    return NextResponse.redirect(new URL("/login", request.url));
+    return NextResponse.redirect(toRedirectUrl(request, "/login"));
   }
 
   const formData = await request.formData();
@@ -58,5 +59,7 @@ export async function POST(request: Request) {
     data: { activeWorkspaceId: workspace.id }
   });
 
-  return NextResponse.redirect(new URL(`/workspaces/${workspace.slug}`, request.url));
+  return NextResponse.redirect(toRedirectUrl(request, `/workspaces/${workspace.slug}`));
 }
+
+

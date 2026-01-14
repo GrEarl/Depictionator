@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
@@ -91,5 +92,7 @@ export async function POST(request: Request) {
     meta: { targetType: "overlay" }
   });
 
-  return NextResponse.redirect(new URL(`/articles/${entityId}`, request.url));
+  return NextResponse.redirect(toRedirectUrl(request, `/articles/${entityId}`));
 }
+
+

@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
@@ -65,5 +66,7 @@ export async function POST(request: Request) {
     meta: { storageKey }
   });
 
-  return NextResponse.redirect(new URL("/settings", request.url));
+  return NextResponse.redirect(toRedirectUrl(request, "/settings"));
 }
+
+

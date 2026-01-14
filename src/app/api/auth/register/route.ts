@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { hashPassword } from "@/lib/password";
 import { attachSessionCookie, createSession } from "@/lib/auth";
@@ -27,7 +28,9 @@ export async function POST(request: Request) {
   });
 
   const session = await createSession(user.id);
-  const response = NextResponse.redirect(new URL("/", request.url));
+  const response = NextResponse.redirect(toRedirectUrl(request, "/"));
   attachSessionCookie(response, session.id, session.expiresAt);
   return response;
 }
+
+

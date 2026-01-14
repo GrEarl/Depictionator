@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
@@ -47,5 +48,7 @@ export async function POST(request: Request) {
     targetId: era.id
   });
 
-  return NextResponse.redirect(new URL("/timeline", request.url));
+  return NextResponse.redirect(toRedirectUrl(request, "/timeline"));
 }
+
+

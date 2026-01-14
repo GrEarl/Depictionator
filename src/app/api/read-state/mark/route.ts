@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 
@@ -49,5 +50,7 @@ export async function POST(request: Request) {
     }
   });
 
-  return NextResponse.redirect(new URL(request.headers.get("referer") ?? "/", request.url));
+  return NextResponse.redirect(toRedirectUrl(request, request.headers.get("referer") ?? "/"));
 }
+
+

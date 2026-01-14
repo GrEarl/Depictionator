@@ -1,6 +1,5 @@
 Goal (incl. success criteria):
-- Fix Codex CLI spawn error handling regression in LLM execute route, commit/push.
-- Redeploy on VPS and verify Docker build/health check.
+- Perform end-to-end smoke checks against AGENTS.md features (register/login/workspace/entity/article/map/timeline/review/LLM/PDF).
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -11,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (user asked if requirements are fully met; verification pending beyond smoke checks).
+- In progress (fixing redirect base URL after smoke test failure).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -62,13 +61,13 @@ Done:
 - Browser check (agent-browser): /health OK, /login loads with fields; root / timed out at 10s.
 
 Now:
-- Await next user request.
+- Fix redirect URL construction for API routes, then redeploy and re-test auth flow.
 
 Next:
-- UNCONFIRMED.
+- Resume UI/API smoke checks after redeploy.
 
 Open questions (UNCONFIRMED if needed):
-- Full AGENTS.md requirement verification beyond /health + /login is UNCONFIRMED.
+- Auth and post-redirect flows still UNCONFIRMED until redirect fix is validated.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts

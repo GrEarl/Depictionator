@@ -1,4 +1,5 @@
-﻿import { NextResponse } from "next/server";
+import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { EntityStatus } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
@@ -54,5 +55,7 @@ export async function POST(request: Request) {
     targetId: entity.id
   });
 
-  return NextResponse.redirect(new URL(`/articles/${entity.id}`, request.url));
+  return NextResponse.redirect(toRedirectUrl(request, `/articles/${entity.id}`));
 }
+
+

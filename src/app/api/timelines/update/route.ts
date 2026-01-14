@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { TimelineType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
@@ -57,5 +58,7 @@ export async function POST(request: Request) {
     payload: { timelineId }
   });
 
-  return NextResponse.redirect(new URL("/timeline", request.url));
+  return NextResponse.redirect(toRedirectUrl(request, "/timeline"));
 }
+
+
