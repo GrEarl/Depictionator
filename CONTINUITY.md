@@ -50,9 +50,10 @@ Done:
 - Normalized path arrowStyle enum in create/update.
 - Normalized timeline type enum in create/update.
 - Normalized viewpoint type enum in create.
+- Fixed audit log meta JSON typing.
 
 Now:
-- Commit viewpoint type normalization and push.
+- Commit audit log meta typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
