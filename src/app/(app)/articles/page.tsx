@@ -154,7 +154,7 @@ export default async function ArticlesPage() {
           <section className="panel">
             <h3>Archived entities</h3>
             <ul>
-              {archivedentities.map((entity: EntitySummary) => (
+              {archivedEntities.map((entity: EntitySummary) => (
                 <li key={entity.id} className="list-row">
                   <span>{entity.title}</span>
                   <form action="/api/restore" method="post">

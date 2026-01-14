@@ -1,6 +1,5 @@
 Goal (incl. success criteria):
-- Fix readStateMap type to expose lastReadRevisionId in articles page.
-- Redeploy on VPS and verify build.
+- Redeploy on VPS and verify Docker build/health check.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -8,19 +7,19 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise.
 
 Key decisions:
-- Add explicit Map generic for readStateMap.
+- Added explicit Map generic for readStateMap.
 
 State:
-- In progress (patching and redeploying).
+- In progress (fixing build error).
 
 Done:
-- Added readState callback type.
+- Committed and pushed readStateMap type fix.
 
 Now:
-- Commit readStateMap type fix and push.
+- Fix typo in articles page (archivedentities), commit, push.
 
 Next:
-- Pull on VPS and rebuild Docker image.
+- Pull on VPS, rebuild Docker image, then /health check.
 
 Open questions (UNCONFIRMED if needed):
 - None.
