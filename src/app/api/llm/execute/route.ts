@@ -245,7 +245,7 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
     return;
   }
 
-  let runtimeError: Error | null = null;
+  let runtimeError: unknown = null;
   const onRuntimeError = (error: Error) => {
     runtimeError = error;
   };
@@ -337,7 +337,10 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
   });
 
   if (runtimeError) {
-      yield `\n\n[Codex CLI error: ${runtimeError.message}]`;
+      const message = runtimeError instanceof Error
+        ? runtimeError.message
+        : String(runtimeError);
+      yield `\n\n[Codex CLI error: ${message}]`;
   }
 
   if (exitCode !== 0 && exitCode !== null) {
