@@ -3,10 +3,13 @@ import { requireUser } from "@/lib/auth";
 import { requireWorkspaceRole } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
 
-export default async function RevisionDetailPage({ params }: { params: { id: string } }) {
+type PageProps = { params: Promise<{ id: string }> };
+
+export default async function RevisionDetailPage({ params }: PageProps) {
   const user = await requireUser();
+  const { id } = await params;
   const revision = await prisma.articleRevision.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: { parentRevision: true }
   });
 
