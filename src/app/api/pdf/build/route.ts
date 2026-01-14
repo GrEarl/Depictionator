@@ -4,6 +4,26 @@ import { readFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
+type EntitySummary = {
+  title: string;
+  article: { baseRevision: { bodyMd: string } | null } | null;
+};
+type MapSummary = {
+  title: string;
+  imageAsset: { storageKey: string; mimeType: string } | null;
+};
+type TimelineSummary = {
+  name: string;
+  events: { title: string }[];
+};
+type AssetSummary = {
+  storageKey: string;
+  author: string | null;
+  licenseId: string | null;
+  licenseUrl: string | null;
+  sourceUrl: string | null;
+};
+
 
 function escapeHtml(input: string) {
   return input
@@ -49,7 +69,7 @@ export async function POST(request: Request) {
   const sections: string[] = [];
 
   if (entityIds.length > 0) {
-    const entities = await prisma.entity.findMany({
+    const entities: EntitySummary[] = await prisma.entity.findMany({
       where: { workspaceId, id: { in: entityIds } },
       include: { article: { include: { baseRevision: true } } }
     });
@@ -63,7 +83,7 @@ export async function POST(request: Request) {
   }
 
   if (mapIds.length > 0) {
-    const maps = await prisma.map.findMany({
+    const maps: MapSummary[] = await prisma.map.findMany({
       where: { workspaceId, id: { in: mapIds } },
       include: { imageAsset: true }
     });
@@ -92,7 +112,7 @@ export async function POST(request: Request) {
   }
 
   if (timelineIds.length > 0) {
-    const timelines = await prisma.timeline.findMany({
+    const timelines: TimelineSummary[] = await prisma.timeline.findMany({
       where: { workspaceId, id: { in: timelineIds } },
       include: { events: { orderBy: { createdAt: "desc" } } }
     });
@@ -110,14 +130,14 @@ export async function POST(request: Request) {
   let html = `<html><body>${sections.join("") || "<p>No content selected.</p>"}</body></html>`;
 
   if (includeCredits) {
-    const assets = await prisma.asset.findMany({
+    const assets: AssetSummary[] = await prisma.asset.findMany({
       where: { workspaceId, softDeletedAt: null },
       orderBy: { createdAt: "desc" }
     });
     const credits = assets
       .map(
         (asset) =>
-          `<li>${escapeHtml(asset.storageKey)} ﾂｷ ${escapeHtml(asset.author ?? "")} ﾂｷ ${escapeHtml(asset.licenseId ?? "")} ﾂｷ ${escapeHtml(asset.licenseUrl ?? "")} ﾂｷ ${escapeHtml(asset.sourceUrl ?? "")}</li>`
+          `<li>${escapeHtml(asset.storageKey)} ・ゑｽｷ ${escapeHtml(asset.author ?? "")} ・ゑｽｷ ${escapeHtml(asset.licenseId ?? "")} ・ゑｽｷ ${escapeHtml(asset.licenseUrl ?? "")} ・ゑｽｷ ${escapeHtml(asset.sourceUrl ?? "")}</li>`
       )
       .join("");
     html = `${html}<hr /><h2>Credits</h2><ul>${credits || "<li>No credits</li>"}</ul>`;
@@ -138,3 +158,4 @@ export async function POST(request: Request) {
     }
   });
 }
+
