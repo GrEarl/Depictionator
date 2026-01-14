@@ -1,31 +1,33 @@
-﻿import { requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { prisma } from "@/lib/db";
 
 const VIEWPOINT_TYPES = ["player", "faction", "character", "omniscient"];
+type ViewpointSummary = { id: string; name: string };
+type AssetSummary = { id: string; storageKey: string; size: number };
 
 export default async function SettingsPage() {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
-  const viewpoints = workspace
+  const viewpoints: ViewpointSummary[] = workspace
     ? await prisma.viewpoint.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         orderBy: { createdAt: "asc" }
       })
     : [];
-  const archivedViewpoints = workspace
+  const archivedViewpoints: ViewpointSummary[] = workspace
     ? await prisma.viewpoint.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
         orderBy: { createdAt: "asc" }
       })
     : [];
-  const assets = workspace
+  const assets: AssetSummary[] = workspace
     ? await prisma.asset.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         orderBy: { createdAt: "desc" }
       })
     : [];
-  const archivedAssets = workspace
+  const archivedAssets: AssetSummary[] = workspace
     ? await prisma.asset.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
         orderBy: { createdAt: "desc" }
@@ -224,5 +226,6 @@ export default async function SettingsPage() {
     </div>
   );
 }
+
 
 
