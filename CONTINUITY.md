@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix implicit any in articles page entity map.
+- Fix implicit any in articles page entity list map.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Add explicit type for entities map.
+- Add explicit type annotation in entity list map.
 
 State:
 - In progress (patching articles page and redeploying).
 
 Done:
-- Fixed readState map type.
+- Fixed readState and entityIds map types.
 
 Now:
-- Commit entities map annotation fix and push.
+- Commit entity list type fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.
