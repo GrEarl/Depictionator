@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix implicit any in articles list readState map.
+- Fix implicit any in articles page entity map.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Add explicit type for readState map callback.
+- Add explicit type for entities map.
 
 State:
 - In progress (patching articles page and redeploying).
 
 Done:
-- Fixed multiple PageProps/route typing issues and encoding problems.
+- Fixed readState map type.
 
 Now:
-- Commit articles page type fix and push.
+- Commit entities map annotation fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.

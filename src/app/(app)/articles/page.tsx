@@ -61,7 +61,7 @@ export default async function ArticlesPage() {
       <LlmContext
         value={{
           type: "articles",
-          entityIds: entities.map((entity) => entity.id)
+          entityIds: entities.map((entity: { id: string }) => entity.id)
         }}
       />
       <h2>Articles</h2>
