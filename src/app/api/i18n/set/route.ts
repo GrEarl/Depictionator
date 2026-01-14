@@ -15,6 +15,7 @@ export async function POST(request: Request) {
 
   const form = await request.formData();
   const localeValue = String(form.get("locale") ?? "").trim();
+  const auditWorkspaceId = String(form.get("workspaceId") ?? "system").trim() || "system";
   const locale = normalizeLocale(localeValue);
 
   await prisma.user.update({
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
   });
 
   await logAudit({
-    workspaceId: session.workspaceId ?? "system",
+    workspaceId: auditWorkspaceId,
     actorUserId: session.userId,
     action: "update_locale",
     targetType: "user",
