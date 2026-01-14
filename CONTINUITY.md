@@ -54,9 +54,10 @@ Done:
 - Switched audit log create input to unchecked type.
 - Cast mention notification payload to Prisma JSON input.
 - Cast notification payloads to Prisma JSON input.
+- Added public/.gitkeep to satisfy Docker copy.
 
 Now:
-- Commit notification payload typing fix and push.
+- Commit public directory fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
