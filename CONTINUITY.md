@@ -21,9 +21,10 @@ Done:
 - Typed map/pin/path/archived map arrays in maps page.
 - Guarded null locationType when reading style map.
 - Defaulted null path arrowStyle for MapEditor payload.
+- Typed dashboard membership list.
 
 Now:
-- Commit MapEditor arrowStyle default and push.
+- Commit dashboard membership typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

@@ -1,11 +1,18 @@
-ï»¿import Link from "next/link";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentSession, requireUser } from "@/lib/auth";
+
+type MembershipSummary = {
+  id: string;
+  role: string;
+  workspace: { slug: string; name: string };
+};
+
 
 export default async function DashboardPage() {
   const user = await requireUser();
   const session = await getCurrentSession();
-  const memberships = await prisma.workspaceMember.findMany({
+  const memberships: MembershipSummary[] = await prisma.workspaceMember.findMany({
     where: { userId: user.id },
     include: { workspace: true }
   });
@@ -19,7 +26,7 @@ export default async function DashboardPage() {
     <div className="dashboard">
       <section className="panel">
         <h2>Workspaces</h2>
-        <p>é¸æŠä¸­: {session?.workspace?.name ?? "æœªé¸æŠ"}</p>
+        <p>‘I‘ğ’†: {session?.workspace?.name ?? "–¢‘I‘ğ"}</p>
         <ul>
           {memberships.map((membership) => (
             <li key={membership.id}>
@@ -77,3 +84,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
+
