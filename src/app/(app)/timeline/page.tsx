@@ -1,4 +1,4 @@
-﻿import { FilterSummary } from "@/components/FilterSummary";
+import { FilterSummary } from "@/components/FilterSummary";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
@@ -17,6 +17,39 @@ const EVENT_TYPES = [
   "mystery",
   "other"
 ];
+
+type TimelineEventSummary = {
+  id: string;
+  title: string;
+  worldStart: string | null;
+  worldEnd: string | null;
+  storyOrder: number | null;
+  storyChapterId: string | null;
+  eventType: string | null;
+  locationMapId: string | null;
+  involvedEntityIds: string[];
+};
+type TimelineSummary = {
+  id: string;
+  name: string;
+  type: string;
+  events: TimelineEventSummary[];
+};
+type TimelineArchiveSummary = { id: string; name: string };
+type EraSummary = {
+  id: string;
+  name: string;
+  worldStart: string | null;
+  worldEnd: string | null;
+};
+type ChapterSummary = { id: string; name: string; orderIndex: number };
+type EventListSummary = {
+  id: string;
+  title: string;
+  timeline: { name: string | null } | null;
+};
+type MarkerStyleSummary = { id: string; name: string };
+
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -40,7 +73,7 @@ export default async function TimelinePage({ searchParams }: PageProps) {
     chapterFilter === "all"
       ? {}
       : { OR: [{ storyChapterId: chapterFilter }, { storyChapterId: null }] };
-  const timelines = workspace
+  const timelines: TimelineSummary[] = workspace
     ? await prisma.timeline.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: {
@@ -52,44 +85,44 @@ export default async function TimelinePage({ searchParams }: PageProps) {
         orderBy: { name: "asc" }
       })
     : [];
-  const archivedTimelines = workspace
+  const archivedTimelines: TimelineArchiveSummary[] = workspace
     ? await prisma.timeline.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
         orderBy: { name: "asc" }
       })
     : [];
-  const eras = workspace
+  const eras: EraSummary[] = workspace
     ? await prisma.era.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         orderBy: { sortKey: "asc" }
       })
     : [];
-  const archivedEras = workspace
+  const archivedEras: EraSummary[] = workspace
     ? await prisma.era.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
         orderBy: { sortKey: "asc" }
       })
     : [];
-  const chapters = workspace
+  const chapters: ChapterSummary[] = workspace
     ? await prisma.chapter.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         orderBy: { orderIndex: "asc" }
       })
     : [];
-  const allEvents = workspace
+  const allEvents: EventListSummary[] = workspace
     ? await prisma.event.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: { timeline: true },
         orderBy: { createdAt: "desc" }
       })
     : [];
-  const markerStyles = workspace
+  const markerStyles: MarkerStyleSummary[] = workspace
     ? await prisma.markerStyle.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null, target: "event" },
         orderBy: { createdAt: "desc" }
       })
     : [];
-  const archivedChapters = workspace
+  const archivedChapters: ChapterSummary[] = workspace
     ? await prisma.chapter.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
         orderBy: { orderIndex: "asc" }
@@ -606,3 +639,4 @@ export default async function TimelinePage({ searchParams }: PageProps) {
     </div>
   );
 }
+

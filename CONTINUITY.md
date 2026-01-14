@@ -26,9 +26,10 @@ Done:
 - Typed dashboard notification list.
 - Typed reviews page lists and re-encoded to UTF-8.
 - Typed settings page viewpoints/assets and re-encoded to UTF-8.
+- Typed timeline page lists and re-encoded to UTF-8.
 
 Now:
-- Commit settings page typing/encoding fix and push.
+- Commit timeline page typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
