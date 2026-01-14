@@ -137,7 +137,7 @@ export async function POST(request: Request) {
     const credits = assets
       .map(
         (asset) =>
-          `<li>${escapeHtml(asset.storageKey)} �E�ｷ ${escapeHtml(asset.author ?? "")} �E�ｷ ${escapeHtml(asset.licenseId ?? "")} �E�ｷ ${escapeHtml(asset.licenseUrl ?? "")} �E�ｷ ${escapeHtml(asset.sourceUrl ?? "")}</li>`
+          `<li>${escapeHtml(asset.storageKey)} ・ゑｽｷ ${escapeHtml(asset.author ?? "")} ・ゑｽｷ ${escapeHtml(asset.licenseId ?? "")} ・ゑｽｷ ${escapeHtml(asset.licenseUrl ?? "")} ・ゑｽｷ ${escapeHtml(asset.sourceUrl ?? "")}</li>`
       )
       .join("");
     html = `${html}<hr /><h2>Credits</h2><ul>${credits || "<li>No credits</li>"}</ul>`;

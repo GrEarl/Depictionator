@@ -138,7 +138,7 @@ export default async function SettingsPage() {
               {assets.map((asset) => (
                 <li key={asset.id} className="list-row">
                   <div>
-                    {asset.storageKey} ・ {Math.round(asset.size / 1024)} KB
+                    {asset.storageKey} 繝ｻ {Math.round(asset.size / 1024)} KB
                   </div>
                   <form action="/api/archive" method="post">
                     <input type="hidden" name="workspaceId" value={workspace.id} />

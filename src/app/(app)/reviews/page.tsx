@@ -125,7 +125,7 @@ export default async function ReviewsPage() {
                   <span className="muted"> on {log.targetType} ({log.targetId})</span>
                 </div>
                 <div className="muted" style={{ fontSize: '12px' }}>
-                  {log.actorUser?.name ?? log.actorUserId} ・ {log.createdAt.toLocaleString()}
+                  {log.actorUser?.name ?? log.actorUserId} 繝ｻ {log.createdAt.toLocaleString()}
                 </div>
               </li>
             ))}

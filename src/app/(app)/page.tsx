@@ -27,7 +27,7 @@ export default async function DashboardPage() {
     <div className="dashboard">
       <section className="panel">
         <h2>Workspaces</h2>
-        <p>選択中: {session?.workspace?.name ?? "未選択"}</p>
+        <p>驕ｸ謚樔ｸｭ: {session?.workspace?.name ?? "譛ｪ驕ｸ謚・}</p>
         <ul>
           {memberships.map((membership) => (
             <li key={membership.id}>

@@ -29,9 +29,10 @@ Done:
 - Typed timeline page lists and re-encoded to UTF-8.
 - Added missing TextDecoder in Gemini stream.
 - Typed PDF build route lists and re-encoded to UTF-8.
+- Re-encoded multiple files to UTF-8 after PowerShell edits.
 
 Now:
-- Commit PDF build route typing fix and push.
+- Commit UTF-8 re-encoding changes and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

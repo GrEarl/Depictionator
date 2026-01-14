@@ -177,7 +177,7 @@ export default async function TimelinePage({ searchParams }: PageProps) {
                         <div style={{ fontWeight: 600 }}>{event.title}</div>
                         <div className="muted" style={{ fontSize: '13px' }}>
                            {event.worldStart ? `World: ${event.worldStart}` : ''} 
-                           {(event.worldStart && (event.storyOrder || event.storyChapterId)) ? ' · ' : ''}
+                           {(event.worldStart && (event.storyOrder || event.storyChapterId)) ? ' ﾂｷ ' : ''}
                            {event.storyChapterId ? `Chapter: ${chapters.find(c => c.id === event.storyChapterId)?.name ?? event.storyChapterId}` : ''}
                            {(event.storyChapterId && event.storyOrder) ? ' / ' : ''}
                            {event.storyOrder ? `Order: ${event.storyOrder}` : ''}
@@ -538,7 +538,7 @@ export default async function TimelinePage({ searchParams }: PageProps) {
                 <select name="eventId" required>
                   {allEvents.map((event) => (
                     <option key={event.id} value={event.id}>
-                      {event.title} · {event.timeline?.name}
+                      {event.title} ﾂｷ {event.timeline?.name}
                     </option>
                   ))}
                 </select>
