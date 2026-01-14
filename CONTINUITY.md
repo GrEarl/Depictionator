@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (LLM-assisted multi-language Wikipedia import implemented; pending commit).
+- In progress (LLM-assisted multi-language Wikipedia import pushed; pending deploy verification).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -19,6 +19,7 @@ Done:
 - Added LLM helper for Gemini/Codex text generation.
 - Updated Wikipedia article import to synthesize across languages via LLM.
 - Added wiki LLM env settings to .env.example.
+- Committed and pushed Wikipedia LLM fallback changes.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -88,7 +89,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Commit/push Wikipedia LLM fallback changes.
+- Redeploy and verify Wikipedia LLM fallback on VPS.
 
 Next:
 - Redeploy and re-verify after push.
