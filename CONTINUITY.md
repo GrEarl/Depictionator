@@ -11,7 +11,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (VPS redeploy completed; awaiting further tasks).
+- In progress (user asked if requirements are fully met; verification pending beyond smoke checks).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -68,7 +68,7 @@ Next:
 - UNCONFIRMED.
 
 Open questions (UNCONFIRMED if needed):
-- None.
+- Full AGENTS.md requirement verification beyond /health + /login is UNCONFIRMED.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts
