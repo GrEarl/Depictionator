@@ -1,26 +1,26 @@
 Goal (incl. success criteria):
-- Fix UTF-8 encoding for articles list page to unblock Docker build.
+- Fix articles page header corruption and entity type annotations after regex replace.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
 - Use ssh-mcp via Codex MCP; avoid destructive operations without confirmation.
-- Avoid extra user questions; keep responses concise (except brief safety note if needed).
+- Avoid extra user questions; keep responses concise.
 
 Key decisions:
-- Re-encode articles page as UTF-8.
+- Restore ENTITY_TYPES array and EntitySummary type block.
 
 State:
-- In progress (encoding fix and redeploying).
+- In progress (commit fix and redeploy).
 
 Done:
-- Added entity map type annotations.
+- Repaired header section in articles page and re-encoded as UTF-8.
 
 Now:
-- Commit UTF-8 fix and push.
+- Commit and push fix, then pull on VPS and rebuild.
 
 Next:
-- Pull on VPS and rebuild Docker image.
+- docker-compose up -d and health check once build succeeds.
 
 Open questions (UNCONFIRMED if needed):
 - None.

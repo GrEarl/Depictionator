@@ -17,6 +17,13 @@ const ENTITY_TYPES = [
   "concept"
 ];
 
+type EntitySummary = {
+  id: string;
+  title: string;
+  type: string;
+  article?: { baseRevisionId: string | null } | null;
+};
+
 export default async function ArticlesPage() {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
@@ -61,7 +68,7 @@ export default async function ArticlesPage() {
       <LlmContext
         value={{
           type: "articles",
-          entityIds: entities.map((entity: { id: string }) => entity.id)
+          entityIds: entities.map((entity: EntitySummary) => entity.id)
         }}
       />
       <h2>Articles</h2>
@@ -119,7 +126,7 @@ export default async function ArticlesPage() {
           <section className="panel">
             <h3>Entities</h3>
             <ul>
-              {entities.map((entity: { id: string; title: string }) => (
+              {entities.map((entity: EntitySummary) => (
                 <li key={entity.id} className="list-row">
                   <div>
                     <Link href={`/articles/${entity.id}`}>{entity.title}</Link>
@@ -147,7 +154,7 @@ export default async function ArticlesPage() {
           <section className="panel">
             <h3>Archived entities</h3>
             <ul>
-              {archivedentities.map((entity: { id: string; title: string }) => (
+              {archivedentities.map((entity: EntitySummary) => (
                 <li key={entity.id} className="list-row">
                   <span>{entity.title}</span>
                   <form action="/api/restore" method="post">
@@ -166,5 +173,8 @@ export default async function ArticlesPage() {
     </div>
   );
 }
+
+
+
 
 
