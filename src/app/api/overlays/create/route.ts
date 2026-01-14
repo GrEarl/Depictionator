@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
@@ -15,7 +16,12 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "");
   const entityId = String(form.get("entityId") ?? "");
   const title = String(form.get("title") ?? "").trim();
-  const truthFlag = String(form.get("truthFlag") ?? "canonical");
+  const truthValue = String(form.get("truthFlag") ?? "canonical")
+    .trim()
+    .toLowerCase();
+  const truthFlag = (Object.values(TruthFlag) as string[]).includes(truthValue)
+    ? (truthValue as TruthFlag)
+    : TruthFlag.canonical;
   const viewpointId = String(form.get("viewpointId") ?? "");
   const worldFrom = String(form.get("worldFrom") ?? "").trim();
   const worldTo = String(form.get("worldTo") ?? "").trim();

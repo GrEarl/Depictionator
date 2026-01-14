@@ -45,9 +45,10 @@ Done:
 - Switched map update input to unchecked type for parentMapId.
 - Normalized marker style event/location types to enums.
 - Normalized marker style target/shape to enums.
+- Normalized overlay truthFlag to enum.
 
 Now:
-- Commit marker style shape normalization and push.
+- Commit overlay truthFlag normalization and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
