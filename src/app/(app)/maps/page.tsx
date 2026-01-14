@@ -44,6 +44,15 @@ type SearchParams = { [key: string]: string | string[] | undefined };
 
 type PageProps = { searchParams: Promise<SearchParams> };
 type MapReadState = { targetId: string; lastReadAt: Date };
+type MarkerStyleSummary = {
+  id: string;
+  name: string;
+  target: string;
+  shape: string;
+  color: string;
+  eventType: string | null;
+  locationType: string | null;
+};
 
 export default async function MapsPage({ searchParams }: PageProps) {
   const user = await requireUser();
@@ -78,13 +87,13 @@ export default async function MapsPage({ searchParams }: PageProps) {
             { storyFromChapterId: null, storyToChapterId: null }
           ]
         };
-  const markerStyles = workspace
+  const markerStyles: MarkerStyleSummary[] = workspace
     ? await prisma.markerStyle.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         orderBy: { createdAt: "desc" }
       })
     : [];
-  const archivedMarkerStyles = workspace
+  const archivedMarkerStyles: MarkerStyleSummary[] = workspace
     ? await prisma.markerStyle.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
         orderBy: { createdAt: "desc" }
