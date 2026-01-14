@@ -1,6 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { EventType, LocationType } from "@prisma/client";
+import { EventType, LocationType, MarkerShape, MarkerTarget } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
@@ -15,7 +15,10 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const workspaceId = String(form.get("workspaceId") ?? "");
   const name = String(form.get("name") ?? "").trim();
-  const target = String(form.get("target") ?? "") as "event" | "location" | "path";
+  const targetValue = String(form.get("target") ?? "").trim().toLowerCase();
+  const target = (Object.values(MarkerTarget) as string[]).includes(targetValue)
+    ? (targetValue as MarkerTarget)
+    : null;
   const eventTypeValue = String(form.get("eventType") ?? "").trim().toLowerCase();
   const locationTypeValue = String(form.get("locationType") ?? "").trim().toLowerCase();
   const eventType = (Object.values(EventType) as string[]).includes(eventTypeValue)
@@ -24,7 +27,10 @@ export async function POST(request: Request) {
   const locationType = (Object.values(LocationType) as string[]).includes(locationTypeValue)
     ? (locationTypeValue as LocationType)
     : null;
-  const shape = String(form.get("shape") ?? "");
+  const shapeValue = String(form.get("shape") ?? "").trim().toLowerCase();
+  const shape = (Object.values(MarkerShape) as string[]).includes(shapeValue)
+    ? (shapeValue as MarkerShape)
+    : MarkerShape.circle;
   const color = String(form.get("color") ?? "#4b6ea8");
   const iconKey = String(form.get("iconKey") ?? "").trim();
 
