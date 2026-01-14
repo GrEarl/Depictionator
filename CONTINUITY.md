@@ -15,9 +15,11 @@ State:
 Done:
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
+- Typed global filter option maps in app layout.
+ - Typed map read state map source in maps page.
 
 Now:
-- Fix implicit any in app layout, commit, push.
+- Commit maps page type fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

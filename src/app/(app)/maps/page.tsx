@@ -43,6 +43,7 @@ const SHAPES = ["circle", "square", "diamond", "triangle", "hex", "star"];
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 type PageProps = { searchParams: Promise<SearchParams> };
+type MapReadState = { targetId: string; lastReadAt: Date };
 
 export default async function MapsPage({ searchParams }: PageProps) {
   const user = await requireUser();
@@ -115,7 +116,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
         orderBy: { createdAt: "desc" }
       })
     : [];
-  const mapReadStates = workspace
+  const mapReadStates: MapReadState[] = workspace
     ? await prisma.readState.findMany({
         where: {
           workspaceId: workspace.id,
