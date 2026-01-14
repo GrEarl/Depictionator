@@ -1,10 +1,11 @@
-﻿import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 type NotificationInput = {
   userId: string;
   workspaceId: string;
   type: string;
-  payload: Record<string, unknown>;
+  payload: Prisma.InputJsonValue;
 };
 type WatchSummary = { userId: string };
 
@@ -14,7 +15,7 @@ export async function createNotification(input: NotificationInput) {
       userId: input.userId,
       workspaceId: input.workspaceId,
       type: input.type,
-      payload: input.payload
+      payload: input.payload as Prisma.InputJsonValue
     }
   });
 }
@@ -24,7 +25,7 @@ export async function notifyWatchers(input: {
   targetType: string;
   targetId: string;
   type: string;
-  payload: Record<string, unknown>;
+  payload: Prisma.InputJsonValue;
 }) {
   const watchers: WatchSummary[] = await prisma.watch.findMany({
     where: {
@@ -40,7 +41,7 @@ export async function notifyWatchers(input: {
       userId: watch.userId,
       workspaceId: input.workspaceId,
       type: input.type,
-      payload: input.payload
+      payload: input.payload as Prisma.InputJsonValue
     }))
   });
 }

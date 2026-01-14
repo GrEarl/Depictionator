@@ -53,9 +53,10 @@ Done:
 - Fixed audit log meta JSON typing.
 - Switched audit log create input to unchecked type.
 - Cast mention notification payload to Prisma JSON input.
+- Cast notification payloads to Prisma JSON input.
 
 Now:
-- Commit mention payload typing fix and push.
+- Commit notification payload typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
