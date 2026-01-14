@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { readFile } from "fs/promises";
+import { Buffer } from "node:buffer";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
@@ -151,7 +152,13 @@ export async function POST(request: Request) {
   const pdf = await page.pdf({ format: "A4", printBackground: true });
   await browser.close();
 
-  return new NextResponse(pdf, {
+  const pdfBuffer = Buffer.from(pdf);
+  const pdfBody = pdfBuffer.buffer.slice(
+    pdfBuffer.byteOffset,
+    pdfBuffer.byteOffset + pdfBuffer.byteLength
+  );
+
+  return new NextResponse(pdfBody, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": "attachment; filename=print-set.pdf"
