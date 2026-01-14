@@ -1,11 +1,33 @@
-﻿import { requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
+
+type ReviewCommentSummary = {
+  id: string;
+  bodyMd: string;
+  user: { name: string | null } | null;
+};
+type ReviewSummary = {
+  id: string;
+  revisionId: string;
+  revision: { status: string };
+  comments: ReviewCommentSummary[];
+};
+type AuditLogSummary = {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  actorUserId: string;
+  actorUser: { name: string | null } | null;
+  createdAt: Date;
+};
+
 
 export default async function ReviewsPage() {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
-  const reviews = workspace
+  const reviews: ReviewSummary[] = workspace
     ? await prisma.reviewRequest.findMany({
         where: { workspaceId: workspace.id, status: "open" },
         include: {
@@ -16,7 +38,7 @@ export default async function ReviewsPage() {
       })
     : [];
 
-  const auditLogs = workspace
+  const auditLogs: AuditLogSummary[] = workspace
     ? await prisma.auditLog.findMany({
         where: { workspaceId: workspace.id },
         include: { actorUser: true },
@@ -103,7 +125,7 @@ export default async function ReviewsPage() {
                   <span className="muted"> on {log.targetType} ({log.targetId})</span>
                 </div>
                 <div className="muted" style={{ fontSize: '12px' }}>
-                  {log.actorUser?.name ?? log.actorUserId} · {log.createdAt.toLocaleString()}
+                  {log.actorUser?.name ?? log.actorUserId} ・ {log.createdAt.toLocaleString()}
                 </div>
               </li>
             ))}
@@ -115,3 +137,4 @@ export default async function ReviewsPage() {
     </div>
   );
 }
+

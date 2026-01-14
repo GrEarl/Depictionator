@@ -24,9 +24,10 @@ Done:
 - Typed dashboard membership list.
 - Re-encoded dashboard page to UTF-8.
 - Typed dashboard notification list.
+- Typed reviews page lists and re-encoded to UTF-8.
 
 Now:
-- Commit dashboard notification typing fix and push.
+- Commit reviews page typing/encoding fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
