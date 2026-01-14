@@ -30,9 +30,10 @@ Done:
 - Added missing TextDecoder in Gemini stream.
 - Typed PDF build route lists and re-encoded to UTF-8.
 - Re-encoded multiple files to UTF-8 after PowerShell edits.
+- Replaced corrupted dashboard selection string with ASCII.
 
 Now:
-- Commit UTF-8 re-encoding changes and push.
+- Commit dashboard string fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
