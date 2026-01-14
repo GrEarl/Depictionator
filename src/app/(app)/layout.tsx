@@ -6,6 +6,7 @@ import { getCurrentSession, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
 const DEFAULT_PROVIDERS = ["gemini_ai", "gemini_vertex", "codex_cli"] as const;
+type OptionSource = { id: string; name: string };
 
 function normalizeProvider(value: string) {
   const normalized = value.trim().toLowerCase();
@@ -37,13 +38,19 @@ export default async function AppLayout({
     : [[], [], []];
 
   const eraOptions = [{ value: "all", label: "All Eras" }].concat(
-    eras.map((era) => ({ value: era.id, label: era.name }))
+    eras.map((era: OptionSource) => ({ value: era.id, label: era.name }))
   );
   const chapterOptions = [{ value: "all", label: "All Chapters" }].concat(
-    chapters.map((chapter) => ({ value: chapter.id, label: chapter.name }))
+    chapters.map((chapter: OptionSource) => ({
+      value: chapter.id,
+      label: chapter.name
+    }))
   );
   const viewpointOptions = [{ value: "canon", label: "Omni (Canon)" }].concat(
-    viewpoints.map((viewpoint) => ({ value: viewpoint.id, label: viewpoint.name }))
+    viewpoints.map((viewpoint: OptionSource) => ({
+      value: viewpoint.id,
+      label: viewpoint.name
+    }))
   );
 
   const enabledProviders = process.env.LLM_PROVIDERS_ENABLED

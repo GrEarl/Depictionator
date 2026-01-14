@@ -14,9 +14,10 @@ State:
 
 Done:
 - Committed and pushed readStateMap type fix.
+- Fixed archivedEntities typo and pushed.
 
 Now:
-- Fix typo in articles page (archivedentities), commit, push.
+- Fix implicit any in app layout, commit, push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
