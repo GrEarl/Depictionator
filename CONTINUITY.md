@@ -35,9 +35,10 @@ Done:
 - Typed PDF export route assets and response body.
 - Simplified MarkdownView code renderer to avoid inline prop typing error.
 - Typed mention notification member list.
+- Typed watcher list in notifications helper.
 
 Now:
-- Commit mention typing fix and push.
+- Commit notifications typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

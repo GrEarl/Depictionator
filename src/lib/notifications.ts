@@ -6,6 +6,7 @@ type NotificationInput = {
   type: string;
   payload: Record<string, unknown>;
 };
+type WatchSummary = { userId: string };
 
 export async function createNotification(input: NotificationInput) {
   return prisma.notification.create({
@@ -25,7 +26,7 @@ export async function notifyWatchers(input: {
   type: string;
   payload: Record<string, unknown>;
 }) {
-  const watchers = await prisma.watch.findMany({
+  const watchers: WatchSummary[] = await prisma.watch.findMany({
     where: {
       workspaceId: input.workspaceId,
       targetType: input.targetType,
