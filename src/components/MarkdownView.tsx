@@ -14,9 +14,9 @@ export function MarkdownView({ value }: MarkdownViewProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          code({ inline, className, children, ...props }) {
+          code({ className, children, ...props }) {
             const language = /language-(\w+)/.exec(className ?? "");
-            if (!inline && language?.[1] === "mermaid") {
+            if (language?.[1] === "mermaid") {
               return <Mermaid code={String(children).trim()} />;
             }
             return (
