@@ -7,6 +7,7 @@ type MembershipSummary = {
   role: string;
   workspace: { slug: string; name: string };
 };
+type NotificationSummary = { id: string; type: string };
 
 
 export default async function DashboardPage() {
@@ -16,7 +17,7 @@ export default async function DashboardPage() {
     where: { userId: user.id },
     include: { workspace: true }
   });
-  const notifications = await prisma.notification.findMany({
+  const notifications: NotificationSummary[] = await prisma.notification.findMany({
     where: { userId: user.id, readAt: null },
     orderBy: { createdAt: "desc" },
     take: 10

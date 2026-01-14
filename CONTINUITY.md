@@ -23,9 +23,10 @@ Done:
 - Defaulted null path arrowStyle for MapEditor payload.
 - Typed dashboard membership list.
 - Re-encoded dashboard page to UTF-8.
+- Typed dashboard notification list.
 
 Now:
-- Commit UTF-8 fix for dashboard page and push.
+- Commit dashboard notification typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
