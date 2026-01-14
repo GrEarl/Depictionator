@@ -15,6 +15,16 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+RUN apk add --no-cache \
+    chromium \
+    nss \
+    freetype \
+    harfbuzz \
+    ca-certificates \
+    ttf-freefont \
+    && ln -sf /usr/bin/chromium /usr/bin/chromium-browser
 
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/.next ./.next

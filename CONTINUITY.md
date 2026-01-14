@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (fixing redirect base URL after smoke test failure).
+- In progress (PDF build failing due to missing Chromium; adding runtime deps).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -59,15 +59,18 @@ Done:
 - Guarded Codex CLI runtime error message typing.
 - Pulled latest on VPS, rebuilt Docker image, started containers, and verified /health.
 - Browser check (agent-browser): /health OK, /login loads with fields; root / timed out at 10s.
+- Added redirect helper and updated API redirects to respect Host/forwarded headers.
+- API smoke checks (auth/workspace/article/overlay/viewpoint/timeline/era/chapter/event/map/pin/path) succeeded via curl with session cookie.
+- PDF build failed on VPS due to missing Chromium.
 
 Now:
-- Fix redirect URL construction for API routes, then redeploy and re-test auth flow.
+- Add Chromium deps to Dockerfile, redeploy, re-test PDF build.
 
 Next:
 - Resume UI/API smoke checks after redeploy.
 
 Open questions (UNCONFIRMED if needed):
-- Auth and post-redirect flows still UNCONFIRMED until redirect fix is validated.
+- PDF build success after Chromium install is UNCONFIRMED.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts
