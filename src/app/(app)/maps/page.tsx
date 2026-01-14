@@ -42,13 +42,16 @@ const SHAPES = ["circle", "square", "diamond", "triangle", "hex", "star"];
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
-export default async function MapsPage({ searchParams }: { searchParams: SearchParams }) {
+type PageProps = { searchParams: Promise<SearchParams> };
+
+export default async function MapsPage({ searchParams }: PageProps) {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
-  const eraFilter = String(searchParams.era ?? "all");
-  const chapterFilter = String(searchParams.chapter ?? "all");
-  const viewpointFilter = String(searchParams.viewpoint ?? "canon");
-  const mode = String(searchParams.mode ?? "canon");
+  const resolvedSearchParams = await searchParams;
+  const eraFilter = String(resolvedSearchParams.era ?? "all");
+  const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
+  const viewpointFilter = String(resolvedSearchParams.viewpoint ?? "canon");
+  const mode = String(resolvedSearchParams.mode ?? "canon");
 
   const viewpointCondition =
     mode === "canon"
@@ -148,7 +151,7 @@ export default async function MapsPage({ searchParams }: { searchParams: SearchP
   );
   const defaultPathStyle =
     markerStyles.find((style) => style.target === "path") ?? null;
-  const selectedMapId = String(searchParams.map ?? maps[0]?.id ?? "");
+  const selectedMapId = String(resolvedSearchParams.map ?? maps[0]?.id ?? "");
   const selectedMap = maps.find((map) => map.id === selectedMapId) ?? null;
   const parentMap = selectedMap?.parentMapId ? maps.find((m) => m.id === selectedMap.parentMapId) : null;
   const childMaps = selectedMap ? maps.filter((m) => m.parentMapId === selectedMap.id) : [];

@@ -1,6 +1,6 @@
 Goal (incl. success criteria):
-- Fix UTF-8 encoding errors in settings/login pages to unblock Docker build.
-- Push fix and redeploy on VPS.
+- Fix Next.js PageProps typing for maps/timeline pages to unblock Docker build.
+- Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -8,25 +8,25 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Re-encode problematic files as UTF-8.
+- Accept Promise-based searchParams to satisfy Next.js types.
 
 State:
-- In progress (fixing encoding, pushing, rebuilding on VPS).
+- In progress (patching maps/timeline and redeploying).
 
 Done:
-- Identified build failure due to invalid UTF-8 in settings/login pages.
+- Fixed PageProps typing in article detail page earlier.
 
 Now:
-- Commit encoding fix and push.
+- Commit maps/timeline typing fix and push.
 
 Next:
-- Pull on VPS and rebuild docker image.
+- Pull on VPS and rebuild Docker image.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- src/app/(app)/settings/page.tsx
-- src/app/login/page.tsx
+- src/app/(app)/maps/page.tsx
+- src/app/(app)/timeline/page.tsx
 - git commit, git push
-- ssh-mcp: git pull, docker-compose build/up
+- ssh-mcp rebuild

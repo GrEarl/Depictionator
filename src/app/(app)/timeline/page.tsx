@@ -20,11 +20,14 @@ const EVENT_TYPES = [
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
-export default async function TimelinePage({ searchParams }: { searchParams: SearchParams }) {
+type PageProps = { searchParams: Promise<SearchParams> };
+
+export default async function TimelinePage({ searchParams }: PageProps) {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
-  const eraFilter = String(searchParams.era ?? "all");
-  const chapterFilter = String(searchParams.chapter ?? "all");
+  const resolvedSearchParams = await searchParams;
+  const eraFilter = String(resolvedSearchParams.era ?? "all");
+  const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
 
   const worldCondition =
     eraFilter === "all"
@@ -93,7 +96,7 @@ export default async function TimelinePage({ searchParams }: { searchParams: Sea
       })
     : [];
 
-  const activeTab = String(searchParams.tab ?? "world_history");
+  const activeTab = String(resolvedSearchParams.tab ?? "world_history");
   const filteredTimelines = timelines.filter(t => 
     activeTab === 'all' || t.type === activeTab || (activeTab === 'world_history' && t.type === 'world_history') || (activeTab === 'game_storyline' && t.type === 'game_storyline')
   );
