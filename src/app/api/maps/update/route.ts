@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -31,7 +32,7 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
-  const data: Record<string, unknown> = {};
+  const data: Prisma.MapUpdateInput = {};
   if (title) data.title = title;
   if (parentMapId !== null) data.parentMapId = parentMapId;
   if (imageAssetId !== null) {
@@ -49,10 +50,10 @@ export async function POST(request: Request) {
   }
   if (boundsRaw !== null) {
     if (!boundsRaw) {
-      data.bounds = null;
+      data.bounds = Prisma.DbNull;
     } else {
       try {
-        data.bounds = JSON.parse(boundsRaw);
+        data.bounds = JSON.parse(boundsRaw) as Prisma.InputJsonValue;
       } catch {
         return apiError("Invalid bounds JSON", 400);
       }

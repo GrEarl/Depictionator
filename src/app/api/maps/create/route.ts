@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
@@ -28,10 +29,10 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
-  let bounds: unknown = null;
+  let bounds: Prisma.InputJsonValue | undefined;
   if (boundsRaw) {
     try {
-      bounds = JSON.parse(boundsRaw);
+      bounds = JSON.parse(boundsRaw) as Prisma.InputJsonValue;
     } catch {
       return apiError("Invalid bounds JSON", 400);
     }
@@ -47,17 +48,17 @@ export async function POST(request: Request) {
     }
   }
 
-  const map = await prisma.map.create({
-    data: {
-      workspaceId,
-      title,
-      parentMapId: parentMapId || null,
-      imageAssetId: imageAsset?.id ?? null,
-      bounds: bounds ?? null,
-      createdById: session.userId,
-      updatedById: session.userId
-    }
-  });
+  const data: Prisma.MapCreateInput = {
+    workspaceId,
+    title,
+    parentMapId: parentMapId || null,
+    imageAssetId: imageAsset?.id ?? null,
+    createdById: session.userId,
+    updatedById: session.userId
+  };
+  if (bounds !== undefined) data.bounds = bounds;
+
+  const map = await prisma.map.create({ data });
 
   await logAudit({
     workspaceId,

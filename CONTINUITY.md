@@ -40,9 +40,10 @@ Done:
 - Normalized article entity type to Prisma enum.
 - Normalized article status to Prisma enum.
 - Normalized event type to Prisma enum in create/update.
+- Normalized map bounds JSON typing in create/update.
 
 Now:
-- Commit event type normalization fixes and push.
+- Commit map bounds typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
