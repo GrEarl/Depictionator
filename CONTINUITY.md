@@ -57,6 +57,7 @@ Done:
 - Cast notification payloads to Prisma JSON input.
 - Added public/.gitkeep to satisfy Docker copy.
 - Handled Codex CLI spawn/runtime errors in streaming route.
+- Guarded Codex CLI runtime error message typing.
 
 Now:
 - Pull latest on VPS and rebuild Docker image.
