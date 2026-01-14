@@ -53,7 +53,7 @@ export default async function ArticlesPage() {
         }
       })
     : [];
-  const readStateMap = new Map(
+  const readStateMap = new Map<string, { lastReadRevisionId?: string | null }>(
     readStates.map((state: { targetId: string; lastReadRevisionId?: string | null }) => [state.targetId, state])
   );
   const archivedEntities = workspace
@@ -173,6 +173,7 @@ export default async function ArticlesPage() {
     </div>
   );
 }
+
 
 
 

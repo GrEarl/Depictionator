@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix readState type annotation for lastReadRevisionId in articles page.
+- Fix readStateMap type to expose lastReadRevisionId in articles page.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise.
 
 Key decisions:
-- Expand readState type annotation to include lastReadRevisionId.
+- Add explicit Map generic for readStateMap.
 
 State:
 - In progress (patching and redeploying).
 
 Done:
-- Restored ENTITY_TYPES header and entity annotations.
+- Added readState callback type.
 
 Now:
-- Commit readState type fix and push.
+- Commit readStateMap type fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.
