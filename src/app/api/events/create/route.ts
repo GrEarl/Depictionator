@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EventType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -17,7 +18,10 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "");
   const timelineId = String(form.get("timelineId") ?? "");
   const title = String(form.get("title") ?? "").trim();
-  const eventType = String(form.get("eventType") ?? "other");
+  const eventTypeValue = String(form.get("eventType") ?? "other").trim().toLowerCase();
+  const eventType = (Object.values(EventType) as string[]).includes(eventTypeValue)
+    ? (eventTypeValue as EventType)
+    : EventType.other;
   const worldStart = String(form.get("worldStart") ?? "").trim();
   const worldEnd = String(form.get("worldEnd") ?? "").trim();
   const storyOrder = parseOptionalInt(form.get("storyOrder"));

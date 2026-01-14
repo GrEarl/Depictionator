@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EventType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -47,7 +48,12 @@ export async function POST(request: Request) {
   const title = parseOptionalString(form.get("title"));
   if (title !== null) data.title = title;
   const eventType = parseOptionalString(form.get("eventType"));
-  if (eventType !== null) data.eventType = eventType;
+  if (eventType !== null) {
+    const eventTypeValue = eventType.trim().toLowerCase();
+    data.eventType = (Object.values(EventType) as string[]).includes(eventTypeValue)
+      ? (eventTypeValue as EventType)
+      : EventType.other;
+  }
   const markerStyleId = parseOptionalString(form.get("markerStyleId"));
   if (markerStyleId !== null) data.markerStyleId = markerStyleId;
   const worldStart = parseOptionalString(form.get("worldStart"));

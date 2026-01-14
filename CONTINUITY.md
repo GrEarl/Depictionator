@@ -39,9 +39,10 @@ Done:
 - Added prisma generate in Dockerfile build stage.
 - Normalized article entity type to Prisma enum.
 - Normalized article status to Prisma enum.
+- Normalized event type to Prisma enum in create/update.
 
 Now:
-- Commit article status normalization fix and push.
+- Commit event type normalization fixes and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
