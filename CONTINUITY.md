@@ -78,6 +78,7 @@ Done:
 - Added locale helper and locale setting API.
 - Updated PDF build/export to include SourceRecord credits.
 - Drafted Gemini.md UI/UX brief.
+- Fixed PDF build/export UTF-8 issues after adding Source credits.
 
 Now:
 - Commit/push changes, redeploy, and verify wiki import & PDF credits on VPS.

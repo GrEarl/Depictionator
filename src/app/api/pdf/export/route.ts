@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const credits = assets
       .map(
         (asset) =>
-          `<li>${asset.storageKey} · ${asset.author ?? ""} · ${asset.licenseId ?? ""} · ${asset.licenseUrl ?? ""} · ${asset.sourceUrl ?? ""}</li>`
+          `<li>${asset.storageKey}  |  ${asset.author ?? ""}  |  ${asset.licenseId ?? ""}  |  ${asset.licenseUrl ?? ""}  |  ${asset.sourceUrl ?? ""}</li>`
       )
       .join("");
     const sources = sourceRecords
@@ -94,4 +94,5 @@ export async function POST(request: Request) {
     }
   });
 }
+
 

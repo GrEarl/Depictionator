@@ -163,7 +163,7 @@ export async function POST(request: Request) {
     const credits = assets
       .map(
         (asset) =>
-          `<li>${escapeHtml(asset.storageKey)} 繝ｻ繧托ｽｽ・ｷ ${escapeHtml(asset.author ?? "")} 繝ｻ繧托ｽｽ・ｷ ${escapeHtml(asset.licenseId ?? "")} 繝ｻ繧托ｽｽ・ｷ ${escapeHtml(asset.licenseUrl ?? "")} 繝ｻ繧托ｽｽ・ｷ ${escapeHtml(asset.sourceUrl ?? "")}</li>`
+          `<li>${escapeHtml(asset.storageKey)}  |  ${escapeHtml(asset.author ?? "")}  |  ${escapeHtml(asset.licenseId ?? "")}  |  ${escapeHtml(asset.licenseUrl ?? "")}  |  ${escapeHtml(asset.sourceUrl ?? "")}</li>`
       )
       .join("");
     const sources = sourceRecords
@@ -202,6 +202,7 @@ export async function POST(request: Request) {
     }
   });
 }
+
 
 
 
