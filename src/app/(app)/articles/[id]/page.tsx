@@ -87,7 +87,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
           eraFilter,
           chapterFilter,
           baseRevisionId: entity.article?.baseRevisionId ?? null,
-          overlayIds: entity.overlays.map((overlay) => overlay.id)
+          overlayIds: entity.overlays.map((overlay: { id: string }) => overlay.id)
         }}
       />
       <AutoMarkRead

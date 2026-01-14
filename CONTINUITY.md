@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix Next.js route handler params typing for asset file route.
+- Fix TypeScript implicit any in article detail overlay map.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Use Promise-based params in Next.js route handlers.
+- Add explicit overlay type annotation to satisfy TS.
 
 State:
-- In progress (patching asset route and redeploying).
+- In progress (patching article page and redeploying).
 
 Done:
-- Fixed PageProps typing for maps/timeline/revisions/workspace/article pages.
+- Fixed route and page param typings.
 
 Now:
-- Commit asset route typing fix and push.
+- Commit overlay typing fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.
@@ -26,6 +26,6 @@ Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- src/app/api/assets/file/[id]/route.ts
+- src/app/(app)/articles/[id]/page.tsx
 - git commit, git push
 - ssh-mcp rebuild
