@@ -36,9 +36,10 @@ Done:
 - Simplified MarkdownView code renderer to avoid inline prop typing error.
 - Typed mention notification member list.
 - Typed watcher list in notifications helper.
+- Added prisma generate in Dockerfile build stage.
 
 Now:
-- Commit notifications typing fix and push.
+- Commit Dockerfile prisma generate change and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.
