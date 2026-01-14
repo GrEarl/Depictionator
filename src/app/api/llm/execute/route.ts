@@ -132,6 +132,7 @@ async function* streamGemini(prompt: string, options: GeminiOptions): AsyncGener
   }
 
   const reader = response.body.getReader();
+  const decoder = new TextDecoder();
   let buffer = "";
 
   try {
