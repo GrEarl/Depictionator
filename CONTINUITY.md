@@ -1,30 +1,32 @@
 Goal (incl. success criteria):
-- Push current workspace state to origin.
+- Fix UTF-8 encoding errors in settings/login pages to unblock Docker build.
+- Push fix and redeploy on VPS.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
-- This environment cannot directly SSH into external VPS; only local shell is available.
-- MCP servers must be configured in the user's Codex client.
+- Use ssh-mcp via Codex MCP; avoid destructive operations without confirmation.
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Commit and push any pending changes.
+- Re-encode problematic files as UTF-8.
 
 State:
-- Ready (push complete).
+- In progress (fixing encoding, pushing, rebuilding on VPS).
 
 Done:
-- Committed and pushed latest CONTINUITY.md update.
+- Identified build failure due to invalid UTF-8 in settings/login pages.
 
 Now:
-- No pending tasks.
+- Commit encoding fix and push.
 
 Next:
-- Await further user instructions.
+- Pull on VPS and rebuild docker image.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- git commit 6231bde
-- git push origin main
+- src/app/(app)/settings/page.tsx
+- src/app/login/page.tsx
+- git commit, git push
+- ssh-mcp: git pull, docker-compose build/up

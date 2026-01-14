@@ -1,4 +1,4 @@
-import { requireUser } from "@/lib/auth";
+﻿import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { prisma } from "@/lib/db";
 
@@ -136,7 +136,7 @@ export default async function SettingsPage() {
               {assets.map((asset) => (
                 <li key={asset.id} className="list-row">
                   <div>
-                    {asset.storageKey} �E {Math.round(asset.size / 1024)} KB
+                    {asset.storageKey} ・ {Math.round(asset.size / 1024)} KB
                   </div>
                   <form action="/api/archive" method="post">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
@@ -224,4 +224,5 @@ export default async function SettingsPage() {
     </div>
   );
 }
+
 
