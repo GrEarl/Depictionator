@@ -52,9 +52,10 @@ Done:
 - Normalized viewpoint type enum in create.
 - Fixed audit log meta JSON typing.
 - Switched audit log create input to unchecked type.
+- Cast mention notification payload to Prisma JSON input.
 
 Now:
-- Commit audit log unchecked create input and push.
+- Commit mention payload typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

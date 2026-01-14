@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 type MemberSummary = { userId: string };
 
@@ -44,7 +45,7 @@ export async function notifyMentions(input: {
       userId,
       workspaceId: input.workspaceId,
       type: "mention",
-      payload: input.context
+      payload: input.context as Prisma.InputJsonValue
     }))
   });
 }
