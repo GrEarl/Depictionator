@@ -34,9 +34,10 @@ Done:
 - Fixed PDF response body typing for NextResponse.
 - Typed PDF export route assets and response body.
 - Simplified MarkdownView code renderer to avoid inline prop typing error.
+- Typed mention notification member list.
 
 Now:
-- Commit MarkdownView typing fix and push.
+- Commit mention typing fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

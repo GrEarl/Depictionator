@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 
+type MemberSummary = { userId: string };
+
 const MENTION_REGEX = /@([A-Za-z0-9._-]+)/g;
 
 export function extractMentions(text: string) {
@@ -18,7 +20,7 @@ export async function notifyMentions(input: {
   const mentions = extractMentions(input.text);
   if (mentions.length === 0) return;
 
-  const members = await prisma.workspaceMember.findMany({
+  const members: MemberSummary[] = await prisma.workspaceMember.findMany({
     where: {
       workspaceId: input.workspaceId,
       user: {
