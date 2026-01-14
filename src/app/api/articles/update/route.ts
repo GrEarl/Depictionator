@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EntityStatus } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { parseCsv, parseOptionalString } from "@/lib/forms";
 import { logAudit } from "@/lib/audit";
@@ -16,7 +17,10 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "");
   const entityId = String(form.get("entityId") ?? "");
   const title = String(form.get("title") ?? "").trim();
-  const status = String(form.get("status") ?? "draft");
+  const statusValue = String(form.get("status") ?? "draft").trim().toLowerCase();
+  const status = (Object.values(EntityStatus) as string[]).includes(statusValue)
+    ? (statusValue as EntityStatus)
+    : EntityStatus.draft;
 
   if (!workspaceId || !entityId || !title) {
     return apiError("Missing fields", 400);
