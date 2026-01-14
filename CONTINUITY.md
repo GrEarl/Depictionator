@@ -59,6 +59,7 @@ Done:
 - Handled Codex CLI spawn/runtime errors in streaming route.
 - Guarded Codex CLI runtime error message typing.
 - Pulled latest on VPS, rebuilt Docker image, started containers, and verified /health.
+- Browser check (agent-browser): /health OK, /login loads with fields; root / timed out at 10s.
 
 Now:
 - Await next user request.
