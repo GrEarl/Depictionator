@@ -43,9 +43,10 @@ Done:
 - Normalized map bounds JSON typing in create/update.
 - Switched map create input to unchecked type for workspaceId.
 - Switched map update input to unchecked type for parentMapId.
+- Normalized marker style event/location types to enums.
 
 Now:
-- Commit map update input fix and push.
+- Commit marker style enum normalization and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

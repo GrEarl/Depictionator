@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { EventType, LocationType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
@@ -15,8 +16,14 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "");
   const name = String(form.get("name") ?? "").trim();
   const target = String(form.get("target") ?? "") as "event" | "location" | "path";
-  const eventType = String(form.get("eventType") ?? "").trim();
-  const locationType = String(form.get("locationType") ?? "").trim();
+  const eventTypeValue = String(form.get("eventType") ?? "").trim().toLowerCase();
+  const locationTypeValue = String(form.get("locationType") ?? "").trim().toLowerCase();
+  const eventType = (Object.values(EventType) as string[]).includes(eventTypeValue)
+    ? (eventTypeValue as EventType)
+    : null;
+  const locationType = (Object.values(LocationType) as string[]).includes(locationTypeValue)
+    ? (locationTypeValue as LocationType)
+    : null;
   const shape = String(form.get("shape") ?? "");
   const color = String(form.get("color") ?? "#4b6ea8");
   const iconKey = String(form.get("iconKey") ?? "").trim();
