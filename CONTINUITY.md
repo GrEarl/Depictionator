@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix articles page header corruption and entity type annotations after regex replace.
+- Fix readState type annotation for lastReadRevisionId in articles page.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,19 +8,19 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise.
 
 Key decisions:
-- Restore ENTITY_TYPES array and EntitySummary type block.
+- Expand readState type annotation to include lastReadRevisionId.
 
 State:
-- In progress (commit fix and redeploy).
+- In progress (patching and redeploying).
 
 Done:
-- Repaired header section in articles page and re-encoded as UTF-8.
+- Restored ENTITY_TYPES header and entity annotations.
 
 Now:
-- Commit and push fix, then pull on VPS and rebuild.
+- Commit readState type fix and push.
 
 Next:
-- docker-compose up -d and health check once build succeeds.
+- Pull on VPS and rebuild Docker image.
 
 Open questions (UNCONFIRMED if needed):
 - None.
