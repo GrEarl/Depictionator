@@ -252,7 +252,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </form>
 
             <ul>
-              {entity.overlays.map((overlay) => (
+              {entity.overlays.map((overlay: { id: string; title: string }) => (
                 <li key={overlay.id} className="panel">
                   <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <strong>{overlay.title}</strong>
@@ -295,7 +295,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
             </ul>
             <h4>Archived overlays</h4>
             <ul>
-              {archivedOverlays.map((overlay) => (
+              {archivedOverlays.map((overlay: { id: string; title: string }) => (
                 <li key={overlay.id} className="list-row">
                   <span>{overlay.title}</span>
                   <form action="/api/restore" method="post">
