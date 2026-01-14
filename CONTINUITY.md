@@ -80,6 +80,7 @@ Done:
 - Drafted Gemini.md UI/UX brief.
 - Fixed PDF build/export UTF-8 issues after adding Source credits.
 - Fixed locale audit workspaceId usage for build.
+- Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
 - Commit/push changes, redeploy, and verify wiki import & PDF credits on VPS.
