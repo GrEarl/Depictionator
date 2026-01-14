@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (PDF build failing due to Chromium path; fixing executable path).
+- In progress (smoke checks largely complete; final reporting pending).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -63,15 +63,21 @@ Done:
 - API smoke checks (auth/workspace/article/overlay/viewpoint/timeline/era/chapter/event/map/pin/path) succeeded via curl with session cookie.
 - PDF build failed on VPS due to missing Chromium.
 - Chromium installed in runner image but puppeteer path misconfigured (symlink loop).
+- Fixed Chromium executable path and symlinks; PDF build now returns 200 OK.
+- Redeployed VPS after Chromium path fix; /health OK.
+- LLM exec endpoints return structured errors when keys/CLI missing.
+- Review workflow tested (revision -> review request -> approve).
+- Notifications/read-state/watch toggle endpoints tested via API.
+- PDF export endpoint returns 200 OK.
 
 Now:
-- Fix Chromium executable path in Dockerfile, redeploy, re-test PDF build.
+- Summarize smoke check results and report any remaining gaps.
 
 Next:
 - Resume UI/API smoke checks after redeploy.
 
 Open questions (UNCONFIRMED if needed):
-- PDF build success after executable path fix is UNCONFIRMED.
+- Browser UI flows over HTTPS (Secure cookie) are UNCONFIRMED.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts
