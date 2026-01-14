@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (redeploying on VPS).
+- In progress (fixing build error).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -19,9 +19,10 @@ Done:
 - Typed map read state map source in maps page.
 - Typed marker style arrays in maps page.
 - Typed map/pin/path/archived map arrays in maps page.
+- Guarded null locationType when reading style map.
 
 Now:
-- Commit maps page map/pin/path types and push.
+- Commit locationType null guard fix and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

@@ -213,7 +213,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
           ? `/api/assets/file/${selectedMap.imageAssetId}`
           : null,
         pins: selectedMap.pins.map((pin) => {
-          const fallbackStyle = locationStyleMap.get(pin.locationType);
+          const fallbackStyle = locationStyleMap.get(pin.locationType ?? "");
           const style = pin.markerStyle
             ? { shape: pin.markerStyle.shape, color: pin.markerStyle.color }
             : fallbackStyle ?? null;
