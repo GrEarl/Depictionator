@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { LocationType, MarkerShape, TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -37,11 +38,21 @@ export async function POST(request: Request) {
   const entityId = parseOptionalString(form.get("entityId"));
   if (entityId !== null) data.entityId = entityId;
   const locationType = parseOptionalString(form.get("locationType"));
-  if (locationType !== null) data.locationType = locationType;
+  if (locationType !== null) {
+    const locationValue = locationType.trim().toLowerCase();
+    data.locationType = (Object.values(LocationType) as string[]).includes(locationValue)
+      ? (locationValue as LocationType)
+      : LocationType.other;
+  }
   const markerStyleId = parseOptionalString(form.get("markerStyleId"));
   if (markerStyleId !== null) data.markerStyleId = markerStyleId;
   const markerShape = parseOptionalString(form.get("markerShape"));
-  if (markerShape !== null) data.markerShape = markerShape;
+  if (markerShape !== null) {
+    const shapeValue = markerShape.trim().toLowerCase();
+    data.markerShape = (Object.values(MarkerShape) as string[]).includes(shapeValue)
+      ? (shapeValue as MarkerShape)
+      : null;
+  }
   const markerColor = parseOptionalString(form.get("markerColor"));
   if (markerColor !== null) data.markerColor = markerColor;
   const worldFrom = parseOptionalString(form.get("worldFrom"));
@@ -55,7 +66,12 @@ export async function POST(request: Request) {
   const viewpointId = parseOptionalString(form.get("viewpointId"));
   if (viewpointId !== null) data.viewpointId = viewpointId;
   const truthFlag = parseOptionalString(form.get("truthFlag"));
-  if (truthFlag !== null) data.truthFlag = truthFlag;
+  if (truthFlag !== null) {
+    const truthValue = truthFlag.trim().toLowerCase();
+    data.truthFlag = (Object.values(TruthFlag) as string[]).includes(truthValue)
+      ? (truthValue as TruthFlag)
+      : TruthFlag.canonical;
+  }
 
   await prisma.pin.update({ where: { id: pinId, workspaceId }, data });
 

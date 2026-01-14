@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { LocationType, MarkerShape, TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -20,16 +21,29 @@ export async function POST(request: Request) {
   const y = parseOptionalFloat(form.get("y"));
   const label = String(form.get("label") ?? "").trim();
   const entityId = String(form.get("entityId") ?? "").trim();
-  const locationType = String(form.get("locationType") ?? "other");
+  const locationValue = String(form.get("locationType") ?? "other")
+    .trim()
+    .toLowerCase();
+  const locationType = (Object.values(LocationType) as string[]).includes(locationValue)
+    ? (locationValue as LocationType)
+    : LocationType.other;
   const markerStyleId = String(form.get("markerStyleId") ?? "").trim();
-  const markerShape = String(form.get("markerShape") ?? "").trim();
+  const markerShapeValue = String(form.get("markerShape") ?? "").trim().toLowerCase();
+  const markerShape = (Object.values(MarkerShape) as string[]).includes(markerShapeValue)
+    ? (markerShapeValue as MarkerShape)
+    : null;
   const markerColor = String(form.get("markerColor") ?? "").trim();
   const worldFrom = String(form.get("worldFrom") ?? "").trim();
   const worldTo = String(form.get("worldTo") ?? "").trim();
   const storyFromChapterId = String(form.get("storyFromChapterId") ?? "").trim();
   const storyToChapterId = String(form.get("storyToChapterId") ?? "").trim();
   const viewpointId = String(form.get("viewpointId") ?? "").trim();
-  const truthFlag = String(form.get("truthFlag") ?? "canonical").trim();
+  const truthValue = String(form.get("truthFlag") ?? "canonical")
+    .trim()
+    .toLowerCase();
+  const truthFlag = (Object.values(TruthFlag) as string[]).includes(truthValue)
+    ? (truthValue as TruthFlag)
+    : TruthFlag.canonical;
 
   if (!workspaceId || !mapId || x === null || y === null) {
     return apiError("Missing fields", 400);

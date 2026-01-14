@@ -46,9 +46,10 @@ Done:
 - Normalized marker style event/location types to enums.
 - Normalized marker style target/shape to enums.
 - Normalized overlay truthFlag to enum.
+- Normalized pin truth/location/shape enums in create/update.
 
 Now:
-- Commit overlay truthFlag normalization and push.
+- Commit pin enum normalization fixes and push.
 
 Next:
 - Pull on VPS, rebuild Docker image, then /health check.

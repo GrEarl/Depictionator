@@ -1,5 +1,6 @@
 ﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
@@ -28,7 +29,12 @@ export async function POST(request: Request) {
   const storyFromChapterId = String(form.get("storyFromChapterId") ?? "").trim();
   const storyToChapterId = String(form.get("storyToChapterId") ?? "").trim();
   const viewpointId = String(form.get("viewpointId") ?? "").trim();
-  const truthFlag = String(form.get("truthFlag") ?? "canonical").trim();
+  const truthValue = String(form.get("truthFlag") ?? "canonical")
+    .trim()
+    .toLowerCase();
+  const truthFlag = (Object.values(TruthFlag) as string[]).includes(truthValue)
+    ? (truthValue as TruthFlag)
+    : TruthFlag.canonical;
 
   if (!workspaceId || !mapId) {
     return apiError("Missing fields", 400);
