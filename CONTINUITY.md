@@ -1,6 +1,5 @@
 Goal (incl. success criteria):
-- Add Wikipedia/MediaWiki import backend + source tracking + i18n locale support.
-- Prepare Gemini UI brief for map editing, wiki import, and editor UX improvements.
+- Fix Codex CLI streaming spawn error handling regression.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -11,9 +10,10 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (wiki import + locale + source tracking implemented; pending commit/deploy verification).
+- In progress (Codex CLI spawn error handling fix applied; pending commit/push).
 
 Done:
+- Updated Codex CLI streaming to keep error handler through process close.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -83,14 +83,13 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Commit/push changes, redeploy, and verify wiki import & PDF credits on VPS.
+- Commit/push Codex CLI spawn error handling fix.
 
 Next:
-- Commit/push and redeploy; verify wiki import and PDF credits on VPS.
+- Redeploy and re-verify after push.
 
 Open questions (UNCONFIRMED if needed):
 - Gemini UI/UX implementation pending.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts
-- ssh-mcp deploy commands

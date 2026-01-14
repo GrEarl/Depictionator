@@ -249,7 +249,8 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
   const onRuntimeError = (error: Error) => {
     runtimeError = error;
   };
-  child.once("error", onRuntimeError);
+  // Ensure Codex CLI spawn/runtime errors are always handled and never crash the server.
+  child.on("error", onRuntimeError);
 
   const spawnError = await waitForSpawn(child);
   if (spawnError) {
@@ -326,7 +327,6 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
         }
     }
   } finally {
-    child.off("error", onRuntimeError);
     if (authDir) {
         try { await fs.rm(authDir, { recursive: true, force: true }); } catch {}
     }
@@ -335,6 +335,8 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
   const exitCode = await new Promise<number | null>((resolve) => {
     child.on("close", resolve);
   });
+
+  child.off("error", onRuntimeError);
 
   if (runtimeError) {
       const message = runtimeError instanceof Error
