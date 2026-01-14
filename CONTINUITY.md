@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (PDF build failing due to missing Chromium; adding runtime deps).
+- In progress (PDF build failing due to Chromium path; fixing executable path).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -62,15 +62,16 @@ Done:
 - Added redirect helper and updated API redirects to respect Host/forwarded headers.
 - API smoke checks (auth/workspace/article/overlay/viewpoint/timeline/era/chapter/event/map/pin/path) succeeded via curl with session cookie.
 - PDF build failed on VPS due to missing Chromium.
+- Chromium installed in runner image but puppeteer path misconfigured (symlink loop).
 
 Now:
-- Add Chromium deps to Dockerfile, redeploy, re-test PDF build.
+- Fix Chromium executable path in Dockerfile, redeploy, re-test PDF build.
 
 Next:
 - Resume UI/API smoke checks after redeploy.
 
 Open questions (UNCONFIRMED if needed):
-- PDF build success after Chromium install is UNCONFIRMED.
+- PDF build success after executable path fix is UNCONFIRMED.
 
 Working set (files/ids/commands):
 - src/app/api/llm/execute/route.ts
