@@ -237,13 +237,28 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
     "-"
   ];
 
-  const child = spawn(CODEX_CLI_PATH, args, { env });
+  let child: ChildProcessWithoutNullStreams;
+  try {
+    child = spawn(CODEX_CLI_PATH, args, { env });
+  } catch (error) {
+    yield JSON.stringify({ error: formatSpawnError(error as Error) });
+    return;
+  }
+
+  let runtimeError: Error | null = null;
+  const onRuntimeError = (error: Error) => {
+    runtimeError = error;
+  };
+  child.once("error", onRuntimeError);
+
   const spawnError = await waitForSpawn(child);
   if (spawnError) {
+    child.off("error", onRuntimeError);
     yield JSON.stringify({ error: formatSpawnError(spawnError) });
     return;
   }
   if (!child.stdin || !child.stdout) {
+    child.off("error", onRuntimeError);
     yield JSON.stringify({ error: "Codex CLI stdio not available" });
     return;
   }
@@ -311,6 +326,7 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
         }
     }
   } finally {
+    child.off("error", onRuntimeError);
     if (authDir) {
         try { await fs.rm(authDir, { recursive: true, force: true }); } catch {}
     }
@@ -319,6 +335,10 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
   const exitCode = await new Promise<number | null>((resolve) => {
     child.on("close", resolve);
   });
+
+  if (runtimeError) {
+      yield `\n\n[Codex CLI error: ${runtimeError.message}]`;
+  }
 
   if (exitCode !== 0 && exitCode !== null) {
       yield `\n\n[Codex CLI exited with code ${exitCode}]`;

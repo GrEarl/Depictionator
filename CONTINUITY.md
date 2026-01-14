@@ -1,4 +1,5 @@
 Goal (incl. success criteria):
+- Fix Codex CLI spawn error handling regression in LLM execute route, commit/push.
 - Redeploy on VPS and verify Docker build/health check.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -10,7 +11,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (fixing build error).
+- In progress (apply review fix, then redeploy on VPS).
 
 Done:
 - Committed and pushed readStateMap type fix.
@@ -57,15 +58,16 @@ Done:
 - Added public/.gitkeep to satisfy Docker copy.
 
 Now:
-- Commit public directory fix and push.
+- Apply Codex CLI spawn error handling fix in LLM execute route, commit/push.
+- Pull latest on VPS and rebuild Docker image.
 
 Next:
-- Pull on VPS, rebuild Docker image, then /health check.
+- Rebuild Docker image on VPS, bring up containers, then /health check.
 
 Open questions (UNCONFIRMED if needed):
 - None.
 
 Working set (files/ids/commands):
-- src/app/(app)/articles/page.tsx
+- src/app/api/llm/execute/route.ts
 - git commit, git push
 - ssh-mcp rebuild
