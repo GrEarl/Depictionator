@@ -182,7 +182,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
 
             <h4>Revisions</h4>
             <ul>
-              {entity.article?.revisions.map((rev) => (
+              {entity.article?.revisions.map((rev: { id: string; status: string; changeSummary: string }) => (
                 <li key={rev.id} className="list-row">
                   <div>
                     <a href={`/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>
@@ -274,7 +274,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
                     <button type="submit" className="link-button">Archive overlay</button>
                   </form>
                   <ul>
-                    {overlay.revisions.map((rev) => (
+                    {overlay.revisions.map((rev: { id: string; status: string; changeSummary: string }) => (
                       <li key={rev.id} className="list-row">
                         <div>
                           <a href={`/revisions/${rev.id}`}>{rev.status} · {rev.changeSummary}</a>

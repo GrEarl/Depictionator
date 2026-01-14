@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Fix TypeScript implicit any in article detail overlay map.
+- Fix TypeScript implicit any for revision maps in article detail.
 - Redeploy on VPS and verify build.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
@@ -8,16 +8,16 @@ Constraints/Assumptions:
 - Avoid extra user questions; keep responses concise (except brief safety note if needed).
 
 Key decisions:
-- Add explicit overlay type annotation to satisfy TS.
+- Add explicit revision type annotations in map callbacks.
 
 State:
 - In progress (patching article page and redeploying).
 
 Done:
-- Fixed route and page param typings.
+- Fixed overlay type annotation earlier.
 
 Now:
-- Commit overlay typing fix and push.
+- Commit revision annotation fix and push.
 
 Next:
 - Pull on VPS and rebuild Docker image.
