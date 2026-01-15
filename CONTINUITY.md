@@ -12,7 +12,7 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Implementing additional UI scaffolding (wiki import forms, wider LLM context) and documenting Gemini CLI UX feedback.
+- UI scaffolding updates deployed to VPS; /health OK.
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -34,9 +34,10 @@ Done:
 - Added LLM context coverage to dashboard/reviews/settings/workspace/revision pages.
 - Added wiki import forms to Articles/Maps pages.
 - Fixed garbled UTF-8 strings in reviews/settings UI.
+- VPS rebuilt/redeployed with UI scaffolding changes; /health OK.
 
 Now:
-- Commit/push UI scaffolding updates; respond with status.
+- Respond with status; await further tasks.
 
 Next:
 - Update Gemini.md if UI requirements changed; re-run UI checks with agent-browser if needed.
