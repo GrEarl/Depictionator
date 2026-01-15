@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { EventType } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 
 const EVENT_TYPES = [
@@ -52,7 +53,9 @@ export default async function TimelinePage({ searchParams }: PageProps) {
   const mode = String(resolvedSearchParams.mode ?? "canon");
   const query = String(resolvedSearchParams.q ?? "").trim();
   const eventTypeRaw = String(resolvedSearchParams.eventType ?? "all").toLowerCase();
-  const eventTypeFilter = EVENT_TYPES.includes(eventTypeRaw) ? eventTypeRaw : "all";
+  const eventTypeFilter = EVENT_TYPES.includes(eventTypeRaw)
+    ? (eventTypeRaw as EventType)
+    : "all";
 
   const worldCondition =
     eraFilter === "all"
@@ -65,9 +68,9 @@ export default async function TimelinePage({ searchParams }: PageProps) {
     chapterFilter === "all"
       ? {}
       : { OR: [{ storyChapterId: chapterFilter }, { storyChapterId: null }] };
-  const eventCondition = {
+  const eventCondition: Prisma.EventWhereInput = {
     ...(eventTypeFilter === "all" ? {} : { eventType: eventTypeFilter }),
-    ...(query ? { title: { contains: query, mode: "insensitive" } } : {})
+    ...(query ? { title: { contains: query, mode: "insensitive" as const } } : {})
   };
   const timelines = workspace
     ? (await prisma.timeline.findMany({
