@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Next 16 Turbopack alias fix pushed; VPS rebuild pending).
+- In progress (Next 16 Turbopack alias using absolute path failing; switching to relative alias).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -119,7 +119,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Rebuild VPS after Turbopack alias fix.
+- Update Turbopack resolveAlias to relative path and rebuild VPS.
 
 Next:
 - Redeploy VPS and re-verify.

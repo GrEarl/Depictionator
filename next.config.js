@@ -6,7 +6,7 @@ const nextConfig = {
   outputFileTracingRoot: path.join(__dirname),
   turbopack: {
     resolveAlias: {
-      "@": path.join(__dirname, "src")
+      "@": "./src"
     }
   }
 };
