@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (LLM-assisted multi-language Wikipedia import pushed; pending deploy verification).
+- In progress (VPS redeploy complete; health OK; wiki LLM import verification pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -20,6 +20,12 @@ Done:
 - Updated Wikipedia article import to synthesize across languages via LLM.
 - Added wiki LLM env settings to .env.example.
 - Committed and pushed Wikipedia LLM fallback changes.
+- Redeployed VPS after wiki LLM import update.
+- Resolved DB auth issue by resetting postgres password to match .env.
+- Baselined existing DB with migration 20260114170000_sources_locale.
+- App restarted successfully; /health returns ok.
+- Manual SQL applied for migration 20260114170000_sources_locale (User.locale + SourceRecord).
+- Wiki import LLM path reached; returns 502 without GEMINI_API_KEY (expected).
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -89,10 +95,10 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Redeploy and verify Wikipedia LLM fallback on VPS.
+- Configure LLM key for full wiki LLM import test (optional).
 
 Next:
-- Redeploy and re-verify after push.
+- Re-test wiki LLM import after key is set.
 
 Open questions (UNCONFIRMED if needed):
 - Gemini UI/UX implementation pending.
