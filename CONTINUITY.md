@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (updating Gemini model defaults + API version fallback; VPS retest pending).
+- In progress (Gemini model defaults + API fallback pushed; VPS redeploy pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -28,6 +28,9 @@ Done:
 - Wiki import LLM path reached; returns 502 without GEMINI_API_KEY (expected).
 - GEMINI_API_KEY set on VPS; container recreated.
 - LLM import now fails with 404 model not found for v1beta (need api version fallback / model update).
+- Updated Gemini defaults to gemini-3 preview and added API version fallback in code.
+- Updated .env.example with Gemini v3 preview defaults.
+- Committed and pushed Gemini v3 preview fallback changes.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -97,10 +100,10 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Update code defaults to gemini-3 preview and add Gemini API version fallback.
+- Redeploy VPS with Gemini v3 preview fallback changes.
 
 Next:
-- Redeploy VPS and re-test wiki LLM import with gemini-3 preview.
+- Re-test wiki LLM import with gemini-3 preview.
 
 Open questions (UNCONFIRMED if needed):
 - Gemini UI/UX implementation pending.
