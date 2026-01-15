@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
 
 type MarkerStyle = {
   id: string;
@@ -54,7 +53,7 @@ type MapEditorProps = {
   locationTypes: string[];
 };
 
-function createIcon(shape: string, color: string) {
+function createIcon(L: any, shape: string, color: string) {
   const safeShape = shape || "circle";
   const html = `<span class="marker-shape marker-${safeShape}" style="--marker-color:${color};"></span>`;
   return L.divIcon({
@@ -72,7 +71,7 @@ export function MapEditor({
   locationTypes
 }: MapEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<L.Map | null>(null);
+  const mapRef = useRef<LeafletMap | null>(null);
   const [mode, setMode] = useState<"view" | "pin" | "path">("view");
   const [showImage, setShowImage] = useState(true);
   const [showPins, setShowPins] = useState(true);
@@ -152,107 +151,121 @@ export function MapEditor({
 
   useEffect(() => {
     if (!containerRef.current || !map) return;
-    if (mapRef.current) {
-      mapRef.current.remove();
-      mapRef.current = null;
-    }
-    const bounds = map.bounds ?? [
-      [0, 0],
-      [1000, 1000]
-    ];
-    const leafletMap = L.map(containerRef.current, {
-      crs: L.CRS.Simple,
-      zoomControl: true,
-      minZoom: -2
-    });
-    mapRef.current = leafletMap;
-    if (map.imageUrl && showImage) {
-      L.imageOverlay(map.imageUrl, bounds).addTo(leafletMap);
-    }
-    leafletMap.fitBounds(bounds);
+    let active = true;
+    let leafletMap: LeafletMap | null = null;
 
-    if (showPaths) {
-      map.paths.forEach((path) => {
-        const points = path.polyline.map((pt) => [pt.y, pt.x]) as [number, number][];
-        const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
-        const weight = path.strokeWidth ?? 3;
-        L.polyline(points, {
-          color,
-          weight,
-          dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
-        }).addTo(leafletMap);
+    const init = async () => {
+      const leafletModule = await import("leaflet");
+      const L = (leafletModule as any).default ?? leafletModule;
+      if (!active || !containerRef.current) return;
+
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      const bounds = map.bounds ?? [
+        [0, 0],
+        [1000, 1000]
+      ];
+      leafletMap = L.map(containerRef.current, {
+        crs: L.CRS.Simple,
+        zoomControl: true,
+        minZoom: -2
       });
-    }
+      mapRef.current = leafletMap;
+      if (map.imageUrl && showImage) {
+        L.imageOverlay(map.imageUrl, bounds).addTo(leafletMap);
+      }
+      leafletMap.fitBounds(bounds);
 
-    if (showPins) {
-      map.pins.forEach((pin) => {
-        const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
-        const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
-        const icon = createIcon(shape, color);
-        const marker = L.marker([pin.y, pin.x], { icon, draggable: editPins });
-        if (pin.label) {
-          marker.bindTooltip(pin.label, { direction: "top" });
-        }
-        marker.on("click", () => {
-          setSelectedPinId(pin.id);
-          setPinDraft(
-            createPinDraft({
-              x: pin.x,
-              y: pin.y,
-              label: pin.label ?? "",
-              locationType: pin.locationType ?? defaultLocationType,
-              markerStyleId: pin.markerStyleId ?? "",
-              markerShape: pin.markerShape ?? "",
-              markerColor: pin.markerColor ?? "",
-              truthFlag: pin.truthFlag ?? "canonical",
-              viewpointId: pin.viewpointId ?? "",
-              worldFrom: pin.worldFrom ?? "",
-              worldTo: pin.worldTo ?? "",
-              storyFromChapterId: pin.storyFromChapterId ?? "",
-              storyToChapterId: pin.storyToChapterId ?? "",
-              entityId: pin.entityId ?? ""
-            })
-          );
+      if (showPaths) {
+        map.paths.forEach((path) => {
+          const points = path.polyline.map((pt) => [pt.y, pt.x]) as [number, number][];
+          const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
+          const weight = path.strokeWidth ?? 3;
+          L.polyline(points, {
+            color,
+            weight,
+            dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
+          }).addTo(leafletMap);
         });
-        if (editPins) {
-          marker.on("dragend", (event) => {
-            const target = event.target as L.Marker;
-            const latlng = target.getLatLng();
-            void updatePinPosition(pin.id, latlng.lng, latlng.lat);
+      }
+
+      if (showPins) {
+        map.pins.forEach((pin) => {
+          const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
+          const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
+          const icon = createIcon(L, shape, color);
+          const marker = L.marker([pin.y, pin.x], { icon, draggable: editPins });
+          if (pin.label) {
+            marker.bindTooltip(pin.label, { direction: "top" });
+          }
+          marker.on("click", () => {
+            setSelectedPinId(pin.id);
+            setPinDraft(
+              createPinDraft({
+                x: pin.x,
+                y: pin.y,
+                label: pin.label ?? "",
+                locationType: pin.locationType ?? defaultLocationType,
+                markerStyleId: pin.markerStyleId ?? "",
+                markerShape: pin.markerShape ?? "",
+                markerColor: pin.markerColor ?? "",
+                truthFlag: pin.truthFlag ?? "canonical",
+                viewpointId: pin.viewpointId ?? "",
+                worldFrom: pin.worldFrom ?? "",
+                worldTo: pin.worldTo ?? "",
+                storyFromChapterId: pin.storyFromChapterId ?? "",
+                storyToChapterId: pin.storyToChapterId ?? "",
+                entityId: pin.entityId ?? ""
+              })
+            );
           });
+          if (editPins) {
+            marker.on("dragend", (event: { target: LeafletMarker }) => {
+              const latlng = event.target.getLatLng();
+              void updatePinPosition(pin.id, latlng.lng, latlng.lat);
+            });
+          }
+          marker.addTo(leafletMap);
+        });
+      }
+
+      if (pathPoints.length > 0) {
+        const points = pathPoints.map((pt) => [pt.y, pt.x]) as [number, number][];
+        L.polyline(points, { color: "#c44536", weight: 2 }).addTo(leafletMap);
+        pathPoints.forEach((pt) => {
+          L.circleMarker([pt.y, pt.x], { radius: 4, color: "#c44536" }).addTo(leafletMap);
+        });
+      }
+
+      leafletMap.on("click", (event: { latlng: { lng: number; lat: number } }) => {
+        if (mode === "pin") {
+          setPinDraft((prev) => ({
+            ...prev,
+            x: Number(event.latlng.lng.toFixed(1)),
+            y: Number(event.latlng.lat.toFixed(1))
+          }));
         }
-        marker.addTo(leafletMap);
+        if (mode === "path") {
+          setPathPoints((prev) => [
+            ...prev,
+            { x: Number(event.latlng.lng.toFixed(1)), y: Number(event.latlng.lat.toFixed(1)) }
+          ]);
+        }
       });
-    }
+    };
 
-    if (pathPoints.length > 0) {
-      const points = pathPoints.map((pt) => [pt.y, pt.x]) as [number, number][];
-      L.polyline(points, { color: "#c44536", weight: 2 }).addTo(leafletMap);
-      pathPoints.forEach((pt) => {
-        L.circleMarker([pt.y, pt.x], { radius: 4, color: "#c44536" }).addTo(leafletMap);
-      });
-    }
-
-    leafletMap.on("click", (event) => {
-      if (mode === "pin") {
-        setPinDraft((prev) => ({
-          ...prev,
-          x: Number(event.latlng.lng.toFixed(1)),
-          y: Number(event.latlng.lat.toFixed(1))
-        }));
-      }
-      if (mode === "path") {
-        setPathPoints((prev) => [
-          ...prev,
-          { x: Number(event.latlng.lng.toFixed(1)), y: Number(event.latlng.lat.toFixed(1)) }
-        ]);
-      }
-    });
+    void init();
 
     return () => {
-      leafletMap.remove();
+      active = false;
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
     };
-  }, [map, mode, pathPoints, showImage, showPins, showPaths, editPins, defaultLocationType]);
+  }, [map, mode, pathPoints, showImage, showPins, showPaths, editPins, defaultLocationType, createPinDraft]);
 
   if (!map) {
     return <div className="map-viewer">Select a map to edit.</div>;
