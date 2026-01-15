@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Prisma 7 output path fix needed; pending commit/push and VPS rebuild).
+- In progress (Next 16 build failing due to path alias; baseUrl fix pending commit/push).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -116,7 +116,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Fix Prisma client output path per Prisma 7 requirements; commit/push.
+- Add tsconfig baseUrl to restore @ alias in Next 16 build.
 
 Next:
 - Redeploy VPS and re-verify.
