@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Next 16 Turbopack alias using absolute path failing; switching to relative alias).
+- In progress (relative Turbopack alias pushed; VPS rebuild pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -50,6 +50,7 @@ Done:
 - Added tsconfig baseUrl to restore @ alias for Next 16.
 - Added webpack alias for @ path in next.config.js (caused Turbopack warning).
 - Added Turbopack resolveAlias for @ path in next.config.js.
+- Switched Turbopack resolveAlias to relative "./src".
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -119,7 +120,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Update Turbopack resolveAlias to relative path and rebuild VPS.
+- Rebuild VPS after relative alias update.
 
 Next:
 - Redeploy VPS and re-verify.
