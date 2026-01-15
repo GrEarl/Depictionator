@@ -58,7 +58,7 @@ Done:
 - Appended new UI findings and action items to Gemini.md.
 
 Now:
-- Commit/push Gemini.md updates from latest UI check.
+- UI check findings committed and pushed; awaiting further UI work.
 
 Next:
 - Re-check VPS app health/logs after any new changes.
