@@ -8,8 +8,16 @@ import path from "node:path";
 
 export const runtime = "nodejs";
 
-const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
 const DEFAULT_VERTEX_MODEL = process.env.VERTEX_GEMINI_MODEL ?? DEFAULT_GEMINI_MODEL;
+const GEMINI_API_VERSION = process.env.GEMINI_API_VERSION ?? "v1beta";
+const GEMINI_API_VERSION_FALLBACK =
+  process.env.GEMINI_API_VERSION_FALLBACK ??
+  (GEMINI_API_VERSION === "v1beta" ? "v1" : "v1beta");
+const VERTEX_GEMINI_API_VERSION = process.env.VERTEX_GEMINI_API_VERSION ?? "v1beta1";
+const VERTEX_GEMINI_API_VERSION_FALLBACK =
+  process.env.VERTEX_GEMINI_API_VERSION_FALLBACK ??
+  (VERTEX_GEMINI_API_VERSION === "v1beta1" ? "v1" : "v1beta1");
 const CODEX_MODEL = "gpt-5.2";
 const CODEX_CLI_PATH = process.env.CODEX_CLI_PATH ?? "codex";
 
@@ -85,6 +93,25 @@ function extractGeminiText(payload: unknown): string | null {
   return null;
 }
 
+function buildGeminiStreamUrl(options: {
+  source: GeminiSource;
+  apiKey: string;
+  model: string;
+  apiVersion: string;
+  vertexProject?: string;
+  vertexLocation?: string;
+}) {
+  if (options.source === "vertex") {
+    const project = options.vertexProject?.trim() || process.env.VERTEX_GEMINI_PROJECT;
+    const location = options.vertexLocation?.trim() || process.env.VERTEX_GEMINI_LOCATION;
+    if (!project || !location) {
+      throw new Error("Vertex project/location not configured");
+    }
+    return `https://${location}-aiplatform.googleapis.com/${options.apiVersion}/projects/${project}/locations/${location}/publishers/google/models/${options.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(options.apiKey)}`;
+  }
+  return `https://generativelanguage.googleapis.com/${options.apiVersion}/models/${options.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(options.apiKey)}`;
+}
+
 async function* streamGemini(prompt: string, options: GeminiOptions): AsyncGenerator<string, void, unknown> {
   const apiKey = options.apiKey?.trim() ||
     (options.source === "vertex" ? process.env.VERTEX_GEMINI_API_KEY : process.env.GEMINI_API_KEY);
@@ -94,17 +121,23 @@ async function* streamGemini(prompt: string, options: GeminiOptions): AsyncGener
     return;
   }
 
+  const apiVersion =
+    options.source === "vertex" ? VERTEX_GEMINI_API_VERSION : GEMINI_API_VERSION;
+  const apiVersionFallback =
+    options.source === "vertex" ? VERTEX_GEMINI_API_VERSION_FALLBACK : GEMINI_API_VERSION_FALLBACK;
   let url = "";
-  if (options.source === "vertex") {
-    const project = options.vertexProject?.trim() || process.env.VERTEX_GEMINI_PROJECT;
-    const location = options.vertexLocation?.trim() || process.env.VERTEX_GEMINI_LOCATION;
-    if (!project || !location) {
-      yield JSON.stringify({ error: "Vertex project/location not configured" });
-      return;
-    }
-    url = `https://${location}-aiplatform.googleapis.com/v1beta1/projects/${project}/locations/${location}/publishers/google/models/${options.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`;
-  } else {
-    url = `https://generativelanguage.googleapis.com/v1beta/models/${options.model}:streamGenerateContent?alt=sse&key=${encodeURIComponent(apiKey)}`;
+  try {
+    url = buildGeminiStreamUrl({
+      source: options.source,
+      apiKey,
+      model: options.model,
+      apiVersion,
+      vertexProject: options.vertexProject,
+      vertexLocation: options.vertexLocation
+    });
+  } catch (error) {
+    yield JSON.stringify({ error: (error as Error).message });
+    return;
   }
 
   const body: Record<string, unknown> = {
@@ -114,16 +147,45 @@ async function* streamGemini(prompt: string, options: GeminiOptions): AsyncGener
     body.tools = [{ googleSearch: {} }];
   }
 
-  const response = await fetch(url, {
+  let response = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body)
   });
-
   if (!response.ok) {
     const text = await response.text();
-    yield JSON.stringify({ error: `Gemini error ${response.status}: ${text}` });
-    return;
+    const shouldFallback = response.status === 404 &&
+      apiVersionFallback &&
+      apiVersionFallback !== apiVersion &&
+      text.includes("not found for API version");
+    if (shouldFallback) {
+      try {
+        const fallbackUrl = buildGeminiStreamUrl({
+          source: options.source,
+          apiKey,
+          model: options.model,
+          apiVersion: apiVersionFallback,
+          vertexProject: options.vertexProject,
+          vertexLocation: options.vertexLocation
+        });
+        response = await fetch(fallbackUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body)
+        });
+      } catch (error) {
+        yield JSON.stringify({ error: (error as Error).message });
+        return;
+      }
+      if (!response.ok) {
+        const retryText = await response.text();
+        yield JSON.stringify({ error: `Gemini error ${response.status}: ${retryText}` });
+        return;
+      }
+    } else {
+      yield JSON.stringify({ error: `Gemini error ${response.status}: ${text}` });
+      return;
+    }
   }
 
   if (!response.body) {

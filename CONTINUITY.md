@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Add Wikipedia import fallback that can synthesize from non-JP languages using LLM when JP is missing, with source attribution.
+- Switch Gemini defaults to gemini-3 preview models and add API version fallback; verify wiki LLM import completes.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (VPS redeploy complete; health OK; wiki LLM import verification pending).
+- In progress (updating Gemini model defaults + API version fallback; VPS retest pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -26,6 +26,8 @@ Done:
 - App restarted successfully; /health returns ok.
 - Manual SQL applied for migration 20260114170000_sources_locale (User.locale + SourceRecord).
 - Wiki import LLM path reached; returns 502 without GEMINI_API_KEY (expected).
+- GEMINI_API_KEY set on VPS; container recreated.
+- LLM import now fails with 404 model not found for v1beta (need api version fallback / model update).
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -95,10 +97,10 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Configure LLM key for full wiki LLM import test (optional).
+- Update code defaults to gemini-3 preview and add Gemini API version fallback.
 
 Next:
-- Re-test wiki LLM import after key is set.
+- Redeploy VPS and re-test wiki LLM import with gemini-3 preview.
 
 Open questions (UNCONFIRMED if needed):
 - Gemini UI/UX implementation pending.

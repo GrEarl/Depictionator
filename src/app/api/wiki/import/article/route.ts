@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     String(form.get("aggregateLangs") ?? process.env.WIKI_IMPORT_AGGREGATE_LANGS ?? "true") === "true";
   const llmProviderRaw = String(form.get("llmProvider") ?? "").trim();
   const llmProvider = (llmProviderRaw || DEFAULT_LLM_PROVIDER) as LlmProvider;
-  const llmModel = String(form.get("llmModel") ?? "").trim();
+  const llmModel = String(form.get("llmModel") ?? process.env.WIKI_LLM_MODEL ?? "").trim();
   const codexAuthBase64 = String(form.get("codexAuthBase64") ?? "").trim();
 
   if (!workspaceId || (!pageId && !title)) {
