@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Prisma 7 config + adapter pushed; VPS redeploy pending).
+- In progress (Prisma 7 output path fix needed; pending commit/push and VPS rebuild).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -116,7 +116,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Redeploy VPS with Prisma 7 config and re-verify.
+- Fix Prisma client output path per Prisma 7 requirements; commit/push.
 
 Next:
 - Redeploy VPS and re-verify.
