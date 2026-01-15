@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { WikiMapImportPanel } from "@/components/WikiMapImportPanel";
-import dynamic from "next/dynamic";
+import { MapEditorClient } from "@/components/MapEditorClient";
 
 const EVENT_TYPES = [
   "battle",
@@ -40,11 +40,6 @@ const LOCATION_TYPES = [
 ];
 
 const SHAPES = ["circle", "square", "diamond", "triangle", "hex", "star"];
-
-const MapEditor = dynamic(
-  () => import("@/components/MapEditor").then((mod) => mod.MapEditor),
-  { ssr: false, loading: () => <div className="map-viewer">Loading map editor...</div> }
-);
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -335,7 +330,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
                 No maps yet. Create a map below or import one from Wikipedia to start editing.
               </div>
             ) : (
-              <MapEditor
+              <MapEditorClient
                 map={mapPayload}
                 workspaceId={workspace.id}
                 markerStyles={markerStyles}
