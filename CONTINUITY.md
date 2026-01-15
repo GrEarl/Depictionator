@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Prisma 7 config + adapter updates; pending commit/push and VPS redeploy).
+- In progress (Prisma 7 config + adapter pushed; VPS redeploy pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -46,6 +46,7 @@ Done:
 - Added pg adapter and Pool wiring in Prisma client.
 - Added Prisma adapter dependencies and regenerated lockfile.
 - Lint passes after React/ESLint 9 updates.
+- Committed and pushed Prisma 7 adapter/config changes.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -115,7 +116,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Commit/push Prisma 7 adapter/config changes.
+- Redeploy VPS with Prisma 7 config and re-verify.
 
 Next:
 - Redeploy VPS and re-verify.
