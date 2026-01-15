@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Next 16 baseUrl fix pushed; VPS rebuild pending).
+- In progress (Next 16 build failing; adding webpack alias for @ in next.config.js).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -117,7 +117,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Rebuild VPS after tsconfig fix.
+- Commit/push webpack alias fix and rebuild VPS.
 
 Next:
 - Redeploy VPS and re-verify.
