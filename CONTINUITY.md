@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Next 16 build failing due to path alias; baseUrl fix pending commit/push).
+- In progress (Next 16 baseUrl fix pushed; VPS rebuild pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -47,6 +47,7 @@ Done:
 - Added Prisma adapter dependencies and regenerated lockfile.
 - Lint passes after React/ESLint 9 updates.
 - Committed and pushed Prisma 7 adapter/config changes.
+- Added tsconfig baseUrl to restore @ alias for Next 16.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -116,7 +117,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Add tsconfig baseUrl to restore @ alias in Next 16 build.
+- Rebuild VPS after tsconfig fix.
 
 Next:
 - Redeploy VPS and re-verify.
