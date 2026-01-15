@@ -12,10 +12,11 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Core backend/features mostly implemented; Codex CLI spawn error handling fixed locally in streaming LLM route (await commit/push).
+- Core backend/features mostly implemented; Codex CLI spawn/runtime error handling fixed and pushed in streaming LLM route.
 - Deployment status needs verification after latest changes (ensure app image rebuilt and /health OK).
 
 Done:
+- Codex CLI streaming now handles spawn/runtime errors without crashing and returns structured errors.
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
 - Locale support, LLM env settings, PDF credits; Chromium path fix for PDF generation.
 - Caddy reverse proxy + HTTPS health OK; API smoke checks completed; PDF export OK.
@@ -35,7 +36,6 @@ Done:
 - Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
 
 Now:
-- Commit/push the Codex CLI spawn error fix.
 - Verify deployment status if needed.
 
 Next:
