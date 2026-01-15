@@ -23,6 +23,7 @@ State:
 - MapEditor implicit any typing fix committed and pushed.
 - Local repo clean; VPS deploy for Gemini UI changes completed; /health 200.
 - Comprehensive UI/UX refactor landed locally; verified files present and cleaned invalid UTF-8/emoji artifacts.
+- UI refactor deployed to VPS; /health 200 after rebuild and container restart.
 
 Done:
 - VPS: rebuilt app image after LLM stream fix; removed stale container (ContainerConfig error) and restarted app; /health 200.
@@ -62,9 +63,10 @@ Done:
 - Updated Timeline page to preserve global params, add search, and remove unused imports.
 - Added VisualTimeline component with ASCII-only metadata labels.
 - Fixed UI refactor imports to use "@/lib/auth" after build failure for "@/auth".
+- VPS: rebuilt app image for UI refactor, removed stale container, redeployed successfully; /health 200.
 
 Now:
-- Commit/push auth import fix and redeploy to VPS; confirm /health.
+- Monitor VPS health/logs; await further UI feedback.
 
 Next:
 - Re-check VPS app health/logs after deploy of UI refactor.
@@ -90,5 +92,5 @@ Working set (files/ids/commands):
 - src/lib/markdown.ts
 - README.md
 - Gemini.md
-- /root/build_gemini_ui2.log (VPS)
-- tmux session: build_gemini_ui2
+- /root/build_ui_refactor2.log (VPS)
+- tmux session: build_ui_refactor2
