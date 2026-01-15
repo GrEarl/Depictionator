@@ -12,7 +12,7 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Implementing Markdown preview editor, map legend/layer toggles, and wiki import UI; pending deploy.
+- Markdown preview editor + map legend/layer toggles deployed; VPS /health OK.
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -37,9 +37,10 @@ Done:
 - VPS rebuilt/redeployed with UI scaffolding changes; /health OK.
 - Added MarkdownEditor component and started wiring into article/timeline forms.
 - Added map legend and layer toggle controls in MapEditor.
+- VPS rebuilt/redeployed with Markdown/legend updates; /health OK.
 
 Now:
-- Commit/push Markdown/legend updates; redeploy VPS.
+- Respond with status; await further tasks.
 
 Next:
 - Update Gemini.md if UI requirements changed; re-run UI checks with agent-browser if needed.
