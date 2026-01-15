@@ -6,6 +6,7 @@ Constraints/Assumptions:
 - Use ssh-mcp for VPS actions; avoid destructive operations.
 - Avoid extra user questions; keep responses concise.
 - Approval policy: never. Sandbox: danger-full-access.
+- Prefer direct Gemini CLI (not MCP) if UI/UX feedback is needed.
 
 Key decisions:
 - Next.js 16 + React 19; Prisma 7 with prisma.config.ts and pg adapter; force webpack for @ alias.
@@ -19,7 +20,8 @@ State:
 - Gemini CLI requests timed out; UI/UX guidance will be updated manually in Gemini.md.
 - Gemini CLI ran directly (no MCP) and output appended to Gemini.md.
 - Gemini UI shell/editor changes committed and pushed; pending VPS deploy.
-- MapEditor implicit any typing fix in progress after VPS build failure.
+- MapEditor implicit any typing fix committed and pushed.
+- Local repo clean; VPS deploy for Gemini UI changes completed; /health 200.
 
 Done:
 - VPS: rebuilt app image after LLM stream fix; removed stale container (ContainerConfig error) and restarted app; /health 200.
@@ -49,17 +51,20 @@ Done:
 - MapEditor SSR crash fixed via dynamic import; 502 resolved after redeploy (removed stale container).
 - Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
 - Gemini UI changes committed: new Sidebar/LocaleSwitcher/ArticleDetail, layout + CSS refresh, MapEditor toolbar updates.
+- MapEditor implicit-any typing fix committed and pushed.
+- VPS: rebuild completed for Gemini UI changes; stale app container removed; redeployed successfully.
+- VPS: Postgres password reset to match .env; Prisma migrate deploy succeeded; /health 200.
 
 Now:
-- Commit MapEditor typing fix and redeploy to VPS.
+- Verify remote UI endpoints if needed; keep monitoring logs.
 
 Next:
-- Re-check VPS app health/logs if new changes land.
+- Re-check VPS app health/logs after any new changes.
 - Update Gemini.md if new UI findings emerge.
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
-- Deploy success pending on VPS rebuild.
+- Any additional UI/UX fixes to pass to Gemini?
 
 Working set (files/ids/commands):
 - package.json
@@ -77,4 +82,5 @@ Working set (files/ids/commands):
 - src/lib/markdown.ts
 - README.md
 - Gemini.md
-- /root/build_filters5.log (VPS)
+- /root/build_gemini_ui2.log (VPS)
+- tmux session: build_gemini_ui2
