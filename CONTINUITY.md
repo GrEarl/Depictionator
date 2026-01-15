@@ -54,9 +54,11 @@ Done:
 - MapEditor implicit-any typing fix committed and pushed.
 - VPS: rebuild completed for Gemini UI changes; stale app container removed; redeployed successfully.
 - VPS: Postgres password reset to match .env; Prisma migrate deploy succeeded; /health 200.
+- Agent-browser UI check completed on internal.copiqta.com (login/workspace/articles/maps/timeline/settings).
+- Appended new UI findings and action items to Gemini.md.
 
 Now:
-- Verify remote UI endpoints if needed; keep monitoring logs.
+- Commit/push Gemini.md updates from latest UI check.
 
 Next:
 - Re-check VPS app health/logs after any new changes.

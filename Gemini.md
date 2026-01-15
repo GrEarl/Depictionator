@@ -171,3 +171,18 @@
 - Phase 2: map canvas + inspector + click/drag tools.
 - Phase 3: article split editor + drag/drop assets + TOC.
 - Phase 4: reviews UI + empty states.
+
+## UI check (agent-browser, 2026-01-15) - current deployed state
+- Login/registration works; can create workspace.
+- Articles page: single long column with filters + create form + wiki import stacked; no left entity list or split layout; difficult to scan and no visible content area or revision context.
+- Maps page: massive stacked admin forms; actual map canvas/editor not visible above the fold; map selection and creation are separate blocks with no obvious "start editing" flow; legend/styles buried.
+- Timeline page: full stack of CRUD forms; no visual timeline view or event list, and no clear separation between world/story lanes.
+- Settings page: all admin controls in one column; needs tabbed sections (LLM/Assets/Locale/Members/etc) and clearer labels.
+- LLM floating button overlaps content in some views; consider fixed drawer handle in consistent corner.
+- Global filters are visible but compete with page-level filters; needs hierarchy and sticky behavior.
+
+Design action items for Gemini:
+- Rebuild pages as: left list + main canvas/content + right inspector/drawer.
+- Collapse bulk admin forms into tabs/accordions; hide until "Advanced" is expanded.
+- Make Maps and Timeline primary views visual-first (canvas + timeline lanes), with CRUD in inspector.
+- Add clear empty states and primary CTA for first action on each page.
