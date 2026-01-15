@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
+import type { Prisma } from "@prisma/client";
 
 const EVENT_TYPES = [
   "battle",
@@ -19,23 +20,10 @@ const EVENT_TYPES = [
   "other"
 ];
 
-type TimelineEventSummary = {
-  id: string;
-  title: string;
-  worldStart: string | null;
-  worldEnd: string | null;
-  storyOrder: number | null;
-  storyChapterId: string | null;
-  eventType: string | null;
-  locationMapId: string | null;
-  involvedEntityIds: string[];
-};
-type TimelineSummary = {
-  id: string;
-  name: string;
-  type: string;
-  events: TimelineEventSummary[];
-};
+type TimelineSummary = Prisma.TimelineGetPayload<{
+  include: { events: true };
+}>;
+type TimelineEventSummary = TimelineSummary["events"][number];
 type TimelineArchiveSummary = { id: string; name: string };
 type EraSummary = {
   id: string;
@@ -44,11 +32,9 @@ type EraSummary = {
   worldEnd: string | null;
 };
 type ChapterSummary = { id: string; name: string; orderIndex: number };
-type EventListSummary = {
-  id: string;
-  title: string;
-  timeline: { name: string | null } | null;
-};
+type EventListSummary = Prisma.EventGetPayload<{
+  include: { timeline: true };
+}>;
 type MarkerStyleSummary = { id: string; name: string };
 
 
