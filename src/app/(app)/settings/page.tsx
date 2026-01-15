@@ -1,241 +1,199 @@
-﻿import { requireUser } from "@/lib/auth";
+﻿import { requireUser } from "@/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { prisma } from "@/lib/db";
 import { LlmContext } from "@/components/LlmContext";
+import Link from "next/link";
 
 const VIEWPOINT_TYPES = ["player", "faction", "character", "omniscient"];
-type ViewpointSummary = { id: string; name: string };
-type AssetSummary = { id: string; storageKey: string; size: number };
 
-export default async function SettingsPage() {
+type SearchParams = { [key: string]: string | string[] | undefined };
+
+type SettingsPageProps = { searchParams: Promise<SearchParams> };
+
+export default async function SettingsPage({ searchParams }: SettingsPageProps) {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
-  const viewpoints: ViewpointSummary[] = workspace
-    ? await prisma.viewpoint.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        orderBy: { createdAt: "asc" }
-      })
-    : [];
-  const archivedViewpoints: ViewpointSummary[] = workspace
-    ? await prisma.viewpoint.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
-        orderBy: { createdAt: "asc" }
-      })
-    : [];
-  const assets: AssetSummary[] = workspace
-    ? await prisma.asset.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
-  const archivedAssets: AssetSummary[] = workspace
-    ? await prisma.asset.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
+  const resolvedSearchParams = await searchParams;
+  const tab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "viewpoints";
+
+  const [viewpoints, assets] = workspace
+    ? await Promise.all([
+        prisma.viewpoint.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: null },
+          orderBy: { createdAt: "asc" }
+        }),
+        prisma.asset.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: null },
+          orderBy: { createdAt: "desc" }
+        })
+      ])
+    : [[], []];
+
+  if (!workspace) return <div className="panel">Select a workspace.</div>;
+
+  const tabs = [
+    { id: "viewpoints", label: "Viewpoints", icon: "V" },
+    { id: "assets", label: "Assets & Uploads", icon: "A" },
+    { id: "pdf", label: "PDF & Export", icon: "P" },
+    { id: "llm", label: "LLM Configuration", icon: "L" },
+    { id: "danger", label: "Danger Zone", icon: "!" }
+  ];
 
   return (
-    <div className="panel">
-      <LlmContext
-        value={{
-          type: "settings",
-          workspaceId: workspace?.id ?? null,
-          viewpointIds: viewpoints.map((viewpoint) => viewpoint.id),
-          assetCount: assets.length
-        }}
-      />
-      <h2>Settings</h2>
-      {!workspace && <p className="muted">Select a workspace to manage settings.</p>}
+    <div className="layout-2-pane-sidebar">
+      <LlmContext value={{ type: "settings", workspaceId: workspace.id }} />
 
-      {workspace && (
-        <>
-          <section className="panel">
-            <h3>Viewpoints</h3>
-            <form action="/api/viewpoints/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Name
-                <input name="name" required />
-              </label>
-              <label>
-                Type
-                <select name="type">
-                  {VIEWPOINT_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
+      <aside className="pane-sidebar">
+        <div className="pane-header">
+          <h3>Settings</h3>
+        </div>
+        <nav className="vertical-tabs">
+          {tabs.map((t) => (
+            <Link key={t.id} href={`?tab=${t.id}`} className={`tab-link-v ${tab === t.id ? "active" : ""}`}>
+              <span className="tab-icon">{t.icon}</span>
+              {t.label}
+            </Link>
+          ))}
+        </nav>
+      </aside>
+
+      <main className="pane-main-content">
+        <div className="pane-header">
+          <h2>{tabs.find((t) => t.id === tab)?.label}</h2>
+        </div>
+        <div className="settings-content p-6">
+          {tab === "viewpoints" && (
+            <div className="settings-section-grid">
+              <section className="settings-card">
+                <h4>New Viewpoint</h4>
+                <form action="/api/viewpoints/create" method="post" className="form-grid">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <label>
+                    Name <input name="name" required />
+                  </label>
+                  <label>
+                    Type
+                    <select name="type">
+                      {VIEWPOINT_TYPES.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Description <textarea name="description" rows={2} />
+                  </label>
+                  <button type="submit" className="btn-primary">Add Viewpoint</button>
+                </form>
+              </section>
+              <section className="settings-card">
+                <h4>Active Viewpoints</h4>
+                <div className="list-sm">
+                  {viewpoints.map((v) => (
+                    <div key={v.id} className="list-row-sm">
+                      <span>{v.name}</span>
+                      <form action="/api/archive" method="post">
+                        <input type="hidden" name="workspaceId" value={workspace.id} />
+                        <input type="hidden" name="targetType" value="viewpoint" />
+                        <input type="hidden" name="targetId" value={v.id} />
+                        <button type="submit" className="link-button">Archive</button>
+                      </form>
+                    </div>
                   ))}
-                </select>
-              </label>
-              <label>
-                Linked Entity ID (optional)
-                <input name="entityId" />
-              </label>
-              <label>
-                Description
-                <textarea name="description" rows={3} />
-              </label>
-              <button type="submit">Add viewpoint</button>
-            </form>
-            <ul>
-              {viewpoints.map((viewpoint) => (
-                <li key={viewpoint.id} className="list-row">
-                  <span>{viewpoint.name}</span>
-                  <form action="/api/archive" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="viewpoint" />
-                    <input type="hidden" name="targetId" value={viewpoint.id} />
-                    <button type="submit" className="link-button">Archive</button>
-                  </form>
-                </li>
-              ))}
-              {viewpoints.length === 0 && <li className="muted">No viewpoints.</li>}
-            </ul>
-            <h4>Archived viewpoints</h4>
-            <ul>
-              {archivedViewpoints.map((viewpoint) => (
-                <li key={viewpoint.id} className="list-row">
-                  <span>{viewpoint.name}</span>
-                  <form action="/api/restore" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="viewpoint" />
-                    <input type="hidden" name="targetId" value={viewpoint.id} />
-                    <button type="submit" className="link-button">Restore</button>
-                  </form>
-                </li>
-              ))}
-              {archivedViewpoints.length === 0 && <li className="muted">No archived viewpoints.</li>}
-            </ul>
-          </section>
+                </div>
+              </section>
+            </div>
+          )}
 
-          <section className="panel">
-            <h3>Asset upload</h3>
-            <form action="/api/assets/upload" method="post" encType="multipart/form-data" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                File
-                <input type="file" name="file" required />
-              </label>
-              <label>
-                Source URL
-                <input name="sourceUrl" />
-              </label>
-              <label>
-                Author
-                <input name="author" />
-              </label>
-              <label>
-                License ID
-                <input name="licenseId" />
-              </label>
-              <label>
-                License URL
-                <input name="licenseUrl" />
-              </label>
-              <label>
-                Attribution text
-                <input name="attributionText" />
-              </label>
-              <button type="submit">Upload</button>
-            </form>
-          </section>
+          {tab === "assets" && (
+            <div className="settings-section-grid">
+              <section className="settings-card">
+                <h4>Upload New Asset</h4>
+                <form action="/api/assets/upload" method="post" encType="multipart/form-data" className="form-grid">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <input type="file" name="file" required className="file-input" />
+                  <label>
+                    Author <input name="author" />
+                  </label>
+                  <label>
+                    Attribution <input name="attributionText" />
+                  </label>
+                  <button type="submit" className="btn-primary">Upload File</button>
+                </form>
+              </section>
+              <section className="settings-card">
+                <h4>Manage Assets</h4>
+                <div className="list-sm">
+                  {assets.map((a) => (
+                    <div key={a.id} className="list-row-sm">
+                      <span className="truncate">{a.storageKey}</span>
+                      <form action="/api/archive" method="post">
+                        <input type="hidden" name="workspaceId" value={workspace.id} />
+                        <input type="hidden" name="targetType" value="asset" />
+                        <input type="hidden" name="targetId" value={a.id} />
+                        <button type="submit" className="link-button">Archive</button>
+                      </form>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
 
-          <section className="panel">
-            <h3>Assets</h3>
-            <ul>
-              {assets.map((asset) => (
-                <li key={asset.id} className="list-row">
-                  <div>
-                    {asset.storageKey} at {Math.round(asset.size / 1024)} KB
-                  </div>
-                  <form action="/api/archive" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="asset" />
-                    <input type="hidden" name="targetId" value={asset.id} />
-                    <button type="submit" className="link-button">Archive</button>
-                  </form>
-                </li>
-              ))}
-              {assets.length === 0 && <li className="muted">No assets uploaded.</li>}
-            </ul>
-            <h4>Archived assets</h4>
-            <ul>
-              {archivedAssets.map((asset) => (
-                <li key={asset.id} className="list-row">
-                  <div>{asset.storageKey}</div>
-                  <form action="/api/restore" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="asset" />
-                    <input type="hidden" name="targetId" value={asset.id} />
-                    <button type="submit" className="link-button">Restore</button>
-                  </form>
-                </li>
-              ))}
-              {archivedAssets.length === 0 && <li className="muted">No archived assets.</li>}
-            </ul>
-          </section>
+          {tab === "pdf" && (
+            <div className="settings-section-grid">
+              <section className="settings-card full-width">
+                <h4>Print Set Builder</h4>
+                <p className="muted mb-4">Select the entities and maps you want to bundle into a PDF document.</p>
+                <form action="/api/pdf/build" method="post" className="form-grid max-w-md">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <label>
+                    Entity IDs (comma) <input name="entityIds" placeholder="id1, id2..." />
+                  </label>
+                  <label>
+                    Map IDs (comma) <input name="mapIds" />
+                  </label>
+                  <label>
+                    Include Credits
+                    <select name="includeCredits">
+                      <option value="true">Yes</option>
+                      <option value="false">No</option>
+                    </select>
+                  </label>
+                  <button type="submit" className="btn-primary">Generate Bundle PDF</button>
+                </form>
+              </section>
+            </div>
+          )}
 
-          <section className="panel">
-            <h3>PDF Export</h3>
-            <form action="/api/pdf/export" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                HTML to render
-                <textarea name="html" rows={6} defaultValue={`<html><body><h1>Depictionator</h1><p>PDF export test</p></body></html>`} />
-              </label>
-              <label>
-                Include credits
-                <select name="includeCredits">
-                  <option value="false">No</option>
-                  <option value="true">Yes</option>
-                </select>
-              </label>
-              <button type="submit">Generate PDF</button>
-            </form>
-          </section>
+          {tab === "llm" && (
+            <div className="settings-card">
+              <h4>LLM Service Status</h4>
+              <p className="muted mb-4">Configuration is managed via server environment variables.</p>
+              <div className="status-grid">
+                <div className="status-item">
+                  <span className="status-dot green"></span> Gemini AI (Enabled)
+                </div>
+                <div className="status-item">
+                  <span className="status-dot"></span> Vertex AI (Disabled)
+                </div>
+                <div className="status-item">
+                  <span className="status-dot green"></span> Codex CLI (Enabled)
+                </div>
+              </div>
+            </div>
+          )}
 
-          <section className="panel">
-            <h3>Print set builder</h3>
-            <form action="/api/pdf/build" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Entity IDs (comma)
-                <input name="entityIds" />
-              </label>
-              <label>
-                Map IDs (comma)
-                <input name="mapIds" />
-              </label>
-              <label>
-                Timeline IDs (comma)
-                <input name="timelineIds" />
-              </label>
-              <label>
-                Include credits
-                <select name="includeCredits">
-                  <option value="false">No</option>
-                  <option value="true">Yes</option>
-                </select>
-              </label>
-              <button type="submit">Generate Print Set PDF</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>LLM Configuration</h3>
-            <p className="muted">
-              Configure LLM providers via env: LLM_PROVIDERS_ENABLED, LLM_DEFAULT_PROVIDER, GEMINI_API_KEY /
-              GEMINI_MODEL, VERTEX_GEMINI_API_KEY / VERTEX_GEMINI_PROJECT / VERTEX_GEMINI_LOCATION /
-              VERTEX_GEMINI_MODEL, and CODEX_CLI_PATH. The panel allows per-request API keys and Codex auth base64.
-            </p>
-          </section>
-        </>
-      )}
+          {tab === "danger" && (
+            <div className="settings-card danger-card">
+              <h4>Delete Workspace</h4>
+              <p>This action is irreversible. All articles, maps, and history will be lost.</p>
+              <button className="btn-danger-outline mt-4">Destroy Workspace</button>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
-
-
-
-

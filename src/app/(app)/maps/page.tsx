@@ -1,24 +1,10 @@
-﻿import { FilterSummary } from "@/components/FilterSummary";
-import { requireUser } from "@/lib/auth";
+﻿import { requireUser } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { WikiMapImportPanel } from "@/components/WikiMapImportPanel";
 import { MapEditorClient } from "@/components/MapEditorClient";
-
-const EVENT_TYPES = [
-  "battle",
-  "travel",
-  "political",
-  "diplomatic",
-  "discovery",
-  "ritual",
-  "disaster",
-  "economic",
-  "cultural",
-  "mystery",
-  "other"
-];
+import Link from "next/link";
 
 const LOCATION_TYPES = [
   "capital",
@@ -38,929 +24,276 @@ const LOCATION_TYPES = [
   "road",
   "other"
 ];
-
 const SHAPES = ["circle", "square", "diamond", "triangle", "hex", "star"];
 
 type SearchParams = { [key: string]: string | string[] | undefined };
-
 type PageProps = { searchParams: Promise<SearchParams> };
-type MapReadState = { targetId: string; lastReadAt: Date };
-type MarkerStyleSummary = {
-  id: string;
-  name: string;
-  target: string;
-  shape: string;
-  color: string;
-  eventType: string | null;
-  locationType: string | null;
-};
-type MapPinSummary = {
-  id: string;
-  x: number;
-  y: number;
-  label: string | null;
-  entityId: string | null;
-  markerShape: string | null;
-  markerColor: string | null;
-  markerStyleId: string | null;
-  markerStyle: MarkerStyleSummary | null;
-  truthFlag: string | null;
-  locationType: string | null;
-  viewpointId: string | null;
-  worldFrom: string | null;
-  worldTo: string | null;
-  storyFromChapterId: string | null;
-  storyToChapterId: string | null;
-};
-type MapPathSummary = {
-  id: string;
-  polyline: unknown;
-  arrowStyle: string | null;
-  strokeColor: string | null;
-  strokeWidth: number | null;
-  markerStyle: MarkerStyleSummary | null;
-};
-type MapSummary = {
-  id: string;
-  title: string;
-  parentMapId: string | null;
-  bounds: unknown;
-  imageAssetId: string | null;
-  pins: MapPinSummary[];
-  paths: MapPathSummary[];
-  updatedAt: Date;
-};
-type ArchivedMapSummary = { id: string; title: string };
-type PinWithMapSummary = {
-  id: string;
-  label: string | null;
-  map: { title: string | null } | null;
-};
-type PathWithMapSummary = { id: string; map: { title: string | null } | null };
 
 export default async function MapsPage({ searchParams }: PageProps) {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
   const resolvedSearchParams = await searchParams;
+
+  const selectedMapId = typeof resolvedSearchParams.map === "string" ? resolvedSearchParams.map : undefined;
+  const tab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "manage";
+  const query = typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q : "";
   const eraFilter = String(resolvedSearchParams.era ?? "all");
   const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
   const viewpointFilter = String(resolvedSearchParams.viewpoint ?? "canon");
   const mode = String(resolvedSearchParams.mode ?? "canon");
-  const mapQuery = String(resolvedSearchParams.q ?? "").trim();
-  const unreadOnly = String(resolvedSearchParams.unread ?? "false") === "true";
 
-  const viewpointCondition =
-    mode === "canon"
-      ? { viewpointId: null }
-      : mode === "viewpoint"
-        ? { viewpointId: viewpointFilter === "canon" ? null : viewpointFilter }
-        : { OR: [{ viewpointId: null }, { viewpointId: viewpointFilter === "canon" ? null : viewpointFilter }] };
-
-  const worldCondition =
-    eraFilter === "all"
-      ? {}
-      : {
-          OR: [{ worldFrom: eraFilter }, { worldTo: eraFilter }, { worldFrom: null, worldTo: null }]
-        };
-
-  const storyCondition =
-    chapterFilter === "all"
-      ? {}
-      : {
-          OR: [
-            { storyFromChapterId: chapterFilter },
-            { storyToChapterId: chapterFilter },
-            { storyFromChapterId: null, storyToChapterId: null }
-          ]
-        };
-  const markerStyles: MarkerStyleSummary[] = workspace
-    ? await prisma.markerStyle.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
-  const archivedMarkerStyles: MarkerStyleSummary[] = workspace
-    ? await prisma.markerStyle.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
-  const maps: MapSummary[] = workspace
-    ? await prisma.map.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        include: {
-          pins: {
-            where: {
-              softDeletedAt: null,
-              ...viewpointCondition,
-              ...worldCondition,
-              ...storyCondition
-            },
-            include: { markerStyle: true }
+  const [maps, markerStyles, archivedMaps] = workspace
+    ? await Promise.all([
+        prisma.map.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: null },
+          include: {
+            pins: { where: { softDeletedAt: null }, include: { markerStyle: true } },
+            paths: { where: { softDeletedAt: null }, include: { markerStyle: true } }
           },
-          paths: {
-            where: {
-              softDeletedAt: null,
-              ...viewpointCondition,
-              ...worldCondition,
-              ...storyCondition
-            },
-            include: { markerStyle: true }
-          }
-        },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
-  const mapReadStates: MapReadState[] = workspace
-    ? await prisma.readState.findMany({
-        where: {
-          workspaceId: workspace.id,
-          userId: user.id,
-          targetType: "map"
-        }
-      })
-    : [];
-  const mapReadMap = new Map(
-    mapReadStates.map((state) => [state.targetId, state])
-  );
-  const normalizedMapQuery = mapQuery.toLowerCase();
-  const visibleMaps = maps.filter((map) => {
-    if (mapQuery && !map.title.toLowerCase().includes(normalizedMapQuery)) return false;
-    if (!unreadOnly) return true;
-    const readState = mapReadMap.get(map.id);
-    const isUnread = !readState || map.updatedAt > readState.lastReadAt;
-    return isUnread;
-  });
-  const allPins: PinWithMapSummary[] = workspace
-    ? await prisma.pin.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        include: { map: true },
-        // orderBy: { id: "desc" }
-      })
-    : [];
-  const allPaths: PathWithMapSummary[] = workspace
-    ? await prisma.path.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        include: { map: true },
-        // orderBy: { id: "desc" }
-      })
-    : [];
-  const locationStyleMap = new Map(
-    markerStyles
-      .filter((style) => style.target === "location" && style.locationType)
-      .map((style) => [
-        style.locationType ?? "",
-        { shape: style.shape, color: style.color }
-      ])
-  );
-  const defaultPathStyle =
-    markerStyles.find((style) => style.target === "path") ?? null;
-  const selectedMapCandidate = String(resolvedSearchParams.map ?? "");
-  const selectedMap = maps.find((map) => map.id === selectedMapCandidate) ?? maps[0] ?? null;
-  const selectedMapId = selectedMap?.id ?? "";
-  const parentMap = selectedMap?.parentMapId ? maps.find((m) => m.id === selectedMap.parentMapId) : null;
-  const childMaps = selectedMap ? maps.filter((m) => m.parentMapId === selectedMap.id) : [];
-
-  const mapPayload = selectedMap
-    ? {
-        id: selectedMap.id,
-        title: selectedMap.title,
-        bounds: Array.isArray(selectedMap.bounds)
-          ? (selectedMap.bounds as [[number, number], [number, number]])
-          : null,
-        imageUrl: selectedMap.imageAssetId
-          ? `/api/assets/file/${selectedMap.imageAssetId}`
-          : null,
-        pins: selectedMap.pins.map((pin) => {
-          const fallbackStyle = locationStyleMap.get(pin.locationType ?? "");
-          const style = pin.markerStyle
-            ? { shape: pin.markerStyle.shape, color: pin.markerStyle.color }
-            : fallbackStyle ?? null;
-          return {
-            id: pin.id,
-            x: pin.x,
-            y: pin.y,
-            label: pin.label,
-            entityId: pin.entityId,
-            markerShape: pin.markerShape,
-            markerColor: pin.markerColor,
-            markerStyleId: pin.markerStyleId,
-            markerStyle: style,
-            truthFlag: pin.truthFlag,
-            locationType: pin.locationType,
-            viewpointId: pin.viewpointId,
-            worldFrom: pin.worldFrom,
-            worldTo: pin.worldTo,
-            storyFromChapterId: pin.storyFromChapterId,
-            storyToChapterId: pin.storyToChapterId
-          };
+          orderBy: { createdAt: "desc" }
         }),
-        paths: selectedMap.paths.map((path) => ({
-          id: path.id,
-          polyline: Array.isArray(path.polyline)
-            ? (path.polyline as { x: number; y: number }[])
-            : [],
-          arrowStyle: path.arrowStyle ?? "arrow",
-          strokeColor: path.strokeColor,
-          strokeWidth: path.strokeWidth ?? null,
-          markerStyle: path.markerStyle
-            ? { color: path.markerStyle.color }
-            : defaultPathStyle
-              ? { color: defaultPathStyle.color }
-              : null
+        prisma.markerStyle.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: null },
+          orderBy: { createdAt: "desc" }
+        }),
+        prisma.map.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
+          orderBy: { createdAt: "desc" }
+        })
+      ])
+    : [[], [], []];
+
+  if (!workspace) return <div className="panel">Select a workspace.</div>;
+
+  const mapQuery = query.trim().toLowerCase();
+  const visibleMaps = mapQuery ? maps.filter((m) => m.title.toLowerCase().includes(mapQuery)) : maps;
+  const activeMap = maps.find((m) => m.id === selectedMapId) || maps[0];
+
+  const buildUrl = (overrides: Record<string, string | undefined>) => {
+    const params = new URLSearchParams();
+    const merged = {
+      era: eraFilter,
+      chapter: chapterFilter,
+      viewpoint: viewpointFilter,
+      mode,
+      q: query || undefined,
+      map: selectedMapId,
+      tab,
+      ...overrides
+    };
+    Object.entries(merged).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        params.set(key, value);
+      }
+    });
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  };
+
+  const mapPayload = activeMap
+    ? {
+        id: activeMap.id,
+        title: activeMap.title,
+        bounds: activeMap.bounds as any,
+        imageUrl: activeMap.imageAssetId ? `/api/assets/file/${activeMap.imageAssetId}` : null,
+        pins: activeMap.pins.map((p) => ({
+          ...p,
+          markerStyle: p.markerStyle ? { shape: p.markerStyle.shape, color: p.markerStyle.color } : null
+        })),
+        paths: activeMap.paths.map((p) => ({
+          ...p,
+          polyline: p.polyline as any,
+          markerStyle: p.markerStyle ? { color: p.markerStyle.color } : null
         }))
       }
     : null;
-  const archivedMaps: ArchivedMapSummary[] = workspace
-    ? await prisma.map.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
 
   return (
-    <div className="panel">
-      <LlmContext
-        value={{
-          type: "maps",
-          mapIds: visibleMaps.map((map) => map.id),
-          selectedMapId,
-          filters: { eraFilter, chapterFilter, viewpointFilter, mode, mapQuery, unreadOnly }
-        }}
-      />
-      <h2>Maps</h2>
-      <FilterSummary />
-      {!workspace && (
-        <p className="muted">Select a workspace to manage maps, pins, and styles.</p>
-      )}
+    <div className="layout-3-pane">
+      <LlmContext value={{ type: "maps", workspaceId: workspace.id, selectedMapId: activeMap?.id }} />
 
-      {workspace && (
-        <>
-          <section className="panel">
-            <h3>Filters</h3>
-            <form method="get" className="form-grid">
-              <input type="hidden" name="era" value={eraFilter} />
-              <input type="hidden" name="chapter" value={chapterFilter} />
-              <input type="hidden" name="viewpoint" value={viewpointFilter} />
-              <input type="hidden" name="mode" value={mode} />
-              <input type="hidden" name="map" value={selectedMapId} />
-              <label>
-                Search maps
-                <input name="q" defaultValue={mapQuery} />
-              </label>
-              <label>
-                Unread only
-                <select name="unread" defaultValue={unreadOnly ? "true" : "false"}>
-                  <option value="false">No</option>
-                  <option value="true">Yes</option>
-                </select>
-              </label>
-              <button type="submit">Apply filters</button>
-            </form>
-          </section>
-          <section className="panel">
-            <h3>Map preview</h3>
-            
-            {/* Hierarchical Navigation */}
-            <div className="list-row" style={{justifyContent: 'flex-start', gap: '16px'}}>
-               {parentMap && (
-                 <a href={`/maps?map=${parentMap.id}`} className="link-button">
-                   &larr; Up to {parentMap.title}
-                 </a>
-               )}
-               {childMaps.length > 0 && (
-                 <div style={{display:'flex', gap:'8px', alignItems:'center'}}>
-                   <span className="muted">Sub-regions:</span>
-                   {childMaps.map(child => (
-                     <a key={child.id} href={`/maps?map=${child.id}`} className="badge" style={{textDecoration:'none', cursor:'pointer'}}>
-                       {child.title}
-                     </a>
-                   ))}
-                 </div>
-               )}
-            </div>
-
-            <form action="/maps" method="get" className="form-grid">
-              <label>
-                Map
-                <select name="map" defaultValue={selectedMapId}>
-                  {maps.map((map) => (
-                    <option key={map.id} value={map.id}>
-                      {map.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <input type="hidden" name="era" value={eraFilter} />
-              <input type="hidden" name="chapter" value={chapterFilter} />
-              <input type="hidden" name="viewpoint" value={viewpointFilter} />
-              <input type="hidden" name="mode" value={mode} />
-              <button type="submit">Load map</button>
-            </form>
-            {workspace && maps.length === 0 ? (
-              <div className="muted">
-                No maps yet. Create a map below or import one from Wikipedia to start editing.
-              </div>
-            ) : (
-              <MapEditorClient
-                map={mapPayload}
-                workspaceId={workspace.id}
-                markerStyles={markerStyles}
-                locationTypes={LOCATION_TYPES}
-              />
-            )}
-          </section>
-
-          <WikiMapImportPanel workspaceId={workspace.id} />
-
-          <section className="panel">
-            <h3>Marker styles</h3>
-            <form action="/api/marker-styles/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Name
-                <input name="name" required />
-              </label>
-              <label>
-                Target
-                <select name="target" required>
-                  <option value="event">Event</option>
-                  <option value="location">Location</option>
-                  <option value="path">Path</option>
-                </select>
-              </label>
-              <label>
-                Event type (optional)
-                <select name="eventType">
-                  <option value="">--</option>
-                  {EVENT_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Location type (optional)
-                <select name="locationType">
-                  <option value="">--</option>
-                  {LOCATION_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Shape
-                <select name="shape" required>
-                  {SHAPES.map((shape) => (
-                    <option key={shape} value={shape}>
-                      {shape}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Color
-                <input name="color" defaultValue="#4b6ea8" />
-              </label>
-              <label>
-                Icon key
-                <input name="iconKey" placeholder="optional" />
-              </label>
-              <button type="submit">Add style</button>
-            </form>
-            <ul>
-              {markerStyles.map((style) => (
-                <li key={style.id} className="list-row">
-                  <div>
-                    <strong>{style.name}</strong> · {style.target} · {style.shape} · {style.color}
-                    {style.eventType && <span className="muted"> · {style.eventType}</span>}
-                    {style.locationType && <span className="muted"> · {style.locationType}</span>}
+      {/* Pane 1: Left - Map List & Hierarchy */}
+      <aside className="pane-left">
+        <div className="pane-header">
+          <h3>Maps ({maps.length})</h3>
+          <form method="get" className="quick-search">
+            <input type="hidden" name="era" value={eraFilter} />
+            <input type="hidden" name="chapter" value={chapterFilter} />
+            <input type="hidden" name="viewpoint" value={viewpointFilter} />
+            <input type="hidden" name="mode" value={mode} />
+            <input name="q" defaultValue={query} placeholder="Search maps..." />
+          </form>
+        </div>
+        <div className="scroll-content">
+          <div className="map-tree p-2">
+            {visibleMaps
+              .filter((m) => !m.parentMapId)
+              .map((rootMap) => (
+                <div key={rootMap.id} className="map-tree-item-group">
+                  <Link
+                    href={buildUrl({ map: rootMap.id })}
+                    className={`map-link ${activeMap?.id === rootMap.id ? "active" : ""}`}
+                  >
+                    Map: {rootMap.title}
+                  </Link>
+                  <div className="map-tree-children ml-4">
+                    {visibleMaps
+                      .filter((m) => m.parentMapId === rootMap.id)
+                      .map((child) => (
+                        <Link
+                          key={child.id}
+                          href={buildUrl({ map: child.id })}
+                          className={`map-link-sm ${activeMap?.id === child.id ? "active" : ""}`}
+                        >
+                          Child: {child.title}
+                        </Link>
+                      ))}
                   </div>
-                  <form action="/api/marker-styles/delete" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="styleId" value={style.id} />
-                    <button type="submit" className="link-button">Delete</button>
-                  </form>
-                </li>
+                </div>
               ))}
-              {markerStyles.length === 0 && (
-                <li className="muted">No marker styles yet.</li>
+            {visibleMaps.length === 0 && <div className="muted p-4">No maps found.</div>}
+          </div>
+        </div>
+      </aside>
+
+      {/* Pane 2: Center - Map Editor */}
+      <main className="pane-center overflow-hidden">
+        {activeMap ? (
+          <MapEditorClient
+            map={mapPayload as any}
+            workspaceId={workspace.id}
+            markerStyles={markerStyles as any}
+            locationTypes={LOCATION_TYPES}
+          />
+        ) : (
+          <div className="empty-state-centered">
+            <div className="hero-icon">Map</div>
+            <h2>No Maps Found</h2>
+            <p className="muted">Create your first map or import one from Wikipedia to get started.</p>
+          </div>
+        )}
+      </main>
+
+      {/* Pane 3: Right - Actions / Forms */}
+      <aside className="pane-right-drawer">
+        <div className="pane-header-tabs">
+          <Link href={buildUrl({ tab: "manage" })} className={`tab-link ${tab === "manage" ? "active" : ""}`}>
+            Manage
+          </Link>
+          <Link href={buildUrl({ tab: "styles" })} className={`tab-link ${tab === "styles" ? "active" : ""}`}>
+            Styles
+          </Link>
+          <Link href={buildUrl({ tab: "wiki" })} className={`tab-link ${tab === "wiki" ? "active" : ""}`}>
+            Wiki
+          </Link>
+        </div>
+
+        <div className="drawer-content scroll-content">
+          {tab === "manage" && (
+            <>
+              <details className="action-details" open>
+                <summary>Map Settings</summary>
+                <form action="/api/maps/update" method="post" className="form-grid p-4">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <input type="hidden" name="mapId" value={activeMap?.id} />
+                  <label>
+                    Title <input name="title" defaultValue={activeMap?.title} />
+                  </label>
+                  <label>
+                    Image Asset ID <input name="imageAssetId" defaultValue={activeMap?.imageAssetId || ""} />
+                  </label>
+                  <button type="submit" className="btn-secondary">Update Map</button>
+                </form>
+              </details>
+              <details className="action-details">
+                <summary>Create New Map</summary>
+                <form action="/api/maps/create" method="post" className="form-grid p-4">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <label>
+                    Title <input name="title" required />
+                  </label>
+                  <label>
+                    Parent Map
+                    <select name="parentMapId">
+                      <option value="">None</option>
+                      {maps.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button type="submit" className="btn-primary">Create Map</button>
+                </form>
+              </details>
+              {archivedMaps.length > 0 && (
+                <details className="action-details">
+                  <summary>Archived ({archivedMaps.length})</summary>
+                  <div className="p-4 list-sm">
+                    {archivedMaps.map((m) => (
+                      <div key={m.id} className="list-row-sm">
+                        <span>{m.title}</span>
+                        <form action="/api/restore" method="post">
+                          <input type="hidden" name="workspaceId" value={workspace.id} />
+                          <input type="hidden" name="targetType" value="map" />
+                          <input type="hidden" name="targetId" value={m.id} />
+                          <button type="submit" className="link-button">Restore</button>
+                        </form>
+                      </div>
+                    ))}
+                  </div>
+                </details>
               )}
-            </ul>
-            <h4>Archived marker styles</h4>
-            <ul>
-              {archivedMarkerStyles.map((style) => (
-                <li key={style.id} className="list-row">
-                  <span>{style.name}</span>
-                  <form action="/api/restore" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="marker_style" />
-                    <input type="hidden" name="targetId" value={style.id} />
-                    <button type="submit" className="link-button">Restore</button>
-                  </form>
-                </li>
-              ))}
-              {archivedMarkerStyles.length === 0 && <li className="muted">No archived styles.</li>}
-            </ul>
-          </section>
+            </>
+          )}
 
-          <section className="panel">
-            <h3>Create map</h3>
-            <form action="/api/maps/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Title
-                <input name="title" required />
-              </label>
-              <label>
-                Parent map ID (optional)
-                <input name="parentMapId" />
-              </label>
-              <label>
-                Image asset ID (optional)
-                <input name="imageAssetId" />
-              </label>
-              <label>
-                Bounds JSON (optional)
-                <input name="bounds" placeholder="[[0,0],[1000,1000]]" />
-              </label>
-              <button type="submit">Add map</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Update map</h3>
-            <form action="/api/maps/update" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Map
-                <select name="mapId" required>
-                  {maps.map((map) => (
-                    <option key={map.id} value={map.id}>
-                      {map.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Title
-                <input name="title" />
-              </label>
-              <label>
-                Parent map ID
-                <input name="parentMapId" />
-              </label>
-              <label>
-                Image asset ID
-                <input name="imageAssetId" />
-              </label>
-              <label>
-                Bounds JSON
-                <input name="bounds" placeholder="[[0,0],[1000,1000]]" />
-              </label>
-              <button type="submit">Update map</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Create pin</h3>
-            <form action="/api/pins/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Map
-                <select name="mapId" required>
-                  {maps.map((map) => (
-                    <option key={map.id} value={map.id}>
-                      {map.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                X
-                <input name="x" type="number" step="0.1" required />
-              </label>
-              <label>
-                Y
-                <input name="y" type="number" step="0.1" required />
-              </label>
-              <label>
-                Label
-                <input name="label" />
-              </label>
-              <label>
-                Entity ID (optional)
-                <input name="entityId" />
-              </label>
-              <label>
-                Location type
-                <select name="locationType">
-                  {LOCATION_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Truth flag
-                <select name="truthFlag">
-                  <option value="canonical">canonical</option>
-                  <option value="rumor">rumor</option>
-                  <option value="mistaken">mistaken</option>
-                  <option value="propaganda">propaganda</option>
-                  <option value="unknown">unknown</option>
-                </select>
-              </label>
-              <label>
-                Viewpoint ID
-                <input name="viewpointId" />
-              </label>
-              <label>
-                World from
-                <input name="worldFrom" />
-              </label>
-              <label>
-                World to
-                <input name="worldTo" />
-              </label>
-              <label>
-                Story from chapter ID
-                <input name="storyFromChapterId" />
-              </label>
-              <label>
-                Story to chapter ID
-                <input name="storyToChapterId" />
-              </label>
-              <label>
-                Marker style
-                <select name="markerStyleId">
-                  <option value="">--</option>
-                  {markerStyles.map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Override shape (optional)
-                <select name="markerShape">
-                  <option value="">--</option>
-                  {SHAPES.map((shape) => (
-                    <option key={shape} value={shape}>
-                      {shape}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Override color (optional)
-                <input name="markerColor" />
-              </label>
-              <button type="submit">Add pin</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Update pin</h3>
-            <form action="/api/pins/update" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Pin
-                <select name="pinId" required>
-                  {allPins.map((pin) => (
-                    <option key={pin.id} value={pin.id}>
-                      {(pin.label || pin.id).slice(0, 24)} · {pin.map?.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                X
-                <input name="x" type="number" step="0.1" />
-              </label>
-              <label>
-                Y
-                <input name="y" type="number" step="0.1" />
-              </label>
-              <label>
-                Label
-                <input name="label" />
-              </label>
-              <label>
-                Entity ID (optional)
-                <input name="entityId" />
-              </label>
-              <label>
-                Location type
-                <select name="locationType">
-                  <option value="">--</option>
-                  {LOCATION_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Truth flag
-                <select name="truthFlag">
-                  <option value="">--</option>
-                  <option value="canonical">canonical</option>
-                  <option value="rumor">rumor</option>
-                  <option value="mistaken">mistaken</option>
-                  <option value="propaganda">propaganda</option>
-                  <option value="unknown">unknown</option>
-                </select>
-              </label>
-              <label>
-                Viewpoint ID
-                <input name="viewpointId" />
-              </label>
-              <label>
-                World from
-                <input name="worldFrom" />
-              </label>
-              <label>
-                World to
-                <input name="worldTo" />
-              </label>
-              <label>
-                Story from chapter ID
-                <input name="storyFromChapterId" />
-              </label>
-              <label>
-                Story to chapter ID
-                <input name="storyToChapterId" />
-              </label>
-              <label>
-                Marker style
-                <select name="markerStyleId">
-                  <option value="">--</option>
-                  {markerStyles.map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Override shape
-                <select name="markerShape">
-                  <option value="">--</option>
-                  {SHAPES.map((shape) => (
-                    <option key={shape} value={shape}>
-                      {shape}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Override color
-                <input name="markerColor" />
-              </label>
-              <button type="submit">Update pin</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Create path</h3>
-            <form action="/api/paths/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Map
-                <select name="mapId" required>
-                  {maps.map((map) => (
-                    <option key={map.id} value={map.id}>
-                      {map.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Polyline JSON
-                <textarea name="polyline" rows={3} defaultValue="[]" />
-              </label>
-              <label>
-                Arrow style
-                <select name="arrowStyle">
-                  <option value="arrow">Arrow</option>
-                  <option value="dashed">Dashed</option>
-                  <option value="dotted">Dotted</option>
-                </select>
-              </label>
-              <label>
-                Truth flag
-                <select name="truthFlag">
-                  <option value="canonical">canonical</option>
-                  <option value="rumor">rumor</option>
-                  <option value="mistaken">mistaken</option>
-                  <option value="propaganda">propaganda</option>
-                  <option value="unknown">unknown</option>
-                </select>
-              </label>
-              <label>
-                Viewpoint ID
-                <input name="viewpointId" />
-              </label>
-              <label>
-                World from
-                <input name="worldFrom" />
-              </label>
-              <label>
-                World to
-                <input name="worldTo" />
-              </label>
-              <label>
-                Story from chapter ID
-                <input name="storyFromChapterId" />
-              </label>
-              <label>
-                Story to chapter ID
-                <input name="storyToChapterId" />
-              </label>
-              <label>
-                Stroke color
-                <input name="strokeColor" />
-              </label>
-              <label>
-                Stroke width
-                <input name="strokeWidth" type="number" />
-              </label>
-              <label>
-                Marker style
-                <select name="markerStyleId">
-                  <option value="">--</option>
-                  {markerStyles.map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Related event ID
-                <input name="relatedEventId" />
-              </label>
-              <label>
-                Related entity IDs (comma)
-                <input name="relatedEntityIds" />
-              </label>
-              <button type="submit">Add path</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Update path</h3>
-            <form action="/api/paths/update" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Path
-                <select name="pathId" required>
-                  {allPaths.map((path) => (
-                    <option key={path.id} value={path.id}>
-                      {path.id.slice(0, 10)} · {path.map?.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Polyline JSON
-                <textarea name="polyline" rows={3} />
-              </label>
-              <label>
-                Arrow style
-                <select name="arrowStyle">
-                  <option value="">--</option>
-                  <option value="arrow">Arrow</option>
-                  <option value="dashed">Dashed</option>
-                  <option value="dotted">Dotted</option>
-                </select>
-              </label>
-              <label>
-                Truth flag
-                <select name="truthFlag">
-                  <option value="">--</option>
-                  <option value="canonical">canonical</option>
-                  <option value="rumor">rumor</option>
-                  <option value="mistaken">mistaken</option>
-                  <option value="propaganda">propaganda</option>
-                  <option value="unknown">unknown</option>
-                </select>
-              </label>
-              <label>
-                Viewpoint ID
-                <input name="viewpointId" />
-              </label>
-              <label>
-                World from
-                <input name="worldFrom" />
-              </label>
-              <label>
-                World to
-                <input name="worldTo" />
-              </label>
-              <label>
-                Story from chapter ID
-                <input name="storyFromChapterId" />
-              </label>
-              <label>
-                Story to chapter ID
-                <input name="storyToChapterId" />
-              </label>
-              <label>
-                Stroke color
-                <input name="strokeColor" />
-              </label>
-              <label>
-                Stroke width
-                <input name="strokeWidth" type="number" />
-              </label>
-              <label>
-                Marker style
-                <select name="markerStyleId">
-                  <option value="">--</option>
-                  {markerStyles.map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Related event ID
-                <input name="relatedEventId" />
-              </label>
-              <label>
-                Related entity IDs (comma)
-                <input name="relatedEntityIds" />
-              </label>
-              <button type="submit">Update path</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Maps overview</h3>
-            {visibleMaps.map((map) => (
-              <div key={map.id} className="panel">
-                <div className="list-row">
-                  <strong>{map.title}</strong>
-                  {(() => {
-                    const readState = mapReadMap.get(map.id);
-                    const isUnread = !readState || map.updatedAt > readState.lastReadAt;
-                    return isUnread ? <span className="badge">Unread</span> : null;
-                  })()}
-                </div>
-                <div className="muted">Pins: {map.pins.length} · Paths: {map.paths.length}</div>
-                <div className="list-row">
-                  <form action="/api/watches/toggle" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="map" />
-                    <input type="hidden" name="targetId" value={map.id} />
-                    <button type="submit" className="link-button">Toggle Watch</button>
-                  </form>
-                  <form action="/api/read-state/mark" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="map" />
-                    <input type="hidden" name="targetId" value={map.id} />
-                    <button type="submit" className="link-button">Mark Read</button>
-                  </form>
-                  <form action="/api/archive" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="map" />
-                    <input type="hidden" name="targetId" value={map.id} />
-                    <button type="submit" className="link-button">Archive</button>
-                  </form>
-                </div>
+          {tab === "styles" && (
+            <div className="p-4">
+              <h4>Marker Styles</h4>
+              <form action="/api/marker-styles/create" method="post" className="form-grid mb-6">
+                <input type="hidden" name="workspaceId" value={workspace.id} />
+                <label>
+                  Name <input name="name" required />
+                </label>
+                <label>
+                  Target
+                  <select name="target">
+                    <option value="location">Location</option>
+                    <option value="event">Event</option>
+                    <option value="path">Path</option>
+                  </select>
+                </label>
+                <label>
+                  Shape <select name="shape">{SHAPES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                </label>
+                <label>
+                  Color <input name="color" type="color" defaultValue="#1f4b99" />
+                </label>
+                <button type="submit" className="btn-primary">Add Style</button>
+              </form>
+              <div className="style-list">
+                {markerStyles.map((s) => (
+                  <div key={s.id} className="list-row-sm">
+                    <span className={`marker-shape-sm marker-${s.shape}`} style={{ backgroundColor: s.color } as any} />
+                    <span>{s.name}</span>
+                    <form action="/api/marker-styles/delete" method="post">
+                      <input type="hidden" name="workspaceId" value={workspace.id} />
+                      <input type="hidden" name="styleId" value={s.id} />
+                      <button type="submit" className="link-button">Delete</button>
+                    </form>
+                  </div>
+                ))}
               </div>
-            ))}
-            {visibleMaps.length === 0 && (
-              <div className="muted">No maps match the current filters.</div>
-            )}
-          </section>
-          <section className="panel">
-            <h3>Archived maps</h3>
-            <ul>
-              {archivedMaps.map((map) => (
-                <li key={map.id} className="list-row">
-                  <span>{map.title}</span>
-                  <form action="/api/restore" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="map" />
-                    <input type="hidden" name="targetId" value={map.id} />
-                    <button type="submit" className="link-button">Restore</button>
-                  </form>
-                </li>
-              ))}
-              {archivedMaps.length === 0 && <li className="muted">No archived maps.</li>}
-            </ul>
-          </section>
-        </>
-      )}
+            </div>
+          )}
+
+          {tab === "wiki" && (
+            <div className="p-4">
+              <WikiMapImportPanel workspaceId={workspace.id} />
+            </div>
+          )}
+        </div>
+      </aside>
     </div>
   );
 }

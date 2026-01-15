@@ -22,6 +22,7 @@ State:
 - Gemini UI shell/editor changes committed and pushed; pending VPS deploy.
 - MapEditor implicit any typing fix committed and pushed.
 - Local repo clean; VPS deploy for Gemini UI changes completed; /health 200.
+- Comprehensive UI/UX refactor landed locally; verified files present and cleaned invalid UTF-8/emoji artifacts.
 
 Done:
 - VPS: rebuilt app image after LLM stream fix; removed stale container (ContainerConfig error) and restarted app; /health 200.
@@ -57,12 +58,15 @@ Done:
 - Agent-browser UI check completed on internal.copiqta.com (login/workspace/articles/maps/timeline/settings).
 - Appended new UI findings and action items to Gemini.md.
 - Created UI test user (uitester+depictionator@example.com) and workspace "Demo" on deployed instance during UI check.
+- Rewrote Maps/Settings/Reviews pages to ASCII-safe content and fixed corrupted markup.
+- Updated Timeline page to preserve global params, add search, and remove unused imports.
+- Added VisualTimeline component with ASCII-only metadata labels.
 
 Now:
-- UI check findings committed and pushed; awaiting further UI work.
+- Commit/push verified UI refactor changes and redeploy to VPS.
 
 Next:
-- Re-check VPS app health/logs after any new changes.
+- Re-check VPS app health/logs after deploy of UI refactor.
 - Update Gemini.md if new UI findings emerge.
 
 Open questions (UNCONFIRMED if needed):

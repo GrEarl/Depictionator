@@ -1,673 +1,196 @@
-import { FilterSummary } from "@/components/FilterSummary";
-import { requireUser } from "@/lib/auth";
+import { requireUser } from "@/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
-import { MarkdownEditor } from "@/components/MarkdownEditor";
-import { EventType } from "@prisma/client";
+import { VisualTimeline } from "@/components/VisualTimeline";
 import type { Prisma } from "@prisma/client";
+import Link from "next/link";
 
 const EVENT_TYPES = [
-  "battle",
-  "travel",
-  "political",
-  "diplomatic",
-  "discovery",
-  "ritual",
-  "disaster",
-  "economic",
-  "cultural",
-  "mystery",
-  "other"
+  "battle", "travel", "political", "diplomatic", "discovery", "ritual", "disaster", "economic", "cultural", "mystery", "other"
 ];
 
-type TimelineSummary = Prisma.TimelineGetPayload<{
-  include: { events: true };
-}>;
-type TimelineEventSummary = TimelineSummary["events"][number];
-type TimelineArchiveSummary = { id: string; name: string };
-type EraSummary = {
-  id: string;
-  name: string;
-  worldStart: string | null;
-  worldEnd: string | null;
-};
-type ChapterSummary = { id: string; name: string; orderIndex: number };
-type EventListSummary = Prisma.EventGetPayload<{
-  include: { timeline: true };
-}>;
-type MarkerStyleSummary = { id: string; name: string };
-
-
 type SearchParams = { [key: string]: string | string[] | undefined };
-
 type PageProps = { searchParams: Promise<SearchParams> };
 
 export default async function TimelinePage({ searchParams }: PageProps) {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
   const resolvedSearchParams = await searchParams;
+  
   const eraFilter = String(resolvedSearchParams.era ?? "all");
   const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
   const viewpointFilter = String(resolvedSearchParams.viewpoint ?? "canon");
   const mode = String(resolvedSearchParams.mode ?? "canon");
   const query = String(resolvedSearchParams.q ?? "").trim();
-  const eventTypeRaw = String(resolvedSearchParams.eventType ?? "all").toLowerCase();
-  const eventTypeFilter = EVENT_TYPES.includes(eventTypeRaw)
-    ? (eventTypeRaw as EventType)
-    : "all";
+  const activeTab = String(resolvedSearchParams.tab ?? "visual");
 
-  const worldCondition =
-    eraFilter === "all"
-      ? {}
-      : {
-          OR: [{ worldStart: eraFilter }, { worldEnd: eraFilter }, { worldStart: null, worldEnd: null }]
-        };
-
-  const storyCondition =
-    chapterFilter === "all"
-      ? {}
-      : { OR: [{ storyChapterId: chapterFilter }, { storyChapterId: null }] };
+  const worldCondition = eraFilter === "all" ? {} : {
+    OR: [{ worldStart: eraFilter }, { worldEnd: eraFilter }, { worldStart: null, worldEnd: null }]
+  };
+  const storyCondition = chapterFilter === "all" ? {} : {
+    OR: [{ storyChapterId: chapterFilter }, { storyChapterId: null }]
+  };
   const eventCondition: Prisma.EventWhereInput = {
-    ...(eventTypeFilter === "all" ? {} : { eventType: eventTypeFilter }),
-    ...(query ? { title: { contains: query, mode: "insensitive" as const } } : {})
+    ...(query ? { title: { contains: query, mode: "insensitive" } } : {})
   };
-  const timelines = workspace
-    ? (await prisma.timeline.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        include: {
-          events: {
-            where: { softDeletedAt: null, ...worldCondition, ...storyCondition, ...eventCondition },
-            orderBy: { createdAt: "desc" }
-          }
-        },
-        orderBy: { name: "asc" }
-      })) as TimelineSummary[]
-    : [];
-  const archivedTimelines: TimelineArchiveSummary[] = workspace
-    ? await prisma.timeline.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
-        orderBy: { name: "asc" }
-      })
-    : [];
-  const eras: EraSummary[] = workspace
-    ? await prisma.era.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        orderBy: { sortKey: "asc" }
-      })
-    : [];
-  const archivedEras: EraSummary[] = workspace
-    ? await prisma.era.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
-        orderBy: { sortKey: "asc" }
-      })
-    : [];
-  const chapters: ChapterSummary[] = workspace
-    ? await prisma.chapter.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        orderBy: { orderIndex: "asc" }
-      })
-    : [];
-  const allEvents: EventListSummary[] = workspace
-    ? await prisma.event.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null },
-        include: { timeline: true },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
-  const markerStyles: MarkerStyleSummary[] = workspace
-    ? await prisma.markerStyle.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: null, target: "event" },
-        orderBy: { createdAt: "desc" }
-      })
-    : [];
-  const archivedChapters: ChapterSummary[] = workspace
-    ? await prisma.chapter.findMany({
-        where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
-        orderBy: { orderIndex: "asc" }
-      })
-    : [];
 
-  const activeTab = String(resolvedSearchParams.tab ?? "world_history");
-  const filteredTimelines = timelines.filter(t => 
-    activeTab === 'all' || t.type === activeTab || (activeTab === 'world_history' && t.type === 'world_history') || (activeTab === 'game_storyline' && t.type === 'game_storyline')
-  );
-  const tabHref = (tab: string) => {
+  const buildUrl = (overrides: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
-    params.set("tab", tab);
-    params.set("era", eraFilter);
-    params.set("chapter", chapterFilter);
-    params.set("viewpoint", viewpointFilter);
-    params.set("mode", mode);
-    if (query) params.set("q", query);
-    if (eventTypeFilter !== "all") params.set("eventType", eventTypeFilter);
-    return `?${params.toString()}`;
+    const merged = {
+      era: eraFilter,
+      chapter: chapterFilter,
+      viewpoint: viewpointFilter,
+      mode,
+      q: query || undefined,
+      tab: activeTab,
+      ...overrides
+    };
+    Object.entries(merged).forEach(([key, value]) => {
+      if (value !== undefined && value !== "") {
+        params.set(key, value);
+      }
+    });
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
   };
+
+  const [timelines, eras, chapters, markerStyles] = workspace ? await Promise.all([
+    prisma.timeline.findMany({
+      where: { workspaceId: workspace.id, softDeletedAt: null },
+      include: {
+        events: {
+          where: { softDeletedAt: null, ...worldCondition, ...storyCondition, ...eventCondition },
+          orderBy: { storyOrder: "asc" }
+        }
+      },
+      orderBy: { name: "asc" }
+    }),
+    prisma.era.findMany({ where: { workspaceId: workspace.id, softDeletedAt: null }, orderBy: { sortKey: "asc" } }),
+    prisma.chapter.findMany({ where: { workspaceId: workspace.id, softDeletedAt: null }, orderBy: { orderIndex: "asc" } }),
+    prisma.markerStyle.findMany({ where: { workspaceId: workspace.id, softDeletedAt: null, target: "event" } })
+  ]) : [[], [], [], []];
+
+  if (!workspace) return <div className="panel">Select a workspace.</div>;
 
   return (
-    <div className="panel">
+    <div className="layout-3-pane">
       <LlmContext
         value={{
           type: "timeline",
-          timelineIds: timelines.map((timeline) => timeline.id),
-          filters: { eraFilter, chapterFilter, viewpointFilter, mode, query, eventTypeFilter }
+          timelineIds: timelines.map((t) => t.id),
+          filters: { eraFilter, chapterFilter, viewpointFilter, mode, query }
         }}
       />
-      <h2>Timeline</h2>
-      <FilterSummary />
 
-      <section className="panel">
-        <h3>Filters</h3>
-        <form method="get" className="form-grid">
-          <input type="hidden" name="tab" value={activeTab} />
-          <input type="hidden" name="era" value={eraFilter} />
-          <input type="hidden" name="chapter" value={chapterFilter} />
-          <input type="hidden" name="viewpoint" value={viewpointFilter} />
-          <input type="hidden" name="mode" value={mode} />
-          <label>
-            Search events
-            <input name="q" defaultValue={query} />
-          </label>
-          <label>
-            Event type
-            <select name="eventType" defaultValue={eventTypeFilter}>
-              <option value="all">All</option>
-              {EVENT_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-          </label>
-          <button type="submit">Apply filters</button>
-        </form>
-      </section>
-      
-      <div className="link-grid" style={{ marginBottom: '16px' }}>
-        <a href={tabHref("world_history")} style={{ fontWeight: activeTab === 'world_history' ? 'bold' : 'normal', borderColor: activeTab === 'world_history' ? 'var(--accent)' : 'var(--border)' }}>
-          World History
-        </a>
-        <a href={tabHref("game_storyline")} style={{ fontWeight: activeTab === 'game_storyline' ? 'bold' : 'normal', borderColor: activeTab === 'game_storyline' ? 'var(--accent)' : 'var(--border)' }}>
-          Game Storyline
-        </a>
-        <a href={tabHref("all")} style={{ fontWeight: activeTab === 'all' ? 'bold' : 'normal', borderColor: activeTab === 'all' ? 'var(--accent)' : 'var(--border)' }}>
-          All
-        </a>
-      </div>
+      {/* Pane 1: Left - Context / Eras & Chapters */}
+      <aside className="pane-left">
+        <div className="pane-header">
+           <h3>Context</h3>
+           <form method="get" className="quick-search">
+             <input type="hidden" name="era" value={eraFilter} />
+             <input type="hidden" name="chapter" value={chapterFilter} />
+             <input type="hidden" name="viewpoint" value={viewpointFilter} />
+             <input type="hidden" name="mode" value={mode} />
+             <input type="hidden" name="tab" value={activeTab} />
+             <input name="q" defaultValue={query} placeholder="Search events..." />
+           </form>
+        </div>
+        <div className="context-list">
+          <section className="context-section">
+             <h4>Eras</h4>
+             <div className="filter-chips">
+               <Link href={buildUrl({ era: "all" })} className={`chip ${eraFilter === 'all' ? 'active' : ''}`}>All</Link>
+               {eras.map(era => (
+                 <Link key={era.id} href={buildUrl({ era: era.id })} className={`chip ${eraFilter === era.id ? 'active' : ''}`}>
+                    {era.name}
+                 </Link>
+               ))}
+             </div>
+          </section>
+          <section className="context-section">
+             <h4>Chapters</h4>
+             <div className="filter-chips">
+               <Link href={buildUrl({ chapter: "all" })} className={`chip ${chapterFilter === 'all' ? 'active' : ''}`}>All</Link>
+               {chapters.map(ch => (
+                 <Link key={ch.id} href={buildUrl({ chapter: ch.id })} className={`chip ${chapterFilter === ch.id ? 'active' : ''}`}>
+                    {ch.name}
+                 </Link>
+               ))}
+             </div>
+          </section>
+        </div>
+      </aside>
 
-      {!workspace && <p className="muted">Select a workspace to manage timelines.</p>}
-
-      {workspace && (
-        <>
-          <section className="panel">
-            <h3>Timelines ({activeTab.replace('_', ' ')})</h3>
-            {filteredTimelines.map((timeline) => (
-              <div key={timeline.id} className="panel">
-                <div className="list-row">
-                  <strong>{timeline.name}</strong>
-                  <span className="muted">{timeline.type}</span>
-                </div>
-                <ul>
-                  {timeline.events.map((event) => (
-                    <li key={event.id} className="list-row" style={{ alignItems: 'flex-start' }}>
-                      <div>
-                        <div style={{ fontWeight: 600 }}>{event.title}</div>
-                        <div className="muted" style={{ fontSize: '13px' }}>
-                           {event.worldStart ? `World: ${event.worldStart}` : ''} 
-                           {(event.worldStart && (event.storyOrder || event.storyChapterId)) ? ' ﾂｷ ' : ''}
-                           {event.storyChapterId ? `Chapter: ${chapters.find(c => c.id === event.storyChapterId)?.name ?? event.storyChapterId}` : ''}
-                           {(event.storyChapterId && event.storyOrder) ? ' / ' : ''}
-                           {event.storyOrder ? `Order: ${event.storyOrder}` : ''}
+      {/* Pane 2: Center - Timeline View */}
+      <main className="pane-center">
+        <div className="pane-header-tabs">
+           <Link href={buildUrl({ tab: "visual" })} className={`tab-link ${activeTab === 'visual' ? 'active' : ''}`}>Visual Lanes</Link>
+           <Link href={buildUrl({ tab: "list" })} className={`tab-link ${activeTab === 'list' ? 'active' : ''}`}>Event List</Link>
+        </div>
+        
+        <div className="timeline-content">
+          {activeTab === 'visual' ? (
+            <VisualTimeline timelines={timelines as any} chapters={chapters} />
+          ) : (
+            <div className="event-list-view p-4">
+              {timelines.map(t => (
+                <section key={t.id} className="timeline-group">
+                   <h4>{t.name}</h4>
+                   {t.events.map(e => (
+                     <div key={e.id} className="list-row">
+                        <div>
+                          <strong>{e.title}</strong>
+                          <div className="muted text-xs">{e.worldStart || 'No date'} · {e.eventType}</div>
                         </div>
-                        <div className="link-grid" style={{ marginTop: '4px', fontSize: '12px' }}>
-                          {event.locationMapId && (
-                            <a href={`/maps?map=${event.locationMapId}`}>View on Map</a>
-                          )}
-                          {event.involvedEntityIds.length > 0 && (
-                            <a href={`/articles/${event.involvedEntityIds[0]}`}>
-                              Related Entity {event.involvedEntityIds.length > 1 ? `(+${event.involvedEntityIds.length - 1})` : ''}
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                         <span className="badge">{event.eventType}</span>
-                         <form action="/api/watches/toggle" method="post">
-                           <input type="hidden" name="workspaceId" value={workspace.id} />
-                           <input type="hidden" name="targetType" value="event" />
-                           <input type="hidden" name="targetId" value={event.id} />
-                           <button type="submit" className="link-button">Watch</button>
-                         </form>
-                      </div>
-                    </li>
-                  ))}
-                  {timeline.events.length === 0 && <li className="muted">No events.</li>}
-                </ul>
-                <div className="list-row">
-                  <form action="/api/watches/toggle" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="timeline" />
-                    <input type="hidden" name="targetId" value={timeline.id} />
-                    <button type="submit" className="link-button">Watch</button>
-                  </form>
-                  <form action="/api/archive" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="timeline" />
-                    <input type="hidden" name="targetId" value={timeline.id} />
-                    <button type="submit" className="link-button">Archive timeline</button>
-                  </form>
-                </div>
-              </div>
-            ))}
-            {filteredTimelines.length === 0 && <p className="muted">No timelines found for this tab.</p>}
-          </section>
-
-          <section className="panel">
-            <h3>Create timeline</h3>
-            <form action="/api/timelines/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Name
-                <input name="name" required />
-              </label>
-              <label>
-                Type
-                <select name="type">
-                  <option value="world_history">World History</option>
-                  <option value="game_storyline">Game Storyline</option>
-                  <option value="dev_meta">Dev Meta</option>
-                </select>
-              </label>
-              <button type="submit">Add</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Update timeline</h3>
-            <form action="/api/timelines/update" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Timeline
-                <select name="timelineId" required>
-                  {timelines.map((timeline) => (
-                    <option key={timeline.id} value={timeline.id}>
-                      {timeline.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Name
-                <input name="name" />
-              </label>
-              <label>
-                Type
-                <select name="type">
-                  <option value="">--</option>
-                  <option value="world_history">World History</option>
-                  <option value="game_storyline">Game Storyline</option>
-                  <option value="dev_meta">Dev Meta</option>
-                </select>
-              </label>
-              <button type="submit">Update timeline</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Create era</h3>
-            <form action="/api/eras/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Name
-                <input name="name" required />
-              </label>
-              <label>
-                World start
-                <input name="worldStart" />
-              </label>
-              <label>
-                World end
-                <input name="worldEnd" />
-              </label>
-              <label>
-                Sort key
-                <input name="sortKey" type="number" required />
-              </label>
-              <button type="submit">Add era</button>
-            </form>
-            <ul>
-              {eras.map((era) => (
-                <li key={era.id} className="list-row">
-                  <div>{era.name}</div>
-                  <span className="muted">{era.worldStart} - {era.worldEnd}</span>
-                  <form action="/api/archive" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="era" />
-                    <input type="hidden" name="targetId" value={era.id} />
-                    <button type="submit" className="link-button">Archive</button>
-                  </form>
-                </li>
+                        <Link href={`/timeline?editEvent=${e.id}`} className="link-button">Edit</Link>
+                     </div>
+                   ))}
+                </section>
               ))}
-            </ul>
-          </section>
+            </div>
+          )}
+        </div>
+      </main>
 
-          <section className="panel">
-            <h3>Update era</h3>
-            <form action="/api/eras/update" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Era
-                <select name="eraId" required>
-                  {eras.map((era) => (
-                    <option key={era.id} value={era.id}>
-                      {era.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Name
-                <input name="name" />
-              </label>
-              <label>
-                World start
-                <input name="worldStart" />
-              </label>
-              <label>
-                World end
-                <input name="worldEnd" />
-              </label>
-              <label>
-                Sort key
-                <input name="sortKey" type="number" />
-              </label>
-              <button type="submit">Update era</button>
-            </form>
-          </section>
-          <section className="panel">
-            <h3>Archived eras</h3>
-            <ul>
-              {archivedEras.map((era) => (
-                <li key={era.id} className="list-row">
-                  <span>{era.name}</span>
-                  <form action="/api/restore" method="post">
+      {/* Pane 3: Right - Actions / Forms */}
+      <aside className="pane-right-drawer">
+         <div className="pane-header">
+            <h3>Management</h3>
+         </div>
+         <div className="drawer-content">
+            <details className="action-details" open>
+               <summary>Create Event</summary>
+               <form action="/api/events/create" method="post" className="form-grid p-2">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <label>Timeline <select name="timelineId" required>{timelines.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
+                  <label>Title <input name="title" required /></label>
+                  <label>Type <select name="eventType">{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
+                  <label>World Start <input name="worldStart" placeholder="Era/Year" /></label>
+                  <label>Chapter <select name="storyChapterId"><option value="">--</option>{chapters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                  <label>Order <input name="storyOrder" type="number" defaultValue={0} /></label>
+                  <button type="submit" className="btn-primary">Add Event</button>
+               </form>
+            </details>
+
+            <details className="action-details">
+               <summary>Timelines & Eras</summary>
+               <div className="p-2">
+                 <form action="/api/timelines/create" method="post" className="form-grid mb-4">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="era" />
-                    <input type="hidden" name="targetId" value={era.id} />
-                    <button type="submit" className="link-button">Restore</button>
-                  </form>
-                </li>
-              ))}
-              {archivedEras.length === 0 && <li className="muted">No archived eras.</li>}
-            </ul>
-          </section>
-
-          <section className="panel">
-            <h3>Create chapter</h3>
-            <form action="/api/chapters/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Name
-                <input name="name" required />
-              </label>
-              <label>
-                Order
-                <input name="orderIndex" type="number" required />
-              </label>
-              <label>
-                Description
-                <textarea name="description" rows={3} />
-              </label>
-              <button type="submit">Add chapter</button>
-            </form>
-            <ul>
-              {chapters.map((chapter) => (
-                <li key={chapter.id} className="list-row">
-                  <div>{chapter.name}</div>
-                  <span className="muted">Order {chapter.orderIndex}</span>
-                  <form action="/api/archive" method="post">
+                    <label>New Timeline Name <input name="name" required /></label>
+                    <button type="submit" className="btn-secondary">Create Timeline</button>
+                 </form>
+                 <form action="/api/eras/create" method="post" className="form-grid">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="chapter" />
-                    <input type="hidden" name="targetId" value={chapter.id} />
-                    <button type="submit" className="link-button">Archive</button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          </section>
-
-          <section className="panel">
-            <h3>Update chapter</h3>
-            <form action="/api/chapters/update" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Chapter
-                <select name="chapterId" required>
-                  {chapters.map((chapter) => (
-                    <option key={chapter.id} value={chapter.id}>
-                      {chapter.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Name
-                <input name="name" />
-              </label>
-              <label>
-                Order
-                <input name="orderIndex" type="number" />
-              </label>
-              <label>
-                Description
-                <textarea name="description" rows={3} />
-              </label>
-              <button type="submit">Update chapter</button>
-            </form>
-          </section>
-          <section className="panel">
-            <h3>Archived chapters</h3>
-            <ul>
-              {archivedChapters.map((chapter) => (
-                <li key={chapter.id} className="list-row">
-                  <span>{chapter.name}</span>
-                  <form action="/api/restore" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="chapter" />
-                    <input type="hidden" name="targetId" value={chapter.id} />
-                    <button type="submit" className="link-button">Restore</button>
-                  </form>
-                </li>
-              ))}
-              {archivedChapters.length === 0 && <li className="muted">No archived chapters.</li>}
-            </ul>
-          </section>
-
-          <section className="panel">
-            <h3>Create event</h3>
-            <form action="/api/events/create" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Timeline
-                <select name="timelineId" required>
-                  {timelines.map((timeline) => (
-                    <option key={timeline.id} value={timeline.id}>
-                      {timeline.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Title
-                <input name="title" required />
-              </label>
-              <label>
-                Event type
-                <select name="eventType">
-                  {EVENT_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Marker style
-                <select name="markerStyleId">
-                  <option value="">--</option>
-                  {markerStyles.map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                World start
-                <input name="worldStart" />
-              </label>
-              <label>
-                World end
-                <input name="worldEnd" />
-              </label>
-              <label>
-                Story order
-                <input name="storyOrder" type="number" />
-              </label>
-              <label>
-                Story chapter ID
-                <input name="storyChapterId" />
-              </label>
-              <label>
-                Location map ID
-                <input name="locationMapId" />
-              </label>
-              <label>
-                Location pin ID
-                <input name="locationPinId" />
-              </label>
-              <label>
-                Location X
-                <input name="locationX" type="number" step="0.1" />
-              </label>
-              <label>
-                Location Y
-                <input name="locationY" type="number" step="0.1" />
-              </label>
-              <MarkdownEditor name="summaryMd" label="Summary (Markdown)" rows={4} />
-              <label>
-                Involved Entity IDs (comma)
-                <input name="involvedEntityIds" />
-              </label>
-              <button type="submit">Add event</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Update event</h3>
-            <form action="/api/events/update" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Event
-                <select name="eventId" required>
-                  {allEvents.map((event) => (
-                    <option key={event.id} value={event.id}>
-                      {event.title} ﾂｷ {event.timeline?.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Timeline ID
-                <input name="timelineId" />
-              </label>
-              <label>
-                Title
-                <input name="title" />
-              </label>
-              <label>
-                Event type
-                <select name="eventType">
-                  <option value="">--</option>
-                  {EVENT_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Marker style
-                <select name="markerStyleId">
-                  <option value="">--</option>
-                  {markerStyles.map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                World start
-                <input name="worldStart" />
-              </label>
-              <label>
-                World end
-                <input name="worldEnd" />
-              </label>
-              <label>
-                Story order
-                <input name="storyOrder" type="number" />
-              </label>
-              <label>
-                Story chapter ID
-                <input name="storyChapterId" />
-              </label>
-              <label>
-                Location map ID
-                <input name="locationMapId" />
-              </label>
-              <label>
-                Location pin ID
-                <input name="locationPinId" />
-              </label>
-              <label>
-                Location X
-                <input name="locationX" type="number" step="0.1" />
-              </label>
-              <label>
-                Location Y
-                <input name="locationY" type="number" step="0.1" />
-              </label>
-              <MarkdownEditor name="summaryMd" label="Summary (Markdown)" rows={4} />
-              <label>
-                Involved Entity IDs (comma)
-                <input name="involvedEntityIds" />
-              </label>
-              <button type="submit">Update event</button>
-            </form>
-          </section>
-
-          <section className="panel">
-            <h3>Archived timelines</h3>
-            <ul>
-              {archivedTimelines.map((timeline) => (
-                <li key={timeline.id} className="list-row">
-                  <span>{timeline.name}</span>
-                  <form action="/api/restore" method="post">
-                    <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <input type="hidden" name="targetType" value="timeline" />
-                    <input type="hidden" name="targetId" value={timeline.id} />
-                    <button type="submit" className="link-button">Restore</button>
-                  </form>
-                </li>
-              ))}
-              {archivedTimelines.length === 0 && <li className="muted">No archived timelines.</li>}
-            </ul>
-          </section>
-        </>
-      )}
+                    <label>New Era Name <input name="name" required /></label>
+                    <label>Sort Key <input name="sortKey" type="number" defaultValue={eras.length} /></label>
+                    <button type="submit" className="btn-secondary">Create Era</button>
+                 </form>
+               </div>
+            </details>
+         </div>
+      </aside>
     </div>
   );
 }
-
