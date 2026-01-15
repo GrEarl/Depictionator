@@ -292,6 +292,7 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
   const args = [
     "exec",
     "--json",
+    "--search",
     "--model",
     CODEX_MODEL,
     "--sandbox",

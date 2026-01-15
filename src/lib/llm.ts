@@ -255,7 +255,16 @@ async function generateCodex(prompt: string, authBase64?: string, timeoutMs?: nu
     env.CODEX_HOME = authDir;
   }
 
-  const args = ["exec", "--json", "--model", CODEX_MODEL, "--sandbox", "read-only", "-"];
+  const args = [
+    "exec",
+    "--json",
+    "--search",
+    "--model",
+    CODEX_MODEL,
+    "--sandbox",
+    "read-only",
+    "-"
+  ];
   let child: ChildProcessWithoutNullStreams;
   try {
     child = spawn(CODEX_CLI_PATH, args, { env });

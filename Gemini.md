@@ -1,45 +1,49 @@
-# Gemini UI/UX�˗����iDepictionator�j
+﻿# Gemini UI/UX依頼書（Depictionator）
 
-�ړI: UI/UX�������x�̍�����ԂɈ����グ��B�o�b�N�G���h�͎����ς݂̂��߁AUI�́u�g����v���u���킸�E�����E���S�Ɂv����ł��邱�Ƃ��d���B
+目的: UI/UXを完成度の高い状態に引き上げる。バックエンドは実装済みのため、UIは「使える」より「迷わず・速く・安全に」操作できることを重視。
 
-## ����̉ۑ�iUI�ϓ_�j
-- ���܂�UI�̓t�H�[���̊񂹏W�߂ŁA���삪���f����Ă���B
-- �}�b�v�ҏW���u�摜��ւ̒��ڃv���b�g/��������v�ɂȂ��Ă��Ȃ��B
-- Wikipedia������̃C���|�[�gUI���Ȃ��B
-- �ҏW�̌���MediaWiki�I�Ɂu�y���E�\�����E�ȒP�v�ɂȂ��Ă��Ȃ��B
-- UI����ؑւ��Ȃ��i���{��/�p��Ȃǁj�B
+## 現状の課題（UI観点）
+- いまのUIはフォームの寄せ集めで、操作が分断されている。
+- マップ編集が「画像上への直接プロット/直感操作」になっていない。
+- Wikipedia等からのインポートUIがない。
+- 編集体験がMediaWiki的に「軽快・構造化・簡単」になっていない。
+- UI言語切替がない（日本語/英語など）。
 
-## �ڕWUX
-1) **MediaWiki���̕ҏW�̌�**
-- WYSIWYG��Markdown�̃n�C�u���b�h�i�����v���r���[/�Z�N�V�����ҏW/���o���i�r�j�B
-- �摜�h���b�O&�h���b�v�A�o�T�����͂�ҏW��ʓ��Ŋ����B
-- �́E����E���_�iCanon/Belief�j���㕔�ŏ펞�ؑցB
-- ����/����/���r���[�̓����������B
+## 目標UX
+1) **MediaWiki級の編集体験**
+- WYSIWYGとMarkdownのハイブリッド（即時プレビュー/セクション編集/見出しナビ）。
+- 画像ドラッグ&ドロップ、出典情報入力を編集画面内で完結。
+- 章・時代・視点（Canon/Belief）を上部で常時切替。
+- 差分/履歴/レビューの導線が明快。
 
-2) **�}�b�v�ҏW�̒�������**
-- �摜��N���b�N�Ńs���ݒu�B
-- �s��/�����̃h���b�O�ړ��A�X�i�b�v�A�폜�A�����I���B
-- �C�x���g���/�n�_���/���_/�^�U�t���O�ɉ�����**�`��E�F����**�𑦎����f�B
-- ���C���[ON/OFF�iCanon/Belief/World/Story/Entity��ʁj�B
+2) **マップ編集の直感操作**
+- 画像上クリックでピン設置。
+- ピン/動線のドラッグ移動、スナップ、削除、複数選択。
+- イベント種別/地点種別/視点/真偽フラグに応じた**形状・色分け**を即時反映。
+- レイヤーON/OFF（Canon/Belief/World/Story/Entity種別）。
 
-3) **Wikipedia/MediaWiki�A�gUI**
-- ���� �� �v���r���[�i�{��/�摜/���C�Z���X�j �� ��荞�ݐ�i�L��/�n�}/�A�Z�b�g�j�I���B
-- ��荞�ݎ���TASL�iTitle/Author/Source/License�j��\���E�ۑ��B
-- �摜��Wikimedia Commons�Ή��B
+3) **Wikipedia/MediaWiki連携UI**
+- 検索 → プレビュー（本文/画像/ライセンス） → 取り込み先（記事/地図/アセット）選択。
+- 取り込み時にTASL（Title/Author/Source/License）を表示・保存。
+- 画像はWikimedia Commons対応。
+- **多言語統合インポート**:
+  - 日本語記事が無い場合は他言語から取り込み可能（UIで言語を複数選択）。
+  - 可能なら「複数言語記事をLLMで統合 → 出典一覧を維持」のワークフローを用意。
+  - 取り込み結果には言語別の出典を明記できるUIを用意。
 
-4) **������UI**
-- ��ʉE��Ɍ���ؑցi���{��/�p��j�B
-- �ؑւ͑������f�A���[�U�[�ݒ�Ƃ��ĕۑ��B
+4) **多言語UI**
+- 画面右上に言語切替（日本語/英語）。
+- 切替は即時反映、ユーザー設定として保存。
 
-## �g����o�b�N�G���hAPI�i�V�K�ǉ��܂ށj
+## 使えるバックエンドAPI（新規追加含む）
 ### Wikipedia/MediaWiki
 - POST `/api/wiki/search`
-  - form: `query`, `lang` (��: `en`, `ja`, `commons`)
+  - form: `query`, `lang` (例: `en`, `ja`, `commons`)
 - POST `/api/wiki/page`
   - form: `pageId` or `title`, `lang`
 - POST `/api/wiki/import/article`
   - form: `workspaceId`, `pageId` or `title`, `lang`, `entityType`, `publish`
-  - `publish=true`�ő������J���r�W������
+  - `publish=true`で即時公開リビジョン化
 - POST `/api/wiki/import/asset`
   - form: `workspaceId`, `imageTitle`, `lang`
 - POST `/api/wiki/import/map`
@@ -48,31 +52,32 @@
 ### Locale
 - POST `/api/i18n/set`
   - form: `locale` (`ja`/`en`)
-  - ���[�U�[�ݒ� + `ui_locale` cookie ���X�V
+  - ユーザー設定 + `ui_locale` cookie を更新
 
-### ������v�@�\
-- �L��/���r�W����/���r���[/�^�C�����C��/�n�}/�s��/����/�ʒm �Ȃǂ�CRUD�͊���API�Ŏ����ς݁B
+### 既存主要機能
+- 記事/リビジョン/レビュー/タイムライン/地図/ピン/動線/通知 などのCRUDは既存APIで実装済み。
 
-## UI�ŕK�{�̓���
-- **�O���[�o���t�B���^**: World Era + Story Chapter + Viewpoint
-- **Map Editor**: ��L�t�B���^�A���Ń��C���[����
-- **Review**: �����������r���[�˗������F/���߂�
-- **PDF�o��**: �L��/�n�}/�N�\�̑I�� �� �o��
+## UIで必須の導線
+- **グローバルフィルタ**: World Era + Story Chapter + Viewpoint
+- **Map Editor**: 上記フィルタ連動でレイヤー可視化
+- **Review**: 下書き→レビュー依頼→承認/差戻し
+- **PDF出力**: 記事/地図/年表の選択 → 出力
 
-## ���o�\���̕K�{���[��
-- �s��/������ **�`��E�F** �� MarkerStyle �����o���B
-- �ł���΁uLegend�i�}��j�v�������\���B
-- Canon/Belief�̍��͎��o�I�Ɉ�ڂŕ�����\���ɁB
+## 視覚表現の必須ルール
+- ピン/動線の **形状・色** は MarkerStyle を視覚化。
+- できれば「Legend（凡例）」を自動表示。
+- Canon/Beliefの差は視覚的に一目で分かる表現に。
 
-## ���ӓ_
-- ����API��Cookie�F�؁iSecure�j�Ȃ̂� **HTTPS�O��**�B
-- �t�H�[�����e�� `multipart/form-data` �x�[�X�B
+## 注意点
+- 既存APIはCookie認証（Secure）なので **HTTPS前提**。
+- フォーム投稿は `multipart/form-data` ベース。
+- Wiki統合インポート時はLLM利用可否のトグルが必要（利用不可なら通常インポートのみ）。
 
-## ��Ɣ͈́iGemini�S���j
-- UI�S�ʂ�UX�݌v�Ǝ����iMap/Article/Timeline/Review/LLM�p�l���j�B
-- ��ʑJ�ڂ̐݌v�Ƒ��x/�킩��₷���̍œK���B
-- �G�f�B�^�ƒn�}�́u���쐫�v�����B
+## 作業範囲（Gemini担当）
+- UI全般のUX設計と実装（Map/Article/Timeline/Review/LLMパネル）。
+- 画面遷移の設計と速度/わかりやすさの最適化。
+- エディタと地図の「操作性」強化。
 
-## �Q�l
-- Wikipedia/MediaWiki ��UI���i�������v���r���[���ҏW�j�Ɋ񂹂�Ɨǂ��B
-- Map�́uFigma�̃L�����o�X����v����ڎw���B
+## 参考
+- Wikipedia/MediaWiki のUI感（検索→プレビュー→編集）に寄せると良い。
+- Mapは「Figmaのキャンバス操作」感を目指す。
