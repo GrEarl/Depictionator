@@ -112,3 +112,21 @@
 - Reviews: 依頼一覧と監査ログの一覧だけ。レビュー差分/承認/差戻しの主導線が弱い。
 - Settings: 機能は揃っているが、ワークスペース設定/アセット/LLM設定が長大なフォームで視認性が低い。
 - Maps: 画面表示は復旧。未作成時は「Select a map to edit」表示のみで、初期作成/インポート誘導を強化したい。
+
+## Gemini CLI attempt (2026-01-15)
+- Gemini CLI timed out repeatedly; manual UI/UX directives appended below.
+
+## UI/UX directives (manual, for Gemini)
+- IA: Fixed global filter bar (Era/Chapter/Viewpoint/Mode) + workspace switcher + main nav (Articles/Maps/Timeline/Reviews/Settings). Use left sidebar for nav, right inspector/drawer for details.
+- Articles (read): 3-pane layout: left entity list with search/type/status/tags/unread; center article with sticky TOC; right metadata (era/story/viewpoint, sources, revision status, watch/read).
+- Articles (edit): inline section edit with split preview; toolbar for headings/links/quotes; image drag/drop with asset picker; references panel.
+- Maps: full-canvas editor with top toolbar (Select/Pin/Path/Area/Measure). Click to place pins, drag to move, shift-click to add path points, snap/undo, right-panel inspector for selected item.
+- Map layers: toggles for pins/paths/events/canon/viewpoint/story/world; legend showing marker style by event/location type; quick filter chips.
+- Timeline: toggle World/Story tabs + visual timeline view (card lanes) + list fallback; per-event chips (type, chapter, map link); quick create and batch edit.
+- Reviews: queue by status tabs, inline diff viewer, approve/reject with required comment; assignment UI.
+- Settings: tabs (Workspace, Members/Roles, LLM, Integrations, Locale), each with short forms + descriptions.
+- LLM panel: right drawer with context summary, prompt templates, “insert as draft” button, execution log.
+- i18n: language switcher in header (ja/en), persists in user settings + cookie; show translation completeness badge.
+- Empty states: show “Create / Import / Sample data” CTAs per page.
+- Accessibility: keyboard focus styles, ARIA labels, color contrast, non-color legend cues, shortcuts cheat sheet.
+- Quick wins: auto-select first map; sticky global filter; reduce form length with collapsible sections.

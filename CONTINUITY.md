@@ -16,6 +16,7 @@ State:
 - VPS rebuild completed; app container recreated and /health returns 200.
 - Added server-side list filters for Articles/Maps/Timeline (query/type/status/tags/unread/event type) and preserved global filter params across views.
 - Latest filter-related typing fixes deployed; /health OK.
+- Gemini CLI requests timed out; UI/UX guidance will be updated manually in Gemini.md.
 
 Done:
 - VPS: rebuilt app image after LLM stream fix; removed stale container (ContainerConfig error) and restarted app; /health 200.
@@ -25,6 +26,7 @@ Done:
 - Timeline event filtering (search/event type) + tab links preserve filters.
 - Fixed Prisma enum typing for article filters and timeline filters; redeployed to VPS.
 - VPS: rebuild completed; removed stale container and restarted app; /health 200.
+- Appended manual UI/UX directives to Gemini.md after Gemini CLI timeouts.
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
 - Locale support, LLM env settings, PDF credits; Chromium path fix for PDF generation.
 - Caddy reverse proxy + HTTPS health OK; API smoke checks completed; PDF export OK.
@@ -44,8 +46,9 @@ Done:
 - Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
 
 Now:
-- Monitor for any new tasks; system is up with latest image.
-- Ready for next phase tasks.
+- Use Gemini CLI to generate UI/UX improvement directives and update Gemini.md.
+- Update Gemini.md manually with UI/UX directives due to CLI timeout.
+ - Report CLI timeout and updated Gemini.md to user.
 
 Next:
 - Re-check VPS app health/logs if new changes land.
