@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (adding pg types + tsconfig jsx/include fixes; pending commit/push and VPS rebuild).
+- In progress (pg types + tsconfig fixes pushed; VPS rebuild pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -54,6 +54,7 @@ Done:
 - Forced Next build/dev to webpack and restored webpack alias.
 - Added @types/pg and aligned tsconfig jsx/include with Next 16 defaults.
 - Regenerated lockfile; lint passes.
+- Committed and pushed pg types + tsconfig updates.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -123,7 +124,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Commit/push pg types + tsconfig updates.
+- Rebuild VPS after pg types update.
 
 Next:
 - Redeploy VPS and re-verify.
