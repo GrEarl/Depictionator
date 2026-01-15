@@ -13,9 +13,10 @@ Key decisions:
 
 State:
 - Core backend/features mostly implemented; Codex CLI spawn/runtime error handling fixed and pushed in streaming LLM route.
-- Deployment status needs verification after latest changes (ensure app image rebuilt and /health OK).
+- VPS rebuild completed; app container recreated and /health returns 200.
 
 Done:
+- VPS: rebuilt app image after LLM stream fix; removed stale container (ContainerConfig error) and restarted app; /health 200.
 - Codex CLI streaming now handles spawn/runtime errors without crashing and returns structured errors.
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
 - Locale support, LLM env settings, PDF credits; Chromium path fix for PDF generation.
@@ -36,16 +37,15 @@ Done:
 - Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
 
 Now:
-- Verify deployment status if needed.
+- Monitor for any new tasks; system is up with latest image.
 
 Next:
-- Re-check VPS app health/logs after pushing.
+- Re-check VPS app health/logs if new changes land.
 - Update Gemini.md if new UI findings emerge.
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
 - Gemini UI/UX implementation pending.
-- Is VPS currently running the newest image after recent code changes?
 
 Working set (files/ids/commands):
 - package.json
@@ -53,6 +53,8 @@ Working set (files/ids/commands):
 - prisma/schema.prisma
 - prisma.config.ts
 - src/app/api/llm/execute/route.ts
+- /root/build_llm_fix.log (VPS)
+- tmux session: build_llm_fix
 - src/components/MapEditor.tsx
 - src/app/(app)/maps/page.tsx
 - src/components/MarkdownToc.tsx
