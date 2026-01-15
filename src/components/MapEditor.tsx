@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -10,6 +10,7 @@ type MarkerStyle = {
   target: string;
   shape: string;
   color: string;
+  eventType?: string | null;
   locationType?: string | null;
 };
 
@@ -23,9 +24,18 @@ type MapPayload = {
     x: number;
     y: number;
     label?: string | null;
+    entityId?: string | null;
+    locationType?: string | null;
+    markerStyleId?: string | null;
     markerShape?: string | null;
     markerColor?: string | null;
     markerStyle?: { shape: string; color: string } | null;
+    truthFlag?: string | null;
+    viewpointId?: string | null;
+    worldFrom?: string | null;
+    worldTo?: string | null;
+    storyFromChapterId?: string | null;
+    storyToChapterId?: string | null;
   }[];
   paths: {
     id: string;
@@ -67,6 +77,41 @@ export function MapEditor({
   const [showImage, setShowImage] = useState(true);
   const [showPins, setShowPins] = useState(true);
   const [showPaths, setShowPaths] = useState(true);
+  const [editPins, setEditPins] = useState(false);
+  const [selectedPinId, setSelectedPinId] = useState("");
+  const defaultLocationType = locationTypes[0] ?? "other";
+  const createPinDraft = useCallback((overrides: Partial<{
+    x: number | null;
+    y: number | null;
+    label: string;
+    locationType: string;
+    markerStyleId: string;
+    markerShape: string;
+    markerColor: string;
+    truthFlag: string;
+    viewpointId: string;
+    worldFrom: string;
+    worldTo: string;
+    storyFromChapterId: string;
+    storyToChapterId: string;
+    entityId: string;
+  }> = {}) => ({
+    x: null,
+    y: null,
+    label: "",
+    locationType: defaultLocationType,
+    markerStyleId: "",
+    markerShape: "",
+    markerColor: "",
+    truthFlag: "canonical",
+    viewpointId: "",
+    worldFrom: "",
+    worldTo: "",
+    storyFromChapterId: "",
+    storyToChapterId: "",
+    entityId: "",
+    ...overrides
+  }), [defaultLocationType]);
   const [pinDraft, setPinDraft] = useState<{
     x: number | null;
     y: number | null;
@@ -82,22 +127,7 @@ export function MapEditor({
     storyFromChapterId: string;
     storyToChapterId: string;
     entityId: string;
-  }>({
-    x: null,
-    y: null,
-    label: "",
-    locationType: locationTypes[0] ?? "other",
-    markerStyleId: "",
-    markerShape: "",
-    markerColor: "",
-    truthFlag: "canonical",
-    viewpointId: "",
-    worldFrom: "",
-    worldTo: "",
-    storyFromChapterId: "",
-    storyToChapterId: "",
-    entityId: ""
-  });
+  }>(() => createPinDraft());
   const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
   const [pathDraft, setPathDraft] = useState({
     arrowStyle: "arrow",
@@ -113,6 +143,12 @@ export function MapEditor({
     relatedEventId: "",
     relatedEntityIds: ""
   });
+
+  useEffect(() => {
+    if (!map) return;
+    setSelectedPinId("");
+    setPinDraft(createPinDraft());
+  }, [map?.id, createPinDraft]);
 
   useEffect(() => {
     if (!containerRef.current || !map) return;
@@ -153,9 +189,37 @@ export function MapEditor({
         const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
         const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
         const icon = createIcon(shape, color);
-        const marker = L.marker([pin.y, pin.x], { icon });
+        const marker = L.marker([pin.y, pin.x], { icon, draggable: editPins });
         if (pin.label) {
           marker.bindTooltip(pin.label, { direction: "top" });
+        }
+        marker.on("click", () => {
+          setSelectedPinId(pin.id);
+          setPinDraft(
+            createPinDraft({
+              x: pin.x,
+              y: pin.y,
+              label: pin.label ?? "",
+              locationType: pin.locationType ?? defaultLocationType,
+              markerStyleId: pin.markerStyleId ?? "",
+              markerShape: pin.markerShape ?? "",
+              markerColor: pin.markerColor ?? "",
+              truthFlag: pin.truthFlag ?? "canonical",
+              viewpointId: pin.viewpointId ?? "",
+              worldFrom: pin.worldFrom ?? "",
+              worldTo: pin.worldTo ?? "",
+              storyFromChapterId: pin.storyFromChapterId ?? "",
+              storyToChapterId: pin.storyToChapterId ?? "",
+              entityId: pin.entityId ?? ""
+            })
+          );
+        });
+        if (editPins) {
+          marker.on("dragend", (event) => {
+            const target = event.target as L.Marker;
+            const latlng = target.getLatLng();
+            void updatePinPosition(pin.id, latlng.lng, latlng.lat);
+          });
         }
         marker.addTo(leafletMap);
       });
@@ -188,7 +252,7 @@ export function MapEditor({
     return () => {
       leafletMap.remove();
     };
-  }, [map, mode, pathPoints, showImage, showPins, showPaths]);
+  }, [map, mode, pathPoints, showImage, showPins, showPaths, editPins, defaultLocationType]);
 
   if (!map) {
     return <div className="map-viewer">Select a map to edit.</div>;
@@ -218,6 +282,43 @@ export function MapEditor({
     window.location.reload();
   }
 
+  async function updatePinPosition(pinId: string, x: number, y: number) {
+    const form = new FormData();
+    form.append("workspaceId", workspaceId);
+    form.append("pinId", pinId);
+    const roundedX = Number(x.toFixed(1));
+    const roundedY = Number(y.toFixed(1));
+    form.append("x", String(roundedX));
+    form.append("y", String(roundedY));
+    await fetch("/api/pins/update", { method: "POST", body: form });
+    if (selectedPinId === pinId) {
+      setPinDraft((prev) => ({ ...prev, x: roundedX, y: roundedY }));
+    }
+  }
+
+  async function submitPinUpdate() {
+    if (!selectedPinId) return;
+    const form = new FormData();
+    form.append("workspaceId", workspaceId);
+    form.append("pinId", selectedPinId);
+    if (pinDraft.x !== null) form.append("x", String(pinDraft.x));
+    if (pinDraft.y !== null) form.append("y", String(pinDraft.y));
+    form.append("label", pinDraft.label);
+    form.append("locationType", pinDraft.locationType);
+    form.append("markerStyleId", pinDraft.markerStyleId);
+    form.append("markerShape", pinDraft.markerShape);
+    form.append("markerColor", pinDraft.markerColor);
+    form.append("truthFlag", pinDraft.truthFlag);
+    form.append("viewpointId", pinDraft.viewpointId);
+    form.append("worldFrom", pinDraft.worldFrom);
+    form.append("worldTo", pinDraft.worldTo);
+    form.append("storyFromChapterId", pinDraft.storyFromChapterId);
+    form.append("storyToChapterId", pinDraft.storyToChapterId);
+    form.append("entityId", pinDraft.entityId);
+    await fetch("/api/pins/update", { method: "POST", body: form });
+    window.location.reload();
+  }
+
   async function submitPath() {
     if (!map) return;
     if (pathPoints.length < 2) return;
@@ -240,6 +341,117 @@ export function MapEditor({
     await fetch("/api/paths/create", { method: "POST", body: form });
     window.location.reload();
   }
+
+  const pinFields = (
+    <>
+      <label>
+        Label
+        <input
+          value={pinDraft.label}
+          onChange={(event) => setPinDraft({ ...pinDraft, label: event.target.value })}
+        />
+      </label>
+      <label>
+        Entity ID
+        <input
+          value={pinDraft.entityId}
+          onChange={(event) => setPinDraft({ ...pinDraft, entityId: event.target.value })}
+        />
+      </label>
+      <label>
+        Location type
+        <select
+          value={pinDraft.locationType}
+          onChange={(event) => setPinDraft({ ...pinDraft, locationType: event.target.value })}
+        >
+          {locationTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Marker style
+        <select
+          value={pinDraft.markerStyleId}
+          onChange={(event) => setPinDraft({ ...pinDraft, markerStyleId: event.target.value })}
+        >
+          <option value="">--</option>
+          {markerStyles
+            .filter((style) => style.target === "location" || style.target === "event")
+            .map((style) => (
+              <option key={style.id} value={style.id}>
+                {style.name} ({style.target})
+              </option>
+            ))}
+        </select>
+      </label>
+      <label>
+        Override shape
+        <input
+          value={pinDraft.markerShape}
+          onChange={(event) => setPinDraft({ ...pinDraft, markerShape: event.target.value })}
+          placeholder="circle/square/diamond/triangle/hex/star"
+        />
+      </label>
+      <label>
+        Override color
+        <input
+          value={pinDraft.markerColor}
+          onChange={(event) => setPinDraft({ ...pinDraft, markerColor: event.target.value })}
+        />
+      </label>
+      <label>
+        Truth flag
+        <select
+          value={pinDraft.truthFlag}
+          onChange={(event) => setPinDraft({ ...pinDraft, truthFlag: event.target.value })}
+        >
+          <option value="canonical">canonical</option>
+          <option value="rumor">rumor</option>
+          <option value="mistaken">mistaken</option>
+          <option value="propaganda">propaganda</option>
+          <option value="unknown">unknown</option>
+        </select>
+      </label>
+      <label>
+        Viewpoint ID
+        <input
+          value={pinDraft.viewpointId}
+          onChange={(event) => setPinDraft({ ...pinDraft, viewpointId: event.target.value })}
+        />
+      </label>
+      <label>
+        World from
+        <input
+          value={pinDraft.worldFrom}
+          onChange={(event) => setPinDraft({ ...pinDraft, worldFrom: event.target.value })}
+        />
+      </label>
+      <label>
+        World to
+        <input
+          value={pinDraft.worldTo}
+          onChange={(event) => setPinDraft({ ...pinDraft, worldTo: event.target.value })}
+        />
+      </label>
+      <label>
+        Story from chapter ID
+        <input
+          value={pinDraft.storyFromChapterId}
+          onChange={(event) => setPinDraft({ ...pinDraft, storyFromChapterId: event.target.value })}
+        />
+      </label>
+      <label>
+        Story to chapter ID
+        <input
+          value={pinDraft.storyToChapterId}
+          onChange={(event) => setPinDraft({ ...pinDraft, storyToChapterId: event.target.value })}
+        />
+      </label>
+    </>
+  );
 
   return (
     <div className="map-viewer">
@@ -277,46 +489,67 @@ export function MapEditor({
           />
           Show paths
         </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={editPins}
+            onChange={(event) => setEditPins(event.target.checked)}
+          />
+          Edit pins (drag/update)
+        </label>
         {mode === "pin" && (
           <>
             <label>
               X/Y (click map)
               <input value={pinDraft.x !== null ? `${pinDraft.x}, ${pinDraft.y}` : ""} readOnly />
             </label>
-            <label>
-              Label
-              <input value={pinDraft.label} onChange={(event) => setPinDraft({ ...pinDraft, label: event.target.value })} />
-            </label>
-            <label>
-              Location type
-              <select value={pinDraft.locationType} onChange={(event) => setPinDraft({ ...pinDraft, locationType: event.target.value })}>
-                {locationTypes.map((type) => (
-                  <option key={type} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Marker style
-              <select value={pinDraft.markerStyleId} onChange={(event) => setPinDraft({ ...pinDraft, markerStyleId: event.target.value })}>
-                <option value="">--</option>
-                {markerStyles
-                  .filter((style) => style.target === "location")
-                  .map((style) => (
-                    <option key={style.id} value={style.id}>
-                      {style.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              Entity ID
-              <input value={pinDraft.entityId} onChange={(event) => setPinDraft({ ...pinDraft, entityId: event.target.value })} />
-            </label>
+            {pinFields}
             <button type="button" onClick={submitPin}>
               Save pin
             </button>
+          </>
+        )}
+        {editPins && mode === "view" && (
+          <>
+            <div className="muted">Tip: click a pin to load it, then drag or update fields.</div>
+            <label>
+              Selected pin
+              <input value={selectedPinId} readOnly />
+            </label>
+            <label>
+              X
+              <input
+                value={pinDraft.x ?? ""}
+                onChange={(event) =>
+                  setPinDraft({ ...pinDraft, x: event.target.value ? Number(event.target.value) : null })
+                }
+              />
+            </label>
+            <label>
+              Y
+              <input
+                value={pinDraft.y ?? ""}
+                onChange={(event) =>
+                  setPinDraft({ ...pinDraft, y: event.target.value ? Number(event.target.value) : null })
+                }
+              />
+            </label>
+            {pinFields}
+            <div className="list-row">
+              <button type="button" onClick={submitPinUpdate} disabled={!selectedPinId}>
+                Update selected pin
+              </button>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => {
+                  setSelectedPinId("");
+                  setPinDraft(createPinDraft());
+                }}
+              >
+                Clear selection
+              </button>
+            </div>
           </>
         )}
         {mode === "path" && (
@@ -354,6 +587,14 @@ export function MapEditor({
               <button type="button" className="link-button" onClick={() => setPathPoints([])}>
                 Clear points
               </button>
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => setPathPoints((prev) => prev.slice(0, -1))}
+                disabled={pathPoints.length === 0}
+              >
+                Undo last point
+              </button>
               <button type="button" onClick={submitPath}>
                 Save path
               </button>
@@ -375,6 +616,17 @@ export function MapEditor({
                 style={{ "--marker-color": style.color } as CSSProperties}
               />
               <span>{style.name}{style.locationType ? ` (${style.locationType})` : ""}</span>
+            </div>
+          ))}
+        {markerStyles
+          .filter((style) => style.target === "event")
+          .map((style) => (
+            <div key={style.id} className="legend-row">
+              <span
+                className={`marker-shape marker-${style.shape}`}
+                style={{ "--marker-color": style.color } as CSSProperties}
+              />
+              <span>{style.name}{style.eventType ? ` (${style.eventType})` : ""}</span>
             </div>
           ))}
         {markerStyles

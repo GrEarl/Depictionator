@@ -244,11 +244,13 @@ function waitForSpawn(child: ChildProcessWithoutNullStreams): Promise<Error | nu
   });
 }
 
-function formatSpawnError(error: Error): string {
-  if (isRecord(error) && error.code === "ENOENT") {
+function formatSpawnError(error: Error, context: "spawn" | "runtime" = "spawn"): string {
+  if (context === "spawn" && isRecord(error) && error.code === "ENOENT") {
     return "Codex CLI not installed or not on PATH";
   }
-  return `Codex CLI failed to start: ${error.message}`;
+  const message = error instanceof Error ? error.message : String(error);
+  const prefix = context === "spawn" ? "Codex CLI failed to start" : "Codex CLI runtime error";
+  return `${prefix}: ${message}`;
 }
 
 function extractTextFromContent(content: unknown): string {
@@ -308,7 +310,7 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
     return;
   }
 
-  let runtimeError: unknown = null;
+  let runtimeError: Error | null = null;
   const onRuntimeError = (error: Error) => {
     runtimeError = error;
   };
@@ -389,6 +391,8 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
             }
         }
     }
+  } catch (error) {
+    runtimeError = runtimeError ?? (error as Error);
   } finally {
     if (authDir) {
         try { await fs.rm(authDir, { recursive: true, force: true }); } catch {}
@@ -402,10 +406,7 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
   child.off("error", onRuntimeError);
 
   if (runtimeError) {
-      const message = runtimeError instanceof Error
-        ? runtimeError.message
-        : String(runtimeError);
-      yield `\n\n[Codex CLI error: ${message}]`;
+      yield JSON.stringify({ error: formatSpawnError(runtimeError, "runtime") });
   }
 
   if (exitCode !== 0 && exitCode !== null) {

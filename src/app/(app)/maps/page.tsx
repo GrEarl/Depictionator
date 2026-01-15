@@ -59,11 +59,18 @@ type MapPinSummary = {
   x: number;
   y: number;
   label: string | null;
+  entityId: string | null;
   markerShape: string | null;
   markerColor: string | null;
+  markerStyleId: string | null;
   markerStyle: MarkerStyleSummary | null;
   truthFlag: string | null;
   locationType: string | null;
+  viewpointId: string | null;
+  worldFrom: string | null;
+  worldTo: string | null;
+  storyFromChapterId: string | null;
+  storyToChapterId: string | null;
 };
 type MapPathSummary = {
   id: string;
@@ -223,10 +230,18 @@ export default async function MapsPage({ searchParams }: PageProps) {
             x: pin.x,
             y: pin.y,
             label: pin.label,
+            entityId: pin.entityId,
             markerShape: pin.markerShape,
             markerColor: pin.markerColor,
+            markerStyleId: pin.markerStyleId,
             markerStyle: style,
-            truthFlag: pin.truthFlag
+            truthFlag: pin.truthFlag,
+            locationType: pin.locationType,
+            viewpointId: pin.viewpointId,
+            worldFrom: pin.worldFrom,
+            worldTo: pin.worldTo,
+            storyFromChapterId: pin.storyFromChapterId,
+            storyToChapterId: pin.storyToChapterId
           };
         }),
         paths: selectedMap.paths.map((path) => ({
