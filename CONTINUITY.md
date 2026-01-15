@@ -12,7 +12,7 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Wiki search panels + Markdown ToC deployed; VPS /health OK (last deploy).
+- Wiki search panels + Markdown ToC deployed; VPS redeployed with latest MapEditor/Codex fixes; /health OK.
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -28,9 +28,10 @@ Done:
 - Updated Gemini.md with latest UI scaffolding notes.
 - Local UI check attempt: localhost /health unreachable (server not running).
 - Committed and pushed latest MapEditor + Codex stream fixes.
+- VPS: git pull + docker-compose up --build (timed out but containers up); /health 200.
 
 Now:
-- Redeploy to VPS; verify /health and key flows.
+- Re-run UI check (agent-browser) when app is running; update Gemini.md if new gaps.
 
 Next:
 - Run UI check (agent-browser) once app is running; update Gemini.md if new gaps.
