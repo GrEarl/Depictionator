@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (webpack build forced and alias restored; VPS rebuild pending).
+- In progress (adding pg types + tsconfig jsx/include fixes; pending commit/push and VPS rebuild).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -52,6 +52,8 @@ Done:
 - Added Turbopack resolveAlias for @ path in next.config.js.
 - Switched Turbopack resolveAlias to relative "./src" (did not fix alias resolution).
 - Forced Next build/dev to webpack and restored webpack alias.
+- Added @types/pg and aligned tsconfig jsx/include with Next 16 defaults.
+- Regenerated lockfile; lint passes.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -121,7 +123,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Rebuild VPS after webpack build switch.
+- Commit/push pg types + tsconfig updates.
 
 Next:
 - Redeploy VPS and re-verify.
