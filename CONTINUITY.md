@@ -12,7 +12,7 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- In progress: app container restart loop on VPS (Prisma migrate deploy missing prisma.config.ts in runner); Dockerfile fix pending redeploy.
+- VPS rebuilt with prisma.config.ts in runtime image; app container running and /health OK.
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -24,10 +24,10 @@ Done:
 - Enabled Codex CLI search flag in LLM execution paths.
 - Rewrote Gemini.md in UTF-8 and added multi-language wiki import UX notes.
 - Identified Prisma migrate deploy failure due to missing prisma.config.ts in runtime image.
+- Deployed Dockerfile fix; rebuilt image and restarted containers; /health OK.
 
 Now:
-- Commit/push Dockerfile fix to copy prisma.config.ts into runner image.
-- Rebuild/redeploy VPS and verify /health and key endpoints.
+- Verify a few key endpoints if needed; prepare handoff summary + Gemini.md update notes.
 
 Next:
 - Update Gemini.md if UI requirements changed; re-run UI checks with agent-browser if needed.
