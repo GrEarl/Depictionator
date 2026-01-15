@@ -12,7 +12,7 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- In progress: local dependency + LLM updates pending commit; VPS redeploy pending.
+- In progress: app container restart loop on VPS (Prisma migrate deploy missing prisma.config.ts in runner); Dockerfile fix pending redeploy.
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -23,10 +23,11 @@ Done:
 - Verified latest docs (Next.js/React/Prisma/Puppeteer/Gemini); updated Prisma to 7.2.0 and Puppeteer to 24.35.0.
 - Enabled Codex CLI search flag in LLM execution paths.
 - Rewrote Gemini.md in UTF-8 and added multi-language wiki import UX notes.
+- Identified Prisma migrate deploy failure due to missing prisma.config.ts in runtime image.
 
 Now:
-- Commit/push current updates (deps + LLM args + Gemini.md).
-- Redeploy VPS and verify /health and key endpoints.
+- Commit/push Dockerfile fix to copy prisma.config.ts into runner image.
+- Rebuild/redeploy VPS and verify /health and key endpoints.
 
 Next:
 - Update Gemini.md if UI requirements changed; re-run UI checks with agent-browser if needed.
