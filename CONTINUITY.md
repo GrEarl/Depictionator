@@ -14,10 +14,14 @@ Key decisions:
 State:
 - Core backend/features mostly implemented; Codex CLI spawn/runtime error handling fixed and pushed in streaming LLM route.
 - VPS rebuild completed; app container recreated and /health returns 200.
+- Added server-side list filters for Articles/Maps/Timeline (query/type/status/tags/unread/event type) and preserved global filter params across views.
 
 Done:
 - VPS: rebuilt app image after LLM stream fix; removed stale container (ContainerConfig error) and restarted app; /health 200.
 - Codex CLI streaming now handles spawn/runtime errors without crashing and returns structured errors.
+- Article list filtering (search/type/status/tags/unread) + LLM context updated.
+- Map overview filtering (search/unread) + LLM context updated.
+- Timeline event filtering (search/event type) + tab links preserve filters.
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
 - Locale support, LLM env settings, PDF credits; Chromium path fix for PDF generation.
 - Caddy reverse proxy + HTTPS health OK; API smoke checks completed; PDF export OK.
@@ -38,6 +42,7 @@ Done:
 
 Now:
 - Monitor for any new tasks; system is up with latest image.
+- Commit/push filter changes and deploy if requested.
 
 Next:
 - Re-check VPS app health/logs if new changes land.

@@ -106,6 +106,8 @@ export default async function MapsPage({ searchParams }: PageProps) {
   const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
   const viewpointFilter = String(resolvedSearchParams.viewpoint ?? "canon");
   const mode = String(resolvedSearchParams.mode ?? "canon");
+  const mapQuery = String(resolvedSearchParams.q ?? "").trim();
+  const unreadOnly = String(resolvedSearchParams.unread ?? "false") === "true";
 
   const viewpointCondition =
     mode === "canon"
@@ -181,6 +183,14 @@ export default async function MapsPage({ searchParams }: PageProps) {
   const mapReadMap = new Map(
     mapReadStates.map((state) => [state.targetId, state])
   );
+  const normalizedMapQuery = mapQuery.toLowerCase();
+  const visibleMaps = maps.filter((map) => {
+    if (mapQuery && !map.title.toLowerCase().includes(normalizedMapQuery)) return false;
+    if (!unreadOnly) return true;
+    const readState = mapReadMap.get(map.id);
+    const isUnread = !readState || map.updatedAt > readState.lastReadAt;
+    return isUnread;
+  });
   const allPins: PinWithMapSummary[] = workspace
     ? await prisma.pin.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
@@ -273,9 +283,9 @@ export default async function MapsPage({ searchParams }: PageProps) {
       <LlmContext
         value={{
           type: "maps",
-          mapIds: maps.map((map) => map.id),
+          mapIds: visibleMaps.map((map) => map.id),
           selectedMapId,
-          filters: { eraFilter, chapterFilter, viewpointFilter, mode }
+          filters: { eraFilter, chapterFilter, viewpointFilter, mode, mapQuery, unreadOnly }
         }}
       />
       <h2>Maps</h2>
@@ -286,6 +296,28 @@ export default async function MapsPage({ searchParams }: PageProps) {
 
       {workspace && (
         <>
+          <section className="panel">
+            <h3>Filters</h3>
+            <form method="get" className="form-grid">
+              <input type="hidden" name="era" value={eraFilter} />
+              <input type="hidden" name="chapter" value={chapterFilter} />
+              <input type="hidden" name="viewpoint" value={viewpointFilter} />
+              <input type="hidden" name="mode" value={mode} />
+              <input type="hidden" name="map" value={selectedMapId} />
+              <label>
+                Search maps
+                <input name="q" defaultValue={mapQuery} />
+              </label>
+              <label>
+                Unread only
+                <select name="unread" defaultValue={unreadOnly ? "true" : "false"}>
+                  <option value="false">No</option>
+                  <option value="true">Yes</option>
+                </select>
+              </label>
+              <button type="submit">Apply filters</button>
+            </form>
+          </section>
           <section className="panel">
             <h3>Map preview</h3>
             
@@ -873,7 +905,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
 
           <section className="panel">
             <h3>Maps overview</h3>
-            {maps.map((map) => (
+            {visibleMaps.map((map) => (
               <div key={map.id} className="panel">
                 <div className="list-row">
                   <strong>{map.title}</strong>
@@ -906,6 +938,9 @@ export default async function MapsPage({ searchParams }: PageProps) {
                 </div>
               </div>
             ))}
+            {visibleMaps.length === 0 && (
+              <div className="muted">No maps match the current filters.</div>
+            )}
           </section>
           <section className="panel">
             <h3>Archived maps</h3>

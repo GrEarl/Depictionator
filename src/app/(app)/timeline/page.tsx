@@ -62,6 +62,11 @@ export default async function TimelinePage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
   const eraFilter = String(resolvedSearchParams.era ?? "all");
   const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
+  const viewpointFilter = String(resolvedSearchParams.viewpoint ?? "canon");
+  const mode = String(resolvedSearchParams.mode ?? "canon");
+  const query = String(resolvedSearchParams.q ?? "").trim();
+  const eventTypeRaw = String(resolvedSearchParams.eventType ?? "all").toLowerCase();
+  const eventTypeFilter = EVENT_TYPES.includes(eventTypeRaw) ? eventTypeRaw : "all";
 
   const worldCondition =
     eraFilter === "all"
@@ -74,12 +79,16 @@ export default async function TimelinePage({ searchParams }: PageProps) {
     chapterFilter === "all"
       ? {}
       : { OR: [{ storyChapterId: chapterFilter }, { storyChapterId: null }] };
+  const eventCondition = {
+    ...(eventTypeFilter === "all" ? {} : { eventType: eventTypeFilter }),
+    ...(query ? { title: { contains: query, mode: "insensitive" } } : {})
+  };
   const timelines: TimelineSummary[] = workspace
     ? await prisma.timeline.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: {
           events: {
-            where: { softDeletedAt: null, ...worldCondition, ...storyCondition },
+            where: { softDeletedAt: null, ...worldCondition, ...storyCondition, ...eventCondition },
             orderBy: { createdAt: "desc" }
           }
         },
@@ -134,6 +143,17 @@ export default async function TimelinePage({ searchParams }: PageProps) {
   const filteredTimelines = timelines.filter(t => 
     activeTab === 'all' || t.type === activeTab || (activeTab === 'world_history' && t.type === 'world_history') || (activeTab === 'game_storyline' && t.type === 'game_storyline')
   );
+  const tabHref = (tab: string) => {
+    const params = new URLSearchParams();
+    params.set("tab", tab);
+    params.set("era", eraFilter);
+    params.set("chapter", chapterFilter);
+    params.set("viewpoint", viewpointFilter);
+    params.set("mode", mode);
+    if (query) params.set("q", query);
+    if (eventTypeFilter !== "all") params.set("eventType", eventTypeFilter);
+    return `?${params.toString()}`;
+  };
 
   return (
     <div className="panel">
@@ -141,20 +161,47 @@ export default async function TimelinePage({ searchParams }: PageProps) {
         value={{
           type: "timeline",
           timelineIds: timelines.map((timeline) => timeline.id),
-          filters: { eraFilter, chapterFilter }
+          filters: { eraFilter, chapterFilter, viewpointFilter, mode, query, eventTypeFilter }
         }}
       />
       <h2>Timeline</h2>
       <FilterSummary />
+
+      <section className="panel">
+        <h3>Filters</h3>
+        <form method="get" className="form-grid">
+          <input type="hidden" name="tab" value={activeTab} />
+          <input type="hidden" name="era" value={eraFilter} />
+          <input type="hidden" name="chapter" value={chapterFilter} />
+          <input type="hidden" name="viewpoint" value={viewpointFilter} />
+          <input type="hidden" name="mode" value={mode} />
+          <label>
+            Search events
+            <input name="q" defaultValue={query} />
+          </label>
+          <label>
+            Event type
+            <select name="eventType" defaultValue={eventTypeFilter}>
+              <option value="all">All</option>
+              {EVENT_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button type="submit">Apply filters</button>
+        </form>
+      </section>
       
       <div className="link-grid" style={{ marginBottom: '16px' }}>
-        <a href="?tab=world_history" style={{ fontWeight: activeTab === 'world_history' ? 'bold' : 'normal', borderColor: activeTab === 'world_history' ? 'var(--accent)' : 'var(--border)' }}>
+        <a href={tabHref("world_history")} style={{ fontWeight: activeTab === 'world_history' ? 'bold' : 'normal', borderColor: activeTab === 'world_history' ? 'var(--accent)' : 'var(--border)' }}>
           World History
         </a>
-        <a href="?tab=game_storyline" style={{ fontWeight: activeTab === 'game_storyline' ? 'bold' : 'normal', borderColor: activeTab === 'game_storyline' ? 'var(--accent)' : 'var(--border)' }}>
+        <a href={tabHref("game_storyline")} style={{ fontWeight: activeTab === 'game_storyline' ? 'bold' : 'normal', borderColor: activeTab === 'game_storyline' ? 'var(--accent)' : 'var(--border)' }}>
           Game Storyline
         </a>
-        <a href="?tab=all" style={{ fontWeight: activeTab === 'all' ? 'bold' : 'normal', borderColor: activeTab === 'all' ? 'var(--accent)' : 'var(--border)' }}>
+        <a href={tabHref("all")} style={{ fontWeight: activeTab === 'all' ? 'bold' : 'normal', borderColor: activeTab === 'all' ? 'var(--accent)' : 'var(--border)' }}>
           All
         </a>
       </div>
