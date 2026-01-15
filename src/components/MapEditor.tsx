@@ -152,8 +152,6 @@ export function MapEditor({
   useEffect(() => {
     if (!containerRef.current || !map) return;
     let active = true;
-    let leafletMap: LeafletMap | null = null;
-
     const init = async () => {
       const leafletModule = await import("leaflet");
       const L = (leafletModule as any).default ?? leafletModule;
@@ -167,16 +165,16 @@ export function MapEditor({
         [0, 0],
         [1000, 1000]
       ];
-      leafletMap = L.map(containerRef.current, {
+      const mapInstance = L.map(containerRef.current, {
         crs: L.CRS.Simple,
         zoomControl: true,
         minZoom: -2
-      });
-      mapRef.current = leafletMap;
+      }) as LeafletMap;
+      mapRef.current = mapInstance;
       if (map.imageUrl && showImage) {
-        L.imageOverlay(map.imageUrl, bounds).addTo(leafletMap);
+        L.imageOverlay(map.imageUrl, bounds).addTo(mapInstance);
       }
-      leafletMap.fitBounds(bounds);
+      mapInstance.fitBounds(bounds);
 
       if (showPaths) {
         map.paths.forEach((path) => {
@@ -187,7 +185,7 @@ export function MapEditor({
             color,
             weight,
             dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
-          }).addTo(leafletMap);
+          }).addTo(mapInstance);
         });
       }
 
@@ -227,19 +225,19 @@ export function MapEditor({
               void updatePinPosition(pin.id, latlng.lng, latlng.lat);
             });
           }
-          marker.addTo(leafletMap);
+          marker.addTo(mapInstance);
         });
       }
 
       if (pathPoints.length > 0) {
         const points = pathPoints.map((pt) => [pt.y, pt.x]) as [number, number][];
-        L.polyline(points, { color: "#c44536", weight: 2 }).addTo(leafletMap);
+        L.polyline(points, { color: "#c44536", weight: 2 }).addTo(mapInstance);
         pathPoints.forEach((pt) => {
-          L.circleMarker([pt.y, pt.x], { radius: 4, color: "#c44536" }).addTo(leafletMap);
+          L.circleMarker([pt.y, pt.x], { radius: 4, color: "#c44536" }).addTo(mapInstance);
         });
       }
 
-      leafletMap.on("click", (event: { latlng: { lng: number; lat: number } }) => {
+      mapInstance.on("click", (event: { latlng: { lng: number; lat: number } }) => {
         if (mode === "pin") {
           setPinDraft((prev) => ({
             ...prev,
