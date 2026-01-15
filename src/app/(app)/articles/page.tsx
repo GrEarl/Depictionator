@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { WikiArticleImportPanel } from "@/components/WikiArticleImportPanel";
 
 const ENTITY_TYPES = [
   "nation",
@@ -121,83 +122,7 @@ export default async function ArticlesPage() {
             </form>
           </section>
 
-          <section className="panel">
-            <h3>Wiki import (Article)</h3>
-            <form action="/api/wiki/import/article" method="post" className="form-grid">
-              <input type="hidden" name="workspaceId" value={workspace.id} />
-              <label>
-                Title
-                <input name="title" placeholder="e.g. Tokyo" />
-              </label>
-              <label>
-                Page ID (optional)
-                <input name="pageId" placeholder="e.g. 30057" />
-              </label>
-              <label>
-                Language
-                <input name="lang" defaultValue="en" />
-              </label>
-              <label>
-                Target language (optional)
-                <input name="targetLang" placeholder="e.g. ja" />
-              </label>
-              <label>
-                Entity type
-                <select name="entityType">
-                  {ENTITY_TYPES.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                Publish
-                <select name="publish">
-                  <option value="true">Yes</option>
-                  <option value="false">No</option>
-                </select>
-              </label>
-              <details className="panel" style={{ padding: "12px" }}>
-                <summary>LLM options</summary>
-                <label>
-                  Use LLM
-                  <select name="useLlm">
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                </label>
-                <label>
-                  Aggregate languages
-                  <select name="aggregateLangs">
-                    <option value="true">true</option>
-                    <option value="false">false</option>
-                  </select>
-                </label>
-                <label>
-                  LLM provider
-                  <select name="llmProvider">
-                    <option value="gemini_ai">gemini_ai</option>
-                    <option value="gemini_vertex">gemini_vertex</option>
-                    <option value="codex_cli">codex_cli</option>
-                  </select>
-                </label>
-                <label>
-                  LLM model (optional)
-                  <input name="llmModel" placeholder="gemini-3-flash-preview" />
-                </label>
-                <label>
-                  Codex auth base64 (optional)
-                  <textarea name="codexAuthBase64" rows={3} />
-                </label>
-              </details>
-              <button type="submit">Import</button>
-            </form>
-            <p className="muted">
-              If both Title and Page ID are set, Page ID is used. LLM synthesis
-              runs when configured and required for non-target languages.
-            </p>
-          </section>
+          <WikiArticleImportPanel workspaceId={workspace.id} entityTypes={ENTITY_TYPES} />
 
           <section className="panel">
             <h3>Entities</h3>

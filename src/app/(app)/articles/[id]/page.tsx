@@ -4,6 +4,7 @@ import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { MarkdownView } from "@/components/MarkdownView";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { MarkdownToc } from "@/components/MarkdownToc";
 import { AutoMarkRead } from "@/components/AutoMarkRead";
 
 const TRUTH_FLAGS = ["canonical", "rumor", "mistaken", "propaganda", "unknown"];
@@ -170,7 +171,10 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
           <div className={`compare-pane canon ${mode === "compare" ? "panel" : ""}`}>
             <h3>Base Article (Canon)</h3>
             {entity.article?.baseRevision ? (
-              <MarkdownView value={entity.article.baseRevision.bodyMd} />
+              <>
+                <MarkdownToc value={entity.article.baseRevision.bodyMd} />
+                <MarkdownView value={entity.article.baseRevision.bodyMd} />
+              </>
             ) : (
               <p className="muted">No approved base revision yet.</p>
             )}
@@ -265,9 +269,15 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
                     </span>
                   </div>
                   {overlay.activeRevision ? (
-                    <MarkdownView value={overlay.activeRevision.bodyMd} />
+                    <>
+                      <MarkdownToc value={overlay.activeRevision.bodyMd} />
+                      <MarkdownView value={overlay.activeRevision.bodyMd} />
+                    </>
                   ) : overlay.revisions[0] ? (
-                    <MarkdownView value={overlay.revisions[0].bodyMd} />
+                    <>
+                      <MarkdownToc value={overlay.revisions[0].bodyMd} />
+                      <MarkdownView value={overlay.revisions[0].bodyMd} />
+                    </>
                   ) : (
                     <p className="muted">No active revision yet.</p>
                   )}
