@@ -18,6 +18,7 @@ State:
 - Latest filter-related typing fixes deployed; /health OK.
 - Gemini CLI requests timed out; UI/UX guidance will be updated manually in Gemini.md.
 - Gemini CLI ran directly (no MCP) and output appended to Gemini.md.
+- Local working tree has uncommitted Gemini UI changes (layout, globals.css, filters, MapEditor, new components) pending review/commit.
 
 Done:
 - VPS: rebuilt app image after LLM stream fix; removed stale container (ContainerConfig error) and restarted app; /health 200.
@@ -48,7 +49,7 @@ Done:
 - Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
 
 Now:
-- Await further instructions; user stated they will handle Gemini side.
+- Review local Gemini UI changes; confirm intent, commit, and deploy if acceptable.
 
 Next:
 - Re-check VPS app health/logs if new changes land.
@@ -56,7 +57,7 @@ Next:
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
-- Gemini UI/UX implementation pending.
+- Which branch/commit contains Gemini changes, and should I pull/review/deploy?
 
 Working set (files/ids/commands):
 - package.json

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { GlobalFilterProvider } from "@/components/GlobalFilterProvider";
 import { GlobalFilters } from "@/components/GlobalFilters";
 import { LlmPanel } from "@/components/LlmPanel";
+import { Sidebar } from "@/components/Sidebar";
+import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { getCurrentSession, requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 
@@ -66,30 +68,16 @@ export default async function AppLayout({
   return (
     <GlobalFilterProvider>
       <div className="app-shell">
-        <header className="app-header">
-          <div className="brand">
-            <Link href="/">Depictionator</Link>
-            <span className="workspace-pill">{session?.workspace?.name ?? "No workspace selected"}</span>
-          </div>
-          <nav className="app-nav">
-            <Link href="/">Dashboard</Link>
-            <Link href="/articles">Articles</Link>
-            <Link href="/maps">Maps</Link>
-            <Link href="/timeline">Timeline</Link>
-            <Link href="/reviews">Reviews</Link>
-            <Link href="/settings">Settings</Link>
-          </nav>
-          <div className="user-actions">
-            <span>{user.name ?? user.email}</span>
-            <form action="/api/auth/logout" method="post">
-              <button type="submit" className="link-button">
-                Logout
-              </button>
-            </form>
-          </div>
-        </header>
-        <GlobalFilters eras={eraOptions} chapters={chapterOptions} viewpoints={viewpointOptions} />
-        <div className="app-body">{children}</div>
+        <Sidebar workspaceName={session?.workspace?.name} userName={user.name ?? user.email} />
+        <div className="app-main">
+          <header className="app-topbar">
+             <GlobalFilters eras={eraOptions} chapters={chapterOptions} viewpoints={viewpointOptions} />
+             <div className="topbar-actions">
+               <LocaleSwitcher />
+             </div>
+          </header>
+          <div className="app-body">{children}</div>
+        </div>
         <LlmPanel
           workspaceId={session?.workspace?.id}
           enabledProviders={enabledProviders}
@@ -101,4 +89,3 @@ export default async function AppLayout({
     </GlobalFilterProvider>
   );
 }
-
