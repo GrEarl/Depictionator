@@ -12,7 +12,7 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Implementing wiki search/preview panels and Markdown ToC; pending deploy.
+- Wiki search panels + Markdown ToC deployed; VPS /health OK.
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -40,9 +40,10 @@ Done:
 - VPS rebuilt/redeployed with Markdown/legend updates; /health OK.
 - Added Markdown ToC component and slugified headings in MarkdownView.
 - Added Wiki import search/preview panels for Articles/Maps.
+- Deployed wiki/ToC updates to VPS; /health OK.
 
 Now:
-- Commit/push wiki search/ToC updates and redeploy VPS.
+- Respond with status; await further tasks.
 
 Next:
 - Update Gemini.md if UI requirements changed; re-run UI checks with agent-browser if needed.
