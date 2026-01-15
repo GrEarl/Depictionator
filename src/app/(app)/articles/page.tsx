@@ -6,20 +6,10 @@ import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { WikiArticleImportPanel } from "@/components/WikiArticleImportPanel";
+import { EntityStatus, EntityType } from "@prisma/client";
 
-const ENTITY_TYPES = [
-  "nation",
-  "faction",
-  "character",
-  "location",
-  "building",
-  "item",
-  "event",
-  "map",
-  "concept"
-];
-
-const ENTITY_STATUSES = ["draft", "in_review", "approved", "deprecated"];
+const ENTITY_TYPES = Object.values(EntityType);
+const ENTITY_STATUSES = Object.values(EntityStatus);
 
 type EntitySummary = {
   id: string;
@@ -45,8 +35,12 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
   const tagsRaw = String(resolvedSearchParams.tags ?? "").trim();
   const unreadOnly = String(resolvedSearchParams.unread ?? "false") === "true";
 
-  const typeFilter = ENTITY_TYPES.includes(typeFilterRaw) ? typeFilterRaw : "all";
-  const statusFilter = ENTITY_STATUSES.includes(statusFilterRaw) ? statusFilterRaw : "all";
+  const typeFilter = ENTITY_TYPES.includes(typeFilterRaw as EntityType)
+    ? (typeFilterRaw as EntityType)
+    : "all";
+  const statusFilter = ENTITY_STATUSES.includes(statusFilterRaw as EntityStatus)
+    ? (statusFilterRaw as EntityStatus)
+    : "all";
   const tagList = tagsRaw
     .split(",")
     .map((tag) => tag.trim())
