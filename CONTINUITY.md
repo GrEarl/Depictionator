@@ -27,9 +27,10 @@ Done:
 - MapEditor: pin edit toggle, drag-to-update, pin metadata fields, event legend, path undo.
 - Updated Gemini.md with latest UI scaffolding notes.
 - Local UI check attempt: localhost /health unreachable (server not running).
+- Committed and pushed latest MapEditor + Codex stream fixes.
 
 Now:
-- Commit/push local changes; redeploy to VPS; verify /health and key flows.
+- Redeploy to VPS; verify /health and key flows.
 
 Next:
 - Run UI check (agent-browser) once app is running; update Gemini.md if new gaps.
