@@ -1,7 +1,6 @@
-﻿"use client";
-
-import { createContext, useContext, useMemo, useState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+"use client";
+import { createContext, useCallback, useContext, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type DisplayMode = "canon" | "viewpoint" | "compare";
 
@@ -20,29 +19,36 @@ const FilterContext = createContext<FilterContextValue | null>(null);
 
 export function GlobalFilterProvider({ children }: { children: React.ReactNode }) {
   const params = useSearchParams();
-  const [state, setState] = useState<FilterState>({
-    eraId: params.get("era") ?? "all",
-    chapterId: params.get("chapter") ?? "all",
-    viewpointId: params.get("viewpoint") ?? "canon",
-    mode: (params.get("mode") as DisplayMode) ?? "canon"
-  });
+  const router = useRouter();
 
-  useEffect(() => {
-    setState({
+  const state = useMemo(
+    () => ({
       eraId: params.get("era") ?? "all",
       chapterId: params.get("chapter") ?? "all",
       viewpointId: params.get("viewpoint") ?? "canon",
       mode: (params.get("mode") as DisplayMode) ?? "canon"
-    });
-  }, [params]);
+    }),
+    [params]
+  );
+
+  const setFilters = useCallback(
+    (next: Partial<FilterState>) => {
+      const search = new URLSearchParams(params.toString());
+      if (next.eraId) search.set("era", next.eraId);
+      if (next.chapterId) search.set("chapter", next.chapterId);
+      if (next.viewpointId) search.set("viewpoint", next.viewpointId);
+      if (next.mode) search.set("mode", next.mode);
+      router.replace(`?${search.toString()}`);
+    },
+    [params, router]
+  );
 
   const value = useMemo(
     () => ({
       ...state,
-      setFilters: (next: Partial<FilterState>) =>
-        setState((prev) => ({ ...prev, ...next }))
+      setFilters
     }),
-    [state]
+    [state, setFilters]
   );
 
   return <FilterContext.Provider value={value}>{children}</FilterContext.Provider>;

@@ -1,5 +1,5 @@
 Goal (incl. success criteria):
-- Switch Gemini defaults to gemini-3 preview models and add API version fallback; verify wiki LLM import completes.
+- Update dependencies and LLM defaults to latest documented versions; redeploy and verify.
 - Maintain CONTINUITY.md updates each turn until overall work is complete.
 
 Constraints/Assumptions:
@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Gemini v3 preview defaults deployed; wiki LLM import verified).
+- In progress (dependency upgrades done; pending commit/push and VPS redeploy).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -36,6 +36,11 @@ Done:
 - Rebuilt and redeployed app; /health OK.
 - Wiki LLM import succeeded (HTTP 307 to new article).
 - Multi-language SourceRecord count confirmed (11 sources).
+- Updated dependencies to latest documented versions (Next.js/React/Puppeteer/Prisma) and added Prisma client output path.
+- Updated README LLM section with Gemini v3 preview guidance.
+- Regenerated npm lockfile; lint now passes with ESLint 9 flat config.
+- Refactored global filters to derive state from URL and update URL via provider.
+- Replaced Mermaid random id with useId-based stable id.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -105,10 +110,10 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Optionally verify UI; otherwise ready.
+- Commit/push dependency and lint config changes.
 
 Next:
-- None pending.
+- Redeploy VPS and re-verify.
 
 Open questions (UNCONFIRMED if needed):
 - Gemini UI/UX implementation pending.
@@ -118,3 +123,10 @@ Working set (files/ids/commands):
 - src/lib/llm.ts
 - src/app/api/wiki/import/article/route.ts
 - .env.example
+- package.json
+- prisma/schema.prisma
+- README.md
+- eslint.config.cjs
+- src/components/GlobalFilterProvider.tsx
+- src/components/GlobalFilters.tsx
+- src/components/Mermaid.tsx

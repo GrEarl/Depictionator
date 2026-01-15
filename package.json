@@ -6,22 +6,22 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
     "prisma:deploy": "prisma migrate deploy || prisma db push"
   },
   "dependencies": {
-    "@prisma/client": "^6.13.0",
+    "@prisma/client": "^7.1.0",
     "bcryptjs": "^2.4.3",
     "diff": "^7.0.0",
     "leaflet": "^1.9.4",
     "mermaid": "^11.12.2",
-    "next": "^15.4.1",
-    "puppeteer": "^24.15.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "next": "^16.1.2",
+    "puppeteer": "^24.21.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
   },
@@ -30,12 +30,12 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/diff": "^7.0.2",
     "@types/leaflet": "^1.9.21",
-    "@types/node": "^20.14.10",
-    "@types/react": "^19.0.2",
-    "@types/react-dom": "^19.0.2",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "^15.4.1",
-    "prisma": "^6.13.0",
-    "typescript": "^5.5.4"
+    "@types/node": "^22.11.0",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.1.2",
+    "prisma": "^7.1.0",
+    "typescript": "^5.7.0"
   }
 }

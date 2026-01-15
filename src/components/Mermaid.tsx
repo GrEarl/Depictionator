@@ -1,16 +1,13 @@
 "use client";
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import mermaid from "mermaid";
 
 let initialized = false;
 
 export function Mermaid({ code }: { code: string }) {
   const [svg, setSvg] = useState<string>("");
-  const id = useMemo(
-    () => `mermaid-${Math.random().toString(36).slice(2)}`,
-    []
-  );
+  const reactId = useId();
+  const id = `mermaid-${reactId.replace(/:/g, "")}`;
 
   useEffect(() => {
     if (!initialized) {

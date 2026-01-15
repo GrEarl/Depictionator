@@ -88,9 +88,11 @@ Notes:
 
 - Enable providers with `LLM_PROVIDERS_ENABLED` (comma list: `gemini_ai`, `gemini_vertex`, `codex_cli`) and choose
   a default with `LLM_DEFAULT_PROVIDER`.
-- Gemini (AI Studio): set `GEMINI_API_KEY` and optionally `GEMINI_MODEL`.
+- Gemini (AI Studio): set `GEMINI_API_KEY` and optionally `GEMINI_MODEL` (e.g. `gemini-3-flash-preview` or `gemini-3-pro-preview`).
+  You can override API versions with `GEMINI_API_VERSION` and `GEMINI_API_VERSION_FALLBACK`.
 - Gemini (Vertex): set `VERTEX_GEMINI_API_KEY`, `VERTEX_GEMINI_PROJECT`, `VERTEX_GEMINI_LOCATION`,
-  and optionally `VERTEX_GEMINI_MODEL`.
+  and optionally `VERTEX_GEMINI_MODEL`. You can override API versions with
+  `VERTEX_GEMINI_API_VERSION` and `VERTEX_GEMINI_API_VERSION_FALLBACK`.
 - Codex CLI: ensure `codex` is installed and available (override path with `CODEX_CLI_PATH`), and optional
   timeout via `CODEX_EXEC_TIMEOUT_MS`. The app can accept a base64 `auth.json` per request or use the default
   `~/.codex/auth.json`.
