@@ -276,141 +276,153 @@ async function* streamCodexCli(prompt: string, authBase64?: string): AsyncGenera
   let authDir: string | null = null;
   const env = { ...process.env } as NodeJS.ProcessEnv;
 
-  if (authBase64?.trim()) {
-    let decoded = "";
+  try {
+    if (authBase64?.trim()) {
+      let decoded = "";
+      try {
+        decoded = Buffer.from(authBase64.trim(), "base64").toString("utf8");
+        JSON.parse(decoded);
+      } catch {
+        yield JSON.stringify({ error: "Invalid codex auth base64 (expected JSON)" });
+        return;
+      }
+
+      authDir = await fs.mkdtemp(path.join(os.tmpdir(), "codex-auth-"));
+      await fs.writeFile(path.join(authDir, "auth.json"), decoded, "utf8");
+      env.CODEX_HOME = authDir;
+    }
+
+    const args = [
+      "exec",
+      "--json",
+      "--search",
+      "--model",
+      CODEX_MODEL,
+      "--sandbox",
+      "read-only",
+      "-"
+    ];
+
+    let child: ChildProcessWithoutNullStreams;
     try {
-      decoded = Buffer.from(authBase64.trim(), "base64").toString("utf8");
-      JSON.parse(decoded);
-    } catch {
-      yield JSON.stringify({ error: "Invalid codex auth base64 (expected JSON)" });
+      child = spawn(CODEX_CLI_PATH, args, { env });
+    } catch (error) {
+      yield JSON.stringify({ error: formatSpawnError(error as Error) });
       return;
     }
 
-    authDir = await fs.mkdtemp(path.join(os.tmpdir(), "codex-auth-"));
-    await fs.writeFile(path.join(authDir, "auth.json"), decoded, "utf8");
-    env.CODEX_HOME = authDir;
-  }
+    let runtimeError: Error | null = null;
+    const onRuntimeError = (error: Error) => {
+      runtimeError = runtimeError ?? error;
+    };
+    // Ensure Codex CLI spawn/runtime errors are always handled and never crash the server.
+    child.on("error", onRuntimeError);
 
-  const args = [
-    "exec",
-    "--json",
-    "--search",
-    "--model",
-    CODEX_MODEL,
-    "--sandbox",
-    "read-only",
-    "-"
-  ];
-
-  let child: ChildProcessWithoutNullStreams;
-  try {
-    child = spawn(CODEX_CLI_PATH, args, { env });
-  } catch (error) {
-    yield JSON.stringify({ error: formatSpawnError(error as Error) });
-    return;
-  }
-
-  let runtimeError: Error | null = null;
-  const onRuntimeError = (error: Error) => {
-    runtimeError = error;
-  };
-  // Ensure Codex CLI spawn/runtime errors are always handled and never crash the server.
-  child.on("error", onRuntimeError);
-
-  const spawnError = await waitForSpawn(child);
-  if (spawnError) {
-    child.off("error", onRuntimeError);
-    yield JSON.stringify({ error: formatSpawnError(spawnError) });
-    return;
-  }
-  if (!child.stdin || !child.stdout) {
-    child.off("error", onRuntimeError);
-    yield JSON.stringify({ error: "Codex CLI stdio not available" });
-    return;
-  }
-  child.stdin.write(`${prompt}\n`);
-  child.stdin.end();
-
-  let buffer = "";
-
-  // Since we are in an async generator, let's use a more direct approach to event handling
-  const readable = child.stdout;
-  
-  try {
-    for await (const chunk of readable) {
-        buffer += chunk.toString();
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
-            try {
-                const event = JSON.parse(trimmed);
-                
-                // Handle Errors immediately
-                if (event.type === "error" || event.type === "turn.failed") {
-                    const errMessage =
-                      isRecord(event.error) && typeof event.error.message === "string"
-                        ? event.error.message
-                        : undefined;
-                    const msg = extractTextFromContent(event.message ?? errMessage);
-                    if (msg) yield `\n> *Error: ${msg}*\n`;
-                    continue;
-                }
-
-                // Extract thinking process if available
-                if (event.type === "thought" || event.type === "reasoning") {
-                    const thought = extractTextFromContent(event.content ?? event.text);
-                    if (thought) yield `> *Thinking: ${thought}*\n\n`;
-                }
-                
-                // Extract message content
-                if (event.type === "message" || event.type === "thread.message") {
-                    const msg = event.message ?? event;
-                    // Only output assistant messages to avoid duplicating user prompt if echoed
-                    if (isRecord(msg) && msg.role === "assistant") {
-                        const content = extractTextFromContent(msg.content ?? msg.text);
-                        // Avoid re-yielding the whole block if it's a final message summary, 
-                        // but usually stream provides deltas. 
-                        // If this CLI provides full message at end, we might duplicate.
-                        // Assuming events are distinct or deltas. 
-                        // If 'content' is a string, it's likely a full chunk or message.
-                        if (content) yield content;
-                    }
-                }
-                
-                // Extract incremental output (deltas)
-                if (event.type === "text_delta" || event.type === "content_block_delta" || event.type === "delta") {
-                    const text = extractTextFromContent(event.text ?? event.delta ?? event.output_text);
-                    if (text) yield text;
-                }
-            } catch {
-                // If not JSON, it might be raw output
-                yield trimmed + "\n";
-            }
-        }
+    const spawnError = await waitForSpawn(child);
+    if (spawnError) {
+      child.off("error", onRuntimeError);
+      yield JSON.stringify({ error: formatSpawnError(spawnError) });
+      return;
     }
-  } catch (error) {
-    runtimeError = runtimeError ?? (error as Error);
+    if (!child.stdin || !child.stdout) {
+      child.off("error", onRuntimeError);
+      yield JSON.stringify({ error: "Codex CLI stdio not available" });
+      return;
+    }
+
+    const onStreamError = (error: Error) => {
+      runtimeError = runtimeError ?? error;
+    };
+    child.stdin.on("error", onStreamError);
+    child.stdout.on("error", onStreamError);
+
+    child.stdin.write(`${prompt}\n`);
+    child.stdin.end();
+
+    let buffer = "";
+
+    // Since we are in an async generator, let's use a more direct approach to event handling
+    const readable = child.stdout;
+
+    try {
+      for await (const chunk of readable) {
+          buffer += chunk.toString();
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+
+          for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
+              try {
+                  const event = JSON.parse(trimmed);
+
+                  // Handle Errors immediately
+                  if (event.type === "error" || event.type === "turn.failed") {
+                      const errMessage =
+                        isRecord(event.error) && typeof event.error.message === "string"
+                          ? event.error.message
+                          : undefined;
+                      const msg = extractTextFromContent(event.message ?? errMessage);
+                      if (msg) yield `\n> *Error: ${msg}*\n`;
+                      continue;
+                  }
+
+                  // Extract thinking process if available
+                  if (event.type === "thought" || event.type === "reasoning") {
+                      const thought = extractTextFromContent(event.content ?? event.text);
+                      if (thought) yield `> *Thinking: ${thought}*\n\n`;
+                  }
+
+                  // Extract message content
+                  if (event.type === "message" || event.type === "thread.message") {
+                      const msg = event.message ?? event;
+                      // Only output assistant messages to avoid duplicating user prompt if echoed
+                      if (isRecord(msg) && msg.role === "assistant") {
+                          const content = extractTextFromContent(msg.content ?? msg.text);
+                          // Avoid re-yielding the whole block if it's a final message summary,
+                          // but usually stream provides deltas.
+                          // If this CLI provides full message at end, we might duplicate.
+                          // Assuming events are distinct or deltas.
+                          // If 'content' is a string, it's likely a full chunk or message.
+                          if (content) yield content;
+                      }
+                  }
+
+                  // Extract incremental output (deltas)
+                  if (event.type === "text_delta" || event.type === "content_block_delta" || event.type === "delta") {
+                      const text = extractTextFromContent(event.text ?? event.delta ?? event.output_text);
+                      if (text) yield text;
+                  }
+              } catch {
+                  // If not JSON, it might be raw output
+                  yield trimmed + "\n";
+              }
+          }
+      }
+    } catch (error) {
+      runtimeError = runtimeError ?? (error as Error);
+    } finally {
+      child.stdin.off("error", onStreamError);
+      child.stdout.off("error", onStreamError);
+    }
+
+    const exitCode = await new Promise<number | null>((resolve) => {
+      child.on("close", resolve);
+    });
+
+    child.off("error", onRuntimeError);
+
+    if (runtimeError) {
+        yield JSON.stringify({ error: formatSpawnError(runtimeError, "runtime") });
+    }
+
+    if (exitCode !== 0 && exitCode !== null) {
+        yield `\n\n[Codex CLI exited with code ${exitCode}]`;
+    }
   } finally {
     if (authDir) {
         try { await fs.rm(authDir, { recursive: true, force: true }); } catch {}
     }
-  }
-
-  const exitCode = await new Promise<number | null>((resolve) => {
-    child.on("close", resolve);
-  });
-
-  child.off("error", onRuntimeError);
-
-  if (runtimeError) {
-      yield JSON.stringify({ error: formatSpawnError(runtimeError, "runtime") });
-  }
-
-  if (exitCode !== 0 && exitCode !== null) {
-      yield `\n\n[Codex CLI exited with code ${exitCode}]`;
   }
 }
 

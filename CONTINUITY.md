@@ -12,7 +12,8 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Wiki search panels + Markdown ToC deployed; VPS running with MapEditor SSR fix; /health OK.
+- Core backend/features mostly implemented; Codex CLI spawn error handling fixed locally in streaming LLM route (await commit/push).
+- Deployment status needs verification after latest changes (ensure app image rebuilt and /health OK).
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -34,14 +35,17 @@ Done:
 - Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
 
 Now:
-- Await next backend tasks or further UI checks.
+- Commit/push the Codex CLI spawn error fix.
+- Verify deployment status if needed.
 
 Next:
-- Continue backend tasks; refine UI guidance as needed.
+- Re-check VPS app health/logs after pushing.
+- Update Gemini.md if new UI findings emerge.
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
 - Gemini UI/UX implementation pending.
+- Is VPS currently running the newest image after recent code changes?
 
 Working set (files/ids/commands):
 - package.json
