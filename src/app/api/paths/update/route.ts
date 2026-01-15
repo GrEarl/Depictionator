@@ -62,22 +62,110 @@ export async function POST(request: Request) {
   const strokeWidth = parseOptionalInt(form.get("strokeWidth"));
   if (strokeWidth !== null) data.strokeWidth = strokeWidth;
   const markerStyleId = parseOptionalString(form.get("markerStyleId"));
-  if (markerStyleId !== null) data.markerStyleId = markerStyleId;
+  if (markerStyleId !== null) {
+    if (markerStyleId) {
+      const markerStyle = await prisma.markerStyle.findFirst({
+        where: { id: markerStyleId, workspaceId, softDeletedAt: null }
+      });
+      if (!markerStyle) {
+        return apiError("Marker style not found", 404);
+      }
+      data.markerStyleId = markerStyleId;
+    } else {
+      data.markerStyleId = null;
+    }
+  }
+  const layerId = parseOptionalString(form.get("layerId"));
   const worldFrom = parseOptionalString(form.get("worldFrom"));
   if (worldFrom !== null) data.worldFrom = worldFrom;
   const worldTo = parseOptionalString(form.get("worldTo"));
   if (worldTo !== null) data.worldTo = worldTo;
   const storyFrom = parseOptionalString(form.get("storyFromChapterId"));
-  if (storyFrom !== null) data.storyFromChapterId = storyFrom;
+  if (storyFrom !== null) {
+    if (storyFrom) {
+      const chapter = await prisma.chapter.findFirst({
+        where: { id: storyFrom, workspaceId, softDeletedAt: null }
+      });
+      if (!chapter) {
+        return apiError("Story chapter not found", 404);
+      }
+      data.storyFromChapterId = storyFrom;
+    } else {
+      data.storyFromChapterId = null;
+    }
+  }
   const storyTo = parseOptionalString(form.get("storyToChapterId"));
-  if (storyTo !== null) data.storyToChapterId = storyTo;
+  if (storyTo !== null) {
+    if (storyTo) {
+      const chapter = await prisma.chapter.findFirst({
+        where: { id: storyTo, workspaceId, softDeletedAt: null }
+      });
+      if (!chapter) {
+        return apiError("Story chapter not found", 404);
+      }
+      data.storyToChapterId = storyTo;
+    } else {
+      data.storyToChapterId = null;
+    }
+  }
   const viewpointId = parseOptionalString(form.get("viewpointId"));
-  if (viewpointId !== null) data.viewpointId = viewpointId;
+  if (viewpointId !== null) {
+    if (viewpointId) {
+      const viewpoint = await prisma.viewpoint.findFirst({
+        where: { id: viewpointId, workspaceId, softDeletedAt: null }
+      });
+      if (!viewpoint) {
+        return apiError("Viewpoint not found", 404);
+      }
+      data.viewpointId = viewpointId;
+    } else {
+      data.viewpointId = null;
+    }
+  }
   const relatedEventId = parseOptionalString(form.get("relatedEventId"));
-  if (relatedEventId !== null) data.relatedEventId = relatedEventId;
+  if (relatedEventId !== null) {
+    if (relatedEventId) {
+      const event = await prisma.event.findFirst({
+        where: { id: relatedEventId, workspaceId, softDeletedAt: null }
+      });
+      if (!event) {
+        return apiError("Event not found", 404);
+      }
+      data.relatedEventId = relatedEventId;
+    } else {
+      data.relatedEventId = null;
+    }
+  }
   const relatedEntityIds = form.get("relatedEntityIds");
   if (relatedEntityIds !== null && String(relatedEntityIds).trim()) {
-    data.relatedEntityIds = parseCsv(relatedEntityIds);
+    const parsedIds = parseCsv(relatedEntityIds);
+    if (parsedIds.length) {
+      const count = await prisma.entity.count({
+        where: { id: { in: parsedIds }, workspaceId, softDeletedAt: null }
+      });
+      if (count !== parsedIds.length) {
+        return apiError("Related entities not found", 404);
+      }
+    }
+    data.relatedEntityIds = parsedIds;
+  }
+
+  if (layerId !== null) {
+    const path = await prisma.path.findFirst({ where: { id: pathId, workspaceId } });
+    if (!path) {
+      return apiError("Path not found", 404);
+    }
+    if (layerId) {
+      const layer = await prisma.mapLayer.findFirst({
+        where: { id: layerId, workspaceId, mapId: path.mapId, softDeletedAt: null }
+      });
+      if (!layer) {
+        return apiError("Layer not found", 404);
+      }
+      data.layerId = layer.id;
+    } else {
+      data.layerId = null;
+    }
   }
 
   await prisma.path.update({ where: { id: pathId, workspaceId }, data });

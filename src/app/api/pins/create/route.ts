@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     ? (markerShapeValue as MarkerShape)
     : null;
   const markerColor = String(form.get("markerColor") ?? "").trim();
+  const layerId = String(form.get("layerId") ?? "").trim();
   const worldFrom = String(form.get("worldFrom") ?? "").trim();
   const worldTo = String(form.get("worldTo") ?? "").trim();
   const storyFromChapterId = String(form.get("storyFromChapterId") ?? "").trim();
@@ -61,6 +62,62 @@ export async function POST(request: Request) {
     return apiError("Map not found", 404);
   }
 
+  let resolvedLayerId: string | null = null;
+  if (layerId) {
+    const layer = await prisma.mapLayer.findFirst({
+      where: { id: layerId, workspaceId, mapId, softDeletedAt: null }
+    });
+    if (!layer) {
+      return apiError("Layer not found", 404);
+    }
+    resolvedLayerId = layer.id;
+  }
+
+  if (entityId) {
+    const entity = await prisma.entity.findFirst({
+      where: { id: entityId, workspaceId, softDeletedAt: null }
+    });
+    if (!entity) {
+      return apiError("Entity not found", 404);
+    }
+  }
+
+  if (viewpointId) {
+    const viewpoint = await prisma.viewpoint.findFirst({
+      where: { id: viewpointId, workspaceId, softDeletedAt: null }
+    });
+    if (!viewpoint) {
+      return apiError("Viewpoint not found", 404);
+    }
+  }
+
+  if (storyFromChapterId) {
+    const chapter = await prisma.chapter.findFirst({
+      where: { id: storyFromChapterId, workspaceId, softDeletedAt: null }
+    });
+    if (!chapter) {
+      return apiError("Story chapter not found", 404);
+    }
+  }
+
+  if (storyToChapterId) {
+    const chapter = await prisma.chapter.findFirst({
+      where: { id: storyToChapterId, workspaceId, softDeletedAt: null }
+    });
+    if (!chapter) {
+      return apiError("Story chapter not found", 404);
+    }
+  }
+
+  if (markerStyleId) {
+    const markerStyle = await prisma.markerStyle.findFirst({
+      where: { id: markerStyleId, workspaceId, softDeletedAt: null }
+    });
+    if (!markerStyle) {
+      return apiError("Marker style not found", 404);
+    }
+  }
+
   const pin = await prisma.pin.create({
     data: {
       workspaceId,
@@ -74,6 +131,7 @@ export async function POST(request: Request) {
       markerStyleId: markerStyleId || null,
       markerShape: markerShape || null,
       markerColor: markerColor || null,
+      layerId: resolvedLayerId,
       worldFrom: worldFrom || null,
       worldTo: worldTo || null,
       storyFromChapterId: storyFromChapterId || null,

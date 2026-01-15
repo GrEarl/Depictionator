@@ -153,6 +153,44 @@ enum SourceTargetType {
   timeline
 }
 
+enum EvidenceItemType {
+  entity
+  asset
+  reference
+  note
+  url
+  quote
+  frame
+}
+
+enum EvidenceLinkStyle {
+  line
+  arrow
+  dashed
+  dotted
+}
+
+enum ReferenceType {
+  url
+  book
+  pdf
+  image
+  file
+  internal
+  other
+}
+
+enum CitationTargetType {
+  article_revision
+  overlay_revision
+  entity
+  map
+  event
+  timeline
+  board_item
+  evidence_board
+}
+
 model User {
   id           String            @id @default(cuid())
   email        String            @unique
@@ -220,9 +258,16 @@ model Workspace {
   eras        Era[]
   chapters    Chapter[]
   maps        Map[]
+  mapLayers   MapLayer[]
+  mapScenes   MapScene[]
   pins        Pin[]
   paths       Path[]
   assets      Asset[]
+  evidenceBoards EvidenceBoard[]
+  evidenceItems EvidenceItem[]
+  evidenceLinks EvidenceLink[]
+  references Reference[]
+  citations  Citation[]
   markerStyles MarkerStyle[]
   llmLogs     LlmLog[]
   auditLogs   AuditLog[]
@@ -274,6 +319,7 @@ model Entity {
   overlays  ArticleOverlay[]
   viewpoints Viewpoint[]
   pins      Pin[]
+  evidenceItems EvidenceItem[]
 
   @@index([workspaceId, type])
 }
@@ -376,6 +422,7 @@ model Timeline {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   events    Event[]
+  citations Citation[]
 
   @@index([workspaceId])
 }
@@ -413,6 +460,7 @@ model Event {
   markerStyle MarkerStyle? @relation(fields: [markerStyleId], references: [id])
 
   paths Path[]
+  citations Citation[]
 
   @@index([workspaceId, timelineId])
 }
@@ -427,6 +475,7 @@ model Era {
   softDeletedAt DateTime?
 
   workspace Workspace @relation(fields: [workspaceId], references: [id])
+  mapScenes MapScene[]
 
   @@index([workspaceId])
 }
@@ -448,6 +497,7 @@ model Chapter {
   pinsTo    Pin[] @relation("PinStoryTo")
   pathsFrom Path[] @relation("PathStoryFrom")
   pathsTo   Path[] @relation("PathStoryTo")
+  mapScenes MapScene[]
 
   @@index([workspaceId])
 }
@@ -476,8 +526,55 @@ model Map {
   pins  Pin[]
   paths Path[]
   events Event[] @relation("EventLocationMap")
+  layers MapLayer[]
+  scenes MapScene[]
+  citations Citation[]
 
   @@index([workspaceId])
+}
+
+model MapLayer {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  mapId         String
+  name          String
+  description   String?
+  color         String?
+  sortIndex     Int?
+  isDefault     Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  map       Map       @relation(fields: [mapId], references: [id])
+  pins      Pin[]
+  paths     Path[]
+
+  @@index([workspaceId, mapId])
+}
+
+model MapScene {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  mapId         String
+  name          String
+  description   String?
+  chapterId     String?
+  eraId         String?
+  viewpointId   String?
+  state         Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  map       Map       @relation(fields: [mapId], references: [id])
+  chapter   Chapter?  @relation(fields: [chapterId], references: [id])
+  era       Era?      @relation(fields: [eraId], references: [id])
+  viewpoint Viewpoint? @relation(fields: [viewpointId], references: [id])
+
+  @@index([workspaceId, mapId])
 }
 
 model Pin {
@@ -499,6 +596,7 @@ model Pin {
   markerShape       MarkerShape?
   markerColor       String?
   markerStyleId     String?
+  layerId           String?
   softDeletedAt     DateTime?
 
   map        Map       @relation(fields: [mapId], references: [id])
@@ -506,6 +604,7 @@ model Pin {
   entity     Entity?   @relation(fields: [entityId], references: [id])
   viewpoint  Viewpoint? @relation(fields: [viewpointId], references: [id])
   markerStyle MarkerStyle? @relation(fields: [markerStyleId], references: [id])
+  layer      MapLayer? @relation(fields: [layerId], references: [id])
   storyFrom  Chapter?  @relation("PinStoryFrom", fields: [storyFromChapterId], references: [id])
   storyTo    Chapter?  @relation("PinStoryTo", fields: [storyToChapterId], references: [id])
 
@@ -531,6 +630,7 @@ model Path {
   relatedEntityIds  String[]
   relatedEventId    String?
   markerStyleId     String?
+  layerId           String?
   softDeletedAt     DateTime?
 
   map        Map       @relation(fields: [mapId], references: [id])
@@ -540,6 +640,7 @@ model Path {
   storyTo    Chapter?  @relation("PathStoryTo", fields: [storyToChapterId], references: [id])
   relatedEvent Event?  @relation(fields: [relatedEventId], references: [id])
   markerStyle MarkerStyle? @relation(fields: [markerStyleId], references: [id])
+  layer      MapLayer? @relation(fields: [layerId], references: [id])
 
   @@index([workspaceId, mapId])
 }
@@ -566,6 +667,8 @@ model Asset {
   workspace Workspace @relation(fields: [workspaceId], references: [id])
   createdBy User? @relation("AssetCreatedBy", fields: [createdById], references: [id])
   maps      Map[]
+  evidenceItems EvidenceItem[]
+  references Reference[]
 
   @@index([workspaceId])
 }
@@ -589,6 +692,135 @@ model MarkerStyle {
   paths     Path[]
 
   @@index([workspaceId, target])
+}
+
+model EvidenceBoard {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  name          String
+  description   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  items     EvidenceItem[]
+  links     EvidenceLink[]
+  citations Citation[]
+
+  @@index([workspaceId])
+}
+
+model EvidenceItem {
+  id            String           @id @default(cuid())
+  workspaceId   String
+  boardId       String
+  type          EvidenceItemType
+  title         String?
+  content       String?
+  url           String?
+  entityId      String?
+  assetId       String?
+  referenceId   String?
+  x             Float
+  y             Float
+  width         Float?
+  height        Float?
+  rotation      Float?
+  zIndex        Int?
+  data          Json?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  board     EvidenceBoard @relation(fields: [boardId], references: [id])
+  entity    Entity?   @relation(fields: [entityId], references: [id])
+  asset     Asset?    @relation(fields: [assetId], references: [id])
+  reference Reference? @relation(fields: [referenceId], references: [id])
+  citations Citation[]
+  linksFrom EvidenceLink[] @relation("EvidenceLinkFrom")
+  linksTo   EvidenceLink[] @relation("EvidenceLinkTo")
+
+  @@index([workspaceId, boardId])
+}
+
+model EvidenceLink {
+  id            String            @id @default(cuid())
+  workspaceId   String
+  boardId       String
+  fromItemId    String
+  toItemId      String
+  label         String?
+  style         EvidenceLinkStyle @default(line)
+  data          Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  board     EvidenceBoard @relation(fields: [boardId], references: [id])
+  fromItem  EvidenceItem @relation("EvidenceLinkFrom", fields: [fromItemId], references: [id])
+  toItem    EvidenceItem @relation("EvidenceLinkTo", fields: [toItemId], references: [id])
+
+  @@index([workspaceId, boardId])
+}
+
+model Reference {
+  id              String        @id @default(cuid())
+  workspaceId     String
+  type            ReferenceType
+  title           String
+  author          String?
+  year            String?
+  publisher       String?
+  sourceUrl       String?
+  summary         String?
+  notes           String?
+  tags            String[]
+  assetId         String?
+  licenseId       String?
+  licenseUrl      String?
+  attributionText String?
+  retrievedAt     DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  softDeletedAt   DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  asset     Asset?    @relation(fields: [assetId], references: [id])
+  citations Citation[]
+  evidenceItems EvidenceItem[]
+
+  @@index([workspaceId])
+}
+
+model Citation {
+  id            String             @id @default(cuid())
+  workspaceId   String
+  referenceId   String
+  targetType    CitationTargetType
+  targetId      String
+  quote         String?
+  locator       String?
+  note          String?
+  createdAt     DateTime           @default(now())
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  reference Reference @relation(fields: [referenceId], references: [id])
+  board     EvidenceBoard? @relation(fields: [evidenceBoardId], references: [id])
+  evidenceBoardId String?
+  evidenceItem EvidenceItem? @relation(fields: [evidenceItemId], references: [id])
+  evidenceItemId String?
+  event    Event? @relation(fields: [eventId], references: [id])
+  eventId  String?
+  timeline Timeline? @relation(fields: [timelineId], references: [id])
+  timelineId String?
+  map      Map? @relation(fields: [mapId], references: [id])
+  mapId    String?
+
+  @@index([workspaceId, targetType, targetId])
 }
 
 model LlmLog {

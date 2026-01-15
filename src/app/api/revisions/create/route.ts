@@ -25,7 +25,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    await requireWorkspaceAccess(session.userId, workspaceId, "editor");
+    await requireWorkspaceAccess(
+      session.userId,
+      workspaceId,
+      targetType === "overlay" ? "reviewer" : "editor"
+    );
   } catch {
     return apiError("Forbidden", 403);
   }

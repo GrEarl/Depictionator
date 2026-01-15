@@ -52,6 +52,61 @@ export async function POST(request: Request) {
     return apiError("Timeline not found", 404);
   }
 
+  if (involvedEntityIds.length) {
+    const count = await prisma.entity.count({
+      where: { id: { in: involvedEntityIds }, workspaceId, softDeletedAt: null }
+    });
+    if (count !== involvedEntityIds.length) {
+      return apiError("Involved entities not found", 404);
+    }
+  }
+
+  if (storyChapterId) {
+    const chapter = await prisma.chapter.findFirst({
+      where: { id: storyChapterId, workspaceId, softDeletedAt: null }
+    });
+    if (!chapter) {
+      return apiError("Story chapter not found", 404);
+    }
+  }
+
+  if (markerStyleId) {
+    const markerStyle = await prisma.markerStyle.findFirst({
+      where: { id: markerStyleId, workspaceId, softDeletedAt: null }
+    });
+    if (!markerStyle) {
+      return apiError("Marker style not found", 404);
+    }
+  }
+
+  let locationMap: { id: string } | null = null;
+  if (locationMapId) {
+    locationMap = await prisma.map.findFirst({
+      where: { id: locationMapId, workspaceId, softDeletedAt: null }
+    });
+    if (!locationMap) {
+      return apiError("Location map not found", 404);
+    }
+  }
+
+  let resolvedLocationMapId = locationMap?.id ?? null;
+  let locationPinMapId: string | null = null;
+  if (locationPinId) {
+    const pin = await prisma.pin.findFirst({
+      where: { id: locationPinId, workspaceId, softDeletedAt: null }
+    });
+    if (!pin) {
+      return apiError("Location pin not found", 404);
+    }
+    locationPinMapId = pin.mapId;
+    if (resolvedLocationMapId && pin.mapId !== resolvedLocationMapId) {
+      return apiError("Location pin does not belong to map", 400);
+    }
+  }
+  if (!resolvedLocationMapId && locationPinMapId) {
+    resolvedLocationMapId = locationPinMapId;
+  }
+
   const event = await prisma.event.create({
     data: {
       workspaceId,
@@ -64,7 +119,7 @@ export async function POST(request: Request) {
       storyChapterId: storyChapterId || null,
       summaryMd: summaryMd || null,
       involvedEntityIds,
-      locationMapId: locationMapId || null,
+      locationMapId: resolvedLocationMapId,
       locationPinId: locationPinId || null,
       locationX: locationX ?? null,
       locationY: locationY ?? null,

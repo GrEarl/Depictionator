@@ -9,12 +9,19 @@ type TargetType =
   | "entity"
   | "overlay"
   | "map"
+  | "map_layer"
+  | "map_scene"
   | "pin"
   | "path"
   | "event"
   | "timeline"
   | "era"
   | "chapter"
+  | "evidence_board"
+  | "evidence_item"
+  | "evidence_link"
+  | "reference"
+  | "citation"
   | "marker_style"
   | "viewpoint"
   | "asset";
@@ -28,6 +35,10 @@ async function softUpdate(targetType: TargetType, workspaceId: string, id: strin
       return prisma.articleOverlay.update({ where: { id, workspaceId }, data: payload });
     case "map":
       return prisma.map.update({ where: { id, workspaceId }, data: payload });
+    case "map_layer":
+      return prisma.mapLayer.update({ where: { id, workspaceId }, data: payload });
+    case "map_scene":
+      return prisma.mapScene.update({ where: { id, workspaceId }, data: payload });
     case "pin":
       return prisma.pin.update({ where: { id, workspaceId }, data: payload });
     case "path":
@@ -40,6 +51,16 @@ async function softUpdate(targetType: TargetType, workspaceId: string, id: strin
       return prisma.era.update({ where: { id, workspaceId }, data: payload });
     case "chapter":
       return prisma.chapter.update({ where: { id, workspaceId }, data: payload });
+    case "evidence_board":
+      return prisma.evidenceBoard.update({ where: { id, workspaceId }, data: payload });
+    case "evidence_item":
+      return prisma.evidenceItem.update({ where: { id, workspaceId }, data: payload });
+    case "evidence_link":
+      return prisma.evidenceLink.update({ where: { id, workspaceId }, data: payload });
+    case "reference":
+      return prisma.reference.update({ where: { id, workspaceId }, data: payload });
+    case "citation":
+      return prisma.citation.update({ where: { id, workspaceId }, data: payload });
     case "marker_style":
       return prisma.markerStyle.update({ where: { id, workspaceId }, data: payload });
     case "viewpoint":

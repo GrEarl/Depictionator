@@ -48,6 +48,33 @@ export async function POST(request: Request) {
     return apiError("Entity not found", 404);
   }
 
+  if (viewpointId) {
+    const viewpoint = await prisma.viewpoint.findFirst({
+      where: { id: viewpointId, workspaceId, softDeletedAt: null }
+    });
+    if (!viewpoint) {
+      return apiError("Viewpoint not found", 404);
+    }
+  }
+
+  if (storyFromChapterId) {
+    const chapter = await prisma.chapter.findFirst({
+      where: { id: storyFromChapterId, workspaceId, softDeletedAt: null }
+    });
+    if (!chapter) {
+      return apiError("Story chapter not found", 404);
+    }
+  }
+
+  if (storyToChapterId) {
+    const chapter = await prisma.chapter.findFirst({
+      where: { id: storyToChapterId, workspaceId, softDeletedAt: null }
+    });
+    if (!chapter) {
+      return apiError("Story chapter not found", 404);
+    }
+  }
+
   const overlay = await prisma.articleOverlay.create({
     data: {
       workspaceId,

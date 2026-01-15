@@ -20,18 +20,22 @@ export async function POST(request: Request) {
     return apiError("Missing fields", 400);
   }
 
-  try {
-    await requireWorkspaceAccess(session.userId, workspaceId, "editor");
-  } catch {
-    return apiError("Forbidden", 403);
-  }
-
   const revision = await prisma.articleRevision.findFirst({
     where: { id: revisionId, workspaceId }
   });
 
   if (!revision) {
     return apiError("Revision not found", 404);
+  }
+
+  try {
+    await requireWorkspaceAccess(
+      session.userId,
+      workspaceId,
+      revision.targetType === "overlay" ? "reviewer" : "editor"
+    );
+  } catch {
+    return apiError("Forbidden", 403);
   }
 
   const restored = await prisma.articleRevision.create({
