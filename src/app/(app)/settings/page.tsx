@@ -1,4 +1,4 @@
-﻿import { requireUser } from "@/auth";
+﻿import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { prisma } from "@/lib/db";
 import { LlmContext } from "@/components/LlmContext";

@@ -61,9 +61,10 @@ Done:
 - Rewrote Maps/Settings/Reviews pages to ASCII-safe content and fixed corrupted markup.
 - Updated Timeline page to preserve global params, add search, and remove unused imports.
 - Added VisualTimeline component with ASCII-only metadata labels.
+- Fixed UI refactor imports to use "@/lib/auth" after build failure for "@/auth".
 
 Now:
-- Commit/push verified UI refactor changes and redeploy to VPS.
+- Commit/push auth import fix and redeploy to VPS; confirm /health.
 
 Next:
 - Re-check VPS app health/logs after deploy of UI refactor.
