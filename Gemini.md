@@ -130,3 +130,44 @@
 - Empty states: show “Create / Import / Sample data” CTAs per page.
 - Accessibility: keyboard focus styles, ARIA labels, color contrast, non-color legend cues, shortcuts cheat sheet.
 - Quick wins: auto-select first map; sticky global filter; reduce form length with collapsible sections.
+
+## Gemini CLI directives (direct, 2026-01-15)
+- Source: gemini-3-pro-preview via direct gemini CLI (no MCP). Output summarized below.
+
+### Information architecture & navigation
+- Left sidebar: Dashboard, Articles, Maps, Timeline, Reviews, Settings; bottom user/profile.
+- Top bar: fixed global filters (Era/Chapter/Viewpoint/Mode), global search, create (+), notifications, locale toggle (JA/EN).
+- Right drawer: contextual tools (LLM, ToC, inspector) depending on page/selection.
+
+### Articles (MediaWiki-like)
+- List: faceted search (type/status/tags), status badges, create modal.
+- Read view: 3-column (nav tree / content / metadata), sticky TOC, header with Edit/History/Comments.
+- Edit view: split editor/preview or tabs, toolbar for headings/links/quotes, drag/drop images, section-level editing.
+
+### Maps (Figma-like canvas)
+- Full-screen canvas; floating toolbar (select/pin/path/area/measure).
+- Floating layers/legend panel; inspector panel on right for selected item fields.
+- Interactions: click-to-add pin, drag-to-move, ctrl-snap paths to pins, hover tooltip.
+
+### Timeline
+- Visual swimlane view with world/story/character lanes; event cards open inspector.
+- List fallback for bulk edits.
+
+### Reviews
+- PR-like dashboard: tabs (needs review/approved/rejected/my requests), split diff viewer, approve/reject with mandatory comment.
+
+### Settings
+- Vertical tabs: General, Members, LLM, Integrations; model selection, API keys, prompt system settings.
+
+### Accessibility
+- Keyboard focus styles, ARIA labels, contrast, non-color legend cues.
+
+### Quick wins vs larger redesign
+- Quick wins: locale toggle, active sidebar state, sticky filters, empty-state CTAs.
+- Larger redesign: replace MapEditor with CanvasMapEditor + inspector/drawer; SplitPaneEditor; DiffViewer.
+
+### Implementation phases (suggested)
+- Phase 1: shell layout + global filters + locale switcher.
+- Phase 2: map canvas + inspector + click/drag tools.
+- Phase 3: article split editor + drag/drop assets + TOC.
+- Phase 4: reviews UI + empty states.
