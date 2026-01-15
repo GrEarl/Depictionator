@@ -1,10 +1,14 @@
 ﻿# syntax=docker/dockerfile:1
 FROM node:20-alpine AS deps
+ENV PUPPETEER_SKIP_DOWNLOAD=1
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 
 FROM node:20-alpine AS builder
+ENV PUPPETEER_SKIP_DOWNLOAD=1
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
