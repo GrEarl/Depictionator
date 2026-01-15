@@ -56,6 +56,7 @@ Done:
 - VPS: Postgres password reset to match .env; Prisma migrate deploy succeeded; /health 200.
 - Agent-browser UI check completed on internal.copiqta.com (login/workspace/articles/maps/timeline/settings).
 - Appended new UI findings and action items to Gemini.md.
+- Created UI test user (uitester+depictionator@example.com) and workspace "Demo" on deployed instance during UI check.
 
 Now:
 - UI check findings committed and pushed; awaiting further UI work.
