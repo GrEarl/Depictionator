@@ -53,6 +53,38 @@ type MapEditorProps = {
   locationTypes: string[];
 };
 
+type PinDraft = {
+  x: number | null;
+  y: number | null;
+  label: string;
+  locationType: string;
+  markerStyleId: string;
+  markerShape: string;
+  markerColor: string;
+  truthFlag: string;
+  viewpointId: string;
+  worldFrom: string;
+  worldTo: string;
+  storyFromChapterId: string;
+  storyToChapterId: string;
+  entityId: string;
+};
+
+type PathDraft = {
+  arrowStyle: string;
+  strokeColor: string;
+  strokeWidth: string;
+  markerStyleId: string;
+  truthFlag: string;
+  viewpointId: string;
+  worldFrom: string;
+  worldTo: string;
+  storyFromChapterId: string;
+  storyToChapterId: string;
+  relatedEventId: string;
+  relatedEntityIds: string;
+};
+
 function createIcon(L: any, shape: string, color: string) {
   const safeShape = shape || "circle";
   const html = `<span class="marker-shape marker-${safeShape}" style="--marker-color:${color};"></span>`;
@@ -83,7 +115,7 @@ export function MapEditor({
   // Draft States
   const defaultLocationType = locationTypes[0] ?? "other";
   
-  const createPinDraft = useCallback((overrides: any = {}) => ({
+  const createPinDraft = useCallback((overrides: Partial<PinDraft> = {}) => ({
     x: null as number | null,
     y: null as number | null,
     label: "",
@@ -101,10 +133,10 @@ export function MapEditor({
     ...overrides
   }), [defaultLocationType]);
 
-  const [pinDraft, setPinDraft] = useState(createPinDraft());
+  const [pinDraft, setPinDraft] = useState<PinDraft>(createPinDraft());
   
   const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
-  const [pathDraft, setPathDraft] = useState({
+  const [pathDraft, setPathDraft] = useState<PathDraft>({
     arrowStyle: "arrow",
     strokeColor: "",
     strokeWidth: "",

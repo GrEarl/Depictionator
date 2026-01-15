@@ -18,7 +18,8 @@ State:
 - Latest filter-related typing fixes deployed; /health OK.
 - Gemini CLI requests timed out; UI/UX guidance will be updated manually in Gemini.md.
 - Gemini CLI ran directly (no MCP) and output appended to Gemini.md.
-- Local working tree has uncommitted Gemini UI changes (layout, globals.css, filters, MapEditor, new components) pending review/commit.
+- Gemini UI shell/editor changes committed and pushed; pending VPS deploy.
+- MapEditor implicit any typing fix in progress after VPS build failure.
 
 Done:
 - VPS: rebuilt app image after LLM stream fix; removed stale container (ContainerConfig error) and restarted app; /health 200.
@@ -47,9 +48,10 @@ Done:
 - Agent-browser UI check on internal.copiqta.com (Dashboard/Maps) completed; notes added to Gemini.md.
 - MapEditor SSR crash fixed via dynamic import; 502 resolved after redeploy (removed stale container).
 - Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
+- Gemini UI changes committed: new Sidebar/LocaleSwitcher/ArticleDetail, layout + CSS refresh, MapEditor toolbar updates.
 
 Now:
-- Review local Gemini UI changes; confirm intent, commit, and deploy if acceptable.
+- Commit MapEditor typing fix and redeploy to VPS.
 
 Next:
 - Re-check VPS app health/logs if new changes land.
@@ -57,7 +59,7 @@ Next:
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
-- Which branch/commit contains Gemini changes, and should I pull/review/deploy?
+- Deploy success pending on VPS rebuild.
 
 Working set (files/ids/commands):
 - package.json
