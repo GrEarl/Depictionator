@@ -1,6 +1,7 @@
-import { requireUser } from "@/lib/auth";
+﻿import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
+import { LlmContext } from "@/components/LlmContext";
 
 type ReviewCommentSummary = {
   id: string;
@@ -49,6 +50,14 @@ export default async function ReviewsPage() {
 
   return (
     <div className="panel">
+      <LlmContext
+        value={{
+          type: "reviews",
+          workspaceId: workspace?.id ?? null,
+          openReviewIds: reviews.map((review) => review.id),
+          auditCount: auditLogs.length
+        }}
+      />
       <h2>Reviews</h2>
       {!workspace && <p className="muted">Select a workspace to review drafts.</p>}
 
@@ -125,7 +134,7 @@ export default async function ReviewsPage() {
                   <span className="muted"> on {log.targetType} ({log.targetId})</span>
                 </div>
                 <div className="muted" style={{ fontSize: '12px' }}>
-                  {log.actorUser?.name ?? log.actorUserId} 繝ｻ {log.createdAt.toLocaleString()}
+                  {log.actorUser?.name ?? log.actorUserId} at {log.createdAt.toLocaleString()}
                 </div>
               </li>
             ))}
@@ -137,4 +146,5 @@ export default async function ReviewsPage() {
     </div>
   );
 }
+
 

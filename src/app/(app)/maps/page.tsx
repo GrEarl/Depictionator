@@ -319,6 +319,46 @@ export default async function MapsPage({ searchParams }: PageProps) {
           </section>
 
           <section className="panel">
+            <h3>Wiki import (Map/Image)</h3>
+            <form action="/api/wiki/import/asset" method="post" className="form-grid">
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Image title
+                <input name="imageTitle" placeholder="e.g. File:World_map.png" />
+              </label>
+              <label>
+                Language
+                <input name="lang" defaultValue="en" />
+              </label>
+              <button type="submit">Import image asset</button>
+            </form>
+            <form action="/api/wiki/import/map" method="post" className="form-grid" style={{ marginTop: "12px" }}>
+              <input type="hidden" name="workspaceId" value={workspace.id} />
+              <label>
+                Map title
+                <input name="mapTitle" placeholder="e.g. World Map" required />
+              </label>
+              <label>
+                Image title
+                <input name="imageTitle" placeholder="e.g. File:World_map.png" required />
+              </label>
+              <label>
+                Parent map ID (optional)
+                <input name="parentMapId" />
+              </label>
+              <label>
+                Bounds JSON (optional)
+                <input name="bounds" placeholder="[[0,0],[1000,1000]]" />
+              </label>
+              <label>
+                Language
+                <input name="lang" defaultValue="en" />
+              </label>
+              <button type="submit">Import map</button>
+            </form>
+          </section>
+
+          <section className="panel">
             <h3>Marker styles</h3>
             <form action="/api/marker-styles/create" method="post" className="form-grid">
               <input type="hidden" name="workspaceId" value={workspace.id} />

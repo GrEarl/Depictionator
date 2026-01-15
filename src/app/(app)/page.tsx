@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { getCurrentSession, requireUser } from "@/lib/auth";
+import { LlmContext } from "@/components/LlmContext";
 
 type MembershipSummary = {
   id: string;
@@ -25,6 +26,14 @@ export default async function DashboardPage() {
 
   return (
     <div className="dashboard">
+      <LlmContext
+        value={{
+          type: "dashboard",
+          currentWorkspaceId: session?.workspace?.id ?? null,
+          workspaceSlugs: memberships.map((membership) => membership.workspace.slug),
+          unreadNotificationTypes: notifications.map((note) => note.type)
+        }}
+      />
       <section className="panel">
         <h2>Workspaces</h2>
         <p>Selected: {session?.workspace?.name ?? "None"}</p>

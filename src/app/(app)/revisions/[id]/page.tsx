@@ -2,6 +2,7 @@
 import { requireUser } from "@/lib/auth";
 import { requireWorkspaceRole } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
+import { LlmContext } from "@/components/LlmContext";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -25,6 +26,15 @@ export default async function RevisionDetailPage({ params }: PageProps) {
 
   return (
     <div className="panel">
+      <LlmContext
+        value={{
+          type: "revision",
+          revisionId: revision.id,
+          workspaceId: revision.workspaceId,
+          status: revision.status,
+          parentRevisionId: revision.parentRevisionId ?? null
+        }}
+      />
       <h2>Revision {revision.id}</h2>
       <div className="muted">Status: {revision.status}</div>
       <form action="/api/revisions/restore" method="post">

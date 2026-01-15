@@ -1,6 +1,7 @@
-import { requireUser } from "@/lib/auth";
+﻿import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { prisma } from "@/lib/db";
+import { LlmContext } from "@/components/LlmContext";
 
 const VIEWPOINT_TYPES = ["player", "faction", "character", "omniscient"];
 type ViewpointSummary = { id: string; name: string };
@@ -36,6 +37,14 @@ export default async function SettingsPage() {
 
   return (
     <div className="panel">
+      <LlmContext
+        value={{
+          type: "settings",
+          workspaceId: workspace?.id ?? null,
+          viewpointIds: viewpoints.map((viewpoint) => viewpoint.id),
+          assetCount: assets.length
+        }}
+      />
       <h2>Settings</h2>
       {!workspace && <p className="muted">Select a workspace to manage settings.</p>}
 
@@ -138,7 +147,7 @@ export default async function SettingsPage() {
               {assets.map((asset) => (
                 <li key={asset.id} className="list-row">
                   <div>
-                    {asset.storageKey} 繝ｻ {Math.round(asset.size / 1024)} KB
+                    {asset.storageKey} at {Math.round(asset.size / 1024)} KB
                   </div>
                   <form action="/api/archive" method="post">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
@@ -226,6 +235,7 @@ export default async function SettingsPage() {
     </div>
   );
 }
+
 
 
 

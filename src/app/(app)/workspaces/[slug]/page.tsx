@@ -1,5 +1,6 @@
-﻿import { requireWorkspaceMembership } from "@/lib/auth";
+import { requireWorkspaceMembership } from "@/lib/auth";
 import Link from "next/link";
+import { LlmContext } from "@/components/LlmContext";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -9,6 +10,14 @@ export default async function WorkspacePage({ params }: PageProps) {
 
   return (
     <div className="panel">
+      <LlmContext
+        value={{
+          type: "workspace",
+          workspaceId: membership.workspace.id,
+          workspaceSlug: membership.workspace.slug,
+          role: membership.role
+        }}
+      />
       <h2>{membership.workspace.name}</h2>
       <p className="muted">Role: {membership.role}</p>
       <div className="link-grid">
