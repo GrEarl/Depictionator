@@ -12,7 +12,7 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Wiki search panels + Markdown ToC deployed; VPS redeployed with latest MapEditor/Codex fixes; /health OK.
+- Wiki search panels + Markdown ToC deployed; VPS running with MapEditor SSR fix; /health OK.
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -30,12 +30,14 @@ Done:
 - Committed and pushed latest MapEditor + Codex stream fixes.
 - VPS: git pull + docker-compose up --build (timed out but containers up); /health 200.
 - Agent-browser UI check on internal.copiqta.com (Dashboard/Maps) completed; notes added to Gemini.md.
+- MapEditor SSR crash fixed via dynamic import; 502 resolved after redeploy (removed stale container).
+- Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
 
 Now:
-- Fix 502 due to MapEditor SSR (dynamic import); redeploy; rerun UI checks.
+- Await next backend tasks or further UI checks.
 
 Next:
-- Update Gemini.md with UI gaps; continue backend tasks.
+- Continue backend tasks; refine UI guidance as needed.
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
