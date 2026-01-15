@@ -3,8 +3,8 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
-import { MapEditor } from "@/components/MapEditor";
 import { WikiMapImportPanel } from "@/components/WikiMapImportPanel";
+import dynamic from "next/dynamic";
 
 const EVENT_TYPES = [
   "battle",
@@ -40,6 +40,11 @@ const LOCATION_TYPES = [
 ];
 
 const SHAPES = ["circle", "square", "diamond", "triangle", "hex", "star"];
+
+const MapEditor = dynamic(
+  () => import("@/components/MapEditor").then((mod) => mod.MapEditor),
+  { ssr: false, loading: () => <div className="map-viewer">Loading map editor...</div> }
+);
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -205,8 +210,9 @@ export default async function MapsPage({ searchParams }: PageProps) {
   );
   const defaultPathStyle =
     markerStyles.find((style) => style.target === "path") ?? null;
-  const selectedMapId = String(resolvedSearchParams.map ?? maps[0]?.id ?? "");
-  const selectedMap = maps.find((map) => map.id === selectedMapId) ?? null;
+  const selectedMapCandidate = String(resolvedSearchParams.map ?? "");
+  const selectedMap = maps.find((map) => map.id === selectedMapCandidate) ?? maps[0] ?? null;
+  const selectedMapId = selectedMap?.id ?? "";
   const parentMap = selectedMap?.parentMapId ? maps.find((m) => m.id === selectedMap.parentMapId) : null;
   const childMaps = selectedMap ? maps.filter((m) => m.parentMapId === selectedMap.id) : [];
 
@@ -324,7 +330,11 @@ export default async function MapsPage({ searchParams }: PageProps) {
               <input type="hidden" name="mode" value={mode} />
               <button type="submit">Load map</button>
             </form>
-            {workspace && (
+            {workspace && maps.length === 0 ? (
+              <div className="muted">
+                No maps yet. Create a map below or import one from Wikipedia to start editing.
+              </div>
+            ) : (
               <MapEditor
                 map={mapPayload}
                 workspaceId={workspace.id}

@@ -32,10 +32,10 @@ Done:
 - Agent-browser UI check on internal.copiqta.com (Dashboard/Maps) completed; notes added to Gemini.md.
 
 Now:
-- Await next backend tasks or deeper UI review requests.
+- Fix 502 due to MapEditor SSR (dynamic import); redeploy; rerun UI checks.
 
 Next:
-- If more UI gaps found, update Gemini.md; continue backend tasks.
+- Update Gemini.md with UI gaps; continue backend tasks.
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
