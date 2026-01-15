@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (webpack alias pushed; VPS rebuild pending).
+- In progress (Next 16 Turbopack alias fix pending commit/push).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -48,7 +48,7 @@ Done:
 - Lint passes after React/ESLint 9 updates.
 - Committed and pushed Prisma 7 adapter/config changes.
 - Added tsconfig baseUrl to restore @ alias for Next 16.
-- Added webpack alias for @ path in next.config.js.
+- Added webpack alias for @ path in next.config.js (caused Turbopack warning).
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -118,7 +118,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Rebuild VPS after webpack alias fix.
+- Switch to Turbopack resolveAlias and rebuild.
 
 Next:
 - Redeploy VPS and re-verify.

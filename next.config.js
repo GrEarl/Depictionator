@@ -4,12 +4,10 @@
 const nextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname),
-  webpack: (config) => {
-    config.resolve.alias = {
-      ...(config.resolve.alias || {}),
+  turbopack: {
+    resolveAlias: {
       "@": path.join(__dirname, "src")
-    };
-    return config;
+    }
   }
 };
 
