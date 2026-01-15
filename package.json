@@ -14,11 +14,13 @@
   },
   "dependencies": {
     "@prisma/client": "^7.1.0",
+    "@prisma/adapter-pg": "^7.1.0",
     "bcryptjs": "^2.4.3",
     "diff": "^7.0.0",
     "leaflet": "^1.9.4",
     "mermaid": "^11.12.2",
     "next": "^16.1.2",
+    "pg": "^8.13.0",
     "puppeteer": "^24.21.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
