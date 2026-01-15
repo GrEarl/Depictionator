@@ -48,10 +48,7 @@ Done:
 - Agent-browser UI checks completed for Articles/Timeline/Reviews/Settings; notes added to Gemini.md.
 
 Now:
-- Use Gemini CLI to generate UI/UX improvement directives and update Gemini.md.
-- Update Gemini.md manually with UI/UX directives due to CLI timeout.
-- Report CLI timeout and updated Gemini.md to user.
-- Report direct Gemini CLI output appended to Gemini.md.
+- Await further instructions; user stated they will handle Gemini side.
 
 Next:
 - Re-check VPS app health/logs if new changes land.
