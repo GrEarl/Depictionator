@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
 
 const ENTITY_TYPES = [
   "nation",
@@ -111,10 +112,7 @@ export default async function ArticlesPage() {
                 World Exist To
                 <input name="worldExistTo" />
               </label>
-              <label>
-                Body (Markdown)
-                <textarea name="bodyMd" rows={6} />
-              </label>
+              <MarkdownEditor name="bodyMd" label="Body (Markdown)" rows={6} />
               <label>
                 Change summary
                 <input name="changeSummary" />

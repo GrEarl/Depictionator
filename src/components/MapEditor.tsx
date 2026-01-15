@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -64,6 +64,9 @@ export function MapEditor({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const [mode, setMode] = useState<"view" | "pin" | "path">("view");
+  const [showImage, setShowImage] = useState(true);
+  const [showPins, setShowPins] = useState(true);
+  const [showPaths, setShowPaths] = useState(true);
   const [pinDraft, setPinDraft] = useState<{
     x: number | null;
     y: number | null;
@@ -127,32 +130,36 @@ export function MapEditor({
       minZoom: -2
     });
     mapRef.current = leafletMap;
-    if (map.imageUrl) {
+    if (map.imageUrl && showImage) {
       L.imageOverlay(map.imageUrl, bounds).addTo(leafletMap);
     }
     leafletMap.fitBounds(bounds);
 
-    map.paths.forEach((path) => {
-      const points = path.polyline.map((pt) => [pt.y, pt.x]) as [number, number][];
-      const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
-      const weight = path.strokeWidth ?? 3;
-      L.polyline(points, {
-        color,
-        weight,
-        dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
-      }).addTo(leafletMap);
-    });
+    if (showPaths) {
+      map.paths.forEach((path) => {
+        const points = path.polyline.map((pt) => [pt.y, pt.x]) as [number, number][];
+        const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
+        const weight = path.strokeWidth ?? 3;
+        L.polyline(points, {
+          color,
+          weight,
+          dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
+        }).addTo(leafletMap);
+      });
+    }
 
-    map.pins.forEach((pin) => {
-      const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
-      const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
-      const icon = createIcon(shape, color);
-      const marker = L.marker([pin.y, pin.x], { icon });
-      if (pin.label) {
-        marker.bindTooltip(pin.label, { direction: "top" });
-      }
-      marker.addTo(leafletMap);
-    });
+    if (showPins) {
+      map.pins.forEach((pin) => {
+        const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
+        const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
+        const icon = createIcon(shape, color);
+        const marker = L.marker([pin.y, pin.x], { icon });
+        if (pin.label) {
+          marker.bindTooltip(pin.label, { direction: "top" });
+        }
+        marker.addTo(leafletMap);
+      });
+    }
 
     if (pathPoints.length > 0) {
       const points = pathPoints.map((pt) => [pt.y, pt.x]) as [number, number][];
@@ -181,7 +188,7 @@ export function MapEditor({
     return () => {
       leafletMap.remove();
     };
-  }, [map, mode, pathPoints]);
+  }, [map, mode, pathPoints, showImage, showPins, showPaths]);
 
   if (!map) {
     return <div className="map-viewer">Select a map to edit.</div>;
@@ -245,6 +252,30 @@ export function MapEditor({
             <option value="pin">Add pin</option>
             <option value="path">Draw path</option>
           </select>
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={showImage}
+            onChange={(event) => setShowImage(event.target.checked)}
+          />
+          Show map image
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={showPins}
+            onChange={(event) => setShowPins(event.target.checked)}
+          />
+          Show pins
+        </label>
+        <label className="checkbox-label">
+          <input
+            type="checkbox"
+            checked={showPaths}
+            onChange={(event) => setShowPaths(event.target.checked)}
+          />
+          Show paths
         </label>
         {mode === "pin" && (
           <>
@@ -329,6 +360,31 @@ export function MapEditor({
             </div>
           </>
         )}
+      </div>
+      <div className="map-legend">
+        <strong>Legend</strong>
+        {markerStyles.length === 0 && (
+          <div className="muted">No marker styles yet.</div>
+        )}
+        {markerStyles
+          .filter((style) => style.target === "location")
+          .map((style) => (
+            <div key={style.id} className="legend-row">
+              <span
+                className={`marker-shape marker-${style.shape}`}
+                style={{ "--marker-color": style.color } as CSSProperties}
+              />
+              <span>{style.name}{style.locationType ? ` (${style.locationType})` : ""}</span>
+            </div>
+          ))}
+        {markerStyles
+          .filter((style) => style.target === "path")
+          .map((style) => (
+            <div key={style.id} className="legend-row">
+              <span className="legend-line" style={{ background: style.color }} />
+              <span>{style.name}</span>
+            </div>
+          ))}
       </div>
       <div ref={containerRef} className="map-canvas" />
     </div>

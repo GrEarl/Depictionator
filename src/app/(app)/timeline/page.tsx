@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
 
 const EVENT_TYPES = [
   "battle",
@@ -517,10 +518,7 @@ export default async function TimelinePage({ searchParams }: PageProps) {
                 Location Y
                 <input name="locationY" type="number" step="0.1" />
               </label>
-              <label>
-                Summary (Markdown)
-                <textarea name="summaryMd" rows={3} />
-              </label>
+              <MarkdownEditor name="summaryMd" label="Summary (Markdown)" rows={4} />
               <label>
                 Involved Entity IDs (comma)
                 <input name="involvedEntityIds" />
@@ -605,10 +603,7 @@ export default async function TimelinePage({ searchParams }: PageProps) {
                 Location Y
                 <input name="locationY" type="number" step="0.1" />
               </label>
-              <label>
-                Summary (Markdown)
-                <textarea name="summaryMd" rows={3} />
-              </label>
+              <MarkdownEditor name="summaryMd" label="Summary (Markdown)" rows={4} />
               <label>
                 Involved Entity IDs (comma)
                 <input name="involvedEntityIds" />

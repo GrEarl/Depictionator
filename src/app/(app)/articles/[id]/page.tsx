@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { MarkdownView } from "@/components/MarkdownView";
+import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { AutoMarkRead } from "@/components/AutoMarkRead";
 
 const TRUTH_FLAGS = ["canonical", "rumor", "mistaken", "propaganda", "unknown"];
@@ -178,10 +179,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
               <input type="hidden" name="workspaceId" value={workspace.id} />
               <input type="hidden" name="targetType" value="base" />
               <input type="hidden" name="articleId" value={entity.id} />
-              <label>
-                New draft (Markdown)
-                <textarea name="bodyMd" rows={6} />
-              </label>
+              <MarkdownEditor name="bodyMd" label="New draft (Markdown)" rows={6} />
               <label>
                 Change summary
                 <input name="changeSummary" />
@@ -249,10 +247,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
                 Story to chapter ID
                 <input name="storyToChapterId" />
               </label>
-              <label>
-                Body (Markdown)
-                <textarea name="bodyMd" rows={6} />
-              </label>
+              <MarkdownEditor name="bodyMd" label="Body (Markdown)" rows={6} />
               <label>
                 Change summary
                 <input name="changeSummary" />

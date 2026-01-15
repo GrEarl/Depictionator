@@ -275,6 +275,24 @@ main {
   gap: 12px;
 }
 
+.markdown-editor {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+}
+
+.markdown-editor-input label {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.markdown-preview {
+  max-height: 360px;
+  overflow: auto;
+}
+
 .markdown pre {
   background: #f5f5f8;
   padding: 12px;
@@ -327,6 +345,29 @@ main {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 12px;
+}
+
+.map-legend {
+  display: grid;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  font-size: 12px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.legend-line {
+  width: 24px;
+  height: 3px;
+  border-radius: 999px;
+  display: inline-block;
 }
 
 .marker-icon {
