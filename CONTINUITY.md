@@ -12,7 +12,7 @@ Key decisions:
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Full checks complete; VPS running with Gemini API key configured; key endpoints verified.
+- Full checks complete; VPS running with Gemini API key configured; key endpoints verified. LLM UI defaults updated to Gemini 3 preview fallback.
 
 Done:
 - LLM exec error handling in streaming route; wiki import with multi-language + SourceRecord credits.
@@ -28,9 +28,10 @@ Done:
 - VPS .env updated with provided Gemini API key + LLM defaults; containers restarted.
 - UI flow verified (register/login/workspace/articles/maps/timeline) via chrome-devtools (agent-browser CLI hung).
 - Wiki search and LLM import OK (307 redirect). PDF export OK. LLM execute OK.
+- Ran Gemini CLI (text) UX review; captured key findings in Gemini.md.
 
 Now:
-- Commit/push ledger update; await further tasks.
+- Commit/push LLM UI fallback + Gemini CLI notes; answer user about LLM context coverage.
 
 Next:
 - Update Gemini.md if UI requirements changed; re-run UI checks with agent-browser if needed.

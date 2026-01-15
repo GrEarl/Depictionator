@@ -60,7 +60,7 @@ export default async function AppLayout({
     : [...DEFAULT_PROVIDERS];
 
   const defaultProvider = normalizeProvider(process.env.LLM_DEFAULT_PROVIDER ?? "") ?? enabledProviders[0];
-  const defaultGeminiModel = process.env.GEMINI_MODEL ?? "gemini-1.5-flash";
+  const defaultGeminiModel = process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
   const defaultVertexModel = process.env.VERTEX_GEMINI_MODEL ?? defaultGeminiModel;
 
   return (

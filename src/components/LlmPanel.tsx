@@ -58,11 +58,11 @@ export function LlmPanel({
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
-  const [geminiModel, setGeminiModel] = useState(defaultGeminiModel ?? "gemini-1.5-flash");
+  const [geminiModel, setGeminiModel] = useState(defaultGeminiModel ?? "gemini-3-flash-preview");
   const [geminiSearch, setGeminiSearch] = useState(false);
   const [geminiApiKey, setGeminiApiKey] = useState("");
 
-  const [vertexModel, setVertexModel] = useState(defaultVertexModel ?? "gemini-1.5-flash");
+  const [vertexModel, setVertexModel] = useState(defaultVertexModel ?? "gemini-3-flash-preview");
   const [vertexSearch, setVertexSearch] = useState(false);
   const [vertexApiKey, setVertexApiKey] = useState("");
   const [vertexProject, setVertexProject] = useState("");
