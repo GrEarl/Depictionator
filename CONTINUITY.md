@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Gemini model defaults + API fallback pushed; VPS redeploy pending).
+- In progress (Gemini v3 preview defaults deployed; wiki LLM import verified).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -31,6 +31,11 @@ Done:
 - Updated Gemini defaults to gemini-3 preview and added API version fallback in code.
 - Updated .env.example with Gemini v3 preview defaults.
 - Committed and pushed Gemini v3 preview fallback changes.
+- VPS .env updated (GEMINI_MODEL=gemini-3-flash-preview, GEMINI_API_VERSION=v1, WIKI_LLM_MODEL=gemini-3-flash-preview).
+- Docker disk cleanup (container/image prune) to resolve no-space issue.
+- Rebuilt and redeployed app; /health OK.
+- Wiki LLM import succeeded (HTTP 307 to new article).
+- Multi-language SourceRecord count confirmed (11 sources).
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -100,10 +105,10 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Redeploy VPS with Gemini v3 preview fallback changes.
+- Optionally verify UI; otherwise ready.
 
 Next:
-- Re-test wiki LLM import with gemini-3 preview.
+- None pending.
 
 Open questions (UNCONFIRMED if needed):
 - Gemini UI/UX implementation pending.
