@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (dependency upgrades done; pending commit/push and VPS redeploy).
+- In progress (dependency upgrades pushed; VPS redeploy pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -41,6 +41,7 @@ Done:
 - Regenerated npm lockfile; lint now passes with ESLint 9 flat config.
 - Refactored global filters to derive state from URL and update URL via provider.
 - Replaced Mermaid random id with useId-based stable id.
+- Committed and pushed dependency + lint config updates.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -110,7 +111,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Commit/push dependency and lint config changes.
+- Redeploy VPS with latest dependencies and rerun smoke checks.
 
 Next:
 - Redeploy VPS and re-verify.
