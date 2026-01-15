@@ -29,12 +29,13 @@ Done:
 - Local UI check attempt: localhost /health unreachable (server not running).
 - Committed and pushed latest MapEditor + Codex stream fixes.
 - VPS: git pull + docker-compose up --build (timed out but containers up); /health 200.
+- Agent-browser UI check on internal.copiqta.com (Dashboard/Maps) completed; notes added to Gemini.md.
 
 Now:
-- Run UI check (agent-browser) now that VPS is healthy; capture UI gaps.
+- Await next backend tasks or deeper UI review requests.
 
 Next:
-- Update Gemini.md with any new UI gaps; continue backend tasks.
+- If more UI gaps found, update Gemini.md; continue backend tasks.
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
