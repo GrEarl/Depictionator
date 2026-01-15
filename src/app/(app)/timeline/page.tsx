@@ -69,8 +69,8 @@ export default async function TimelinePage({ searchParams }: PageProps) {
     ...(eventTypeFilter === "all" ? {} : { eventType: eventTypeFilter }),
     ...(query ? { title: { contains: query, mode: "insensitive" } } : {})
   };
-  const timelines: TimelineSummary[] = workspace
-    ? await prisma.timeline.findMany({
+  const timelines = workspace
+    ? (await prisma.timeline.findMany({
         where: { workspaceId: workspace.id, softDeletedAt: null },
         include: {
           events: {
@@ -79,7 +79,7 @@ export default async function TimelinePage({ searchParams }: PageProps) {
           }
         },
         orderBy: { name: "asc" }
-      })
+      })) as TimelineSummary[]
     : [];
   const archivedTimelines: TimelineArchiveSummary[] = workspace
     ? await prisma.timeline.findMany({
