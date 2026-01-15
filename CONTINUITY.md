@@ -10,7 +10,7 @@ Key decisions:
 - Added explicit Map generic for readStateMap.
 
 State:
-- In progress (Turbopack alias still failing; switching build/dev to webpack).
+- In progress (webpack build forced and alias restored; VPS rebuild pending).
 
 Done:
 - Updated Codex CLI streaming to keep error handler through process close.
@@ -51,6 +51,7 @@ Done:
 - Added webpack alias for @ path in next.config.js (caused Turbopack warning).
 - Added Turbopack resolveAlias for @ path in next.config.js.
 - Switched Turbopack resolveAlias to relative "./src" (did not fix alias resolution).
+- Forced Next build/dev to webpack and restored webpack alias.
 - Committed and pushed readStateMap type fix.
 - Fixed archivedEntities typo and pushed.
 - Typed global filter option maps in app layout.
@@ -120,7 +121,7 @@ Done:
 - Fixed PDF build entity baseRevision typing for SourceRecord credits.
 
 Now:
-- Revert to webpack alias and force webpack builds.
+- Rebuild VPS after webpack build switch.
 
 Next:
 - Redeploy VPS and re-verify.
