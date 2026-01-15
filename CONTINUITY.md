@@ -31,10 +31,10 @@ Done:
 - VPS: git pull + docker-compose up --build (timed out but containers up); /health 200.
 
 Now:
-- Re-run UI check (agent-browser) when app is running; update Gemini.md if new gaps.
+- Run UI check (agent-browser) now that VPS is healthy; capture UI gaps.
 
 Next:
-- Run UI check (agent-browser) once app is running; update Gemini.md if new gaps.
+- Update Gemini.md with any new UI gaps; continue backend tasks.
 
 Open questions (UNCONFIRMED if needed):
 - Are there newer versions than current deps after latest doc check?
