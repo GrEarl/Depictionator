@@ -1,4 +1,4 @@
-Goal (incl. success criteria):
+﻿Goal (incl. success criteria):
 - Keep Depictionator aligned with latest official docs/packages; build passes; VPS deploy works; /health OK; key flows (auth/wiki import/LLM/PDF) operate.
 - Maintain continuity ledger and provide UI requirements for Gemini (Gemini.md).
 
@@ -29,6 +29,7 @@ Done:
 - UI flow verified (register/login/workspace/articles/maps/timeline) via chrome-devtools (agent-browser CLI hung).
 - Wiki search and LLM import OK (307 redirect). PDF export OK. LLM execute OK.
 - Ran Gemini CLI (text) UX review; captured key findings in Gemini.md.
+- Ran Gemini CLI with gemini-3-pro-preview; appended high-priority UI changes to Gemini.md.
 - Updated LlmPanel/Layout fallback models to gemini-3-flash-preview; pushed.
 
 Now:
@@ -53,3 +54,4 @@ Working set (files/ids/commands):
 - src/app/api/wiki/import/article/route.ts
 - README.md
 - Gemini.md
+
