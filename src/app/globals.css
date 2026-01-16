@@ -16,6 +16,161 @@
   --belief-border: #ebdcb2;
 }
 
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --ink: #e4e4e7;
+    --muted: #a1a1aa;
+    --bg: #09090b;
+    --panel: #18181b;
+    --accent: #60a5fa;
+    --accent-hover: #3b82f6;
+    --border: #27272a;
+    --sidebar-bg: #18181b;
+    --sidebar-border: #27272a;
+    --canon-bg: #18181b;
+    --belief-bg: #1c1917;
+    --belief-border: #44403c;
+  }
+
+  .evidence-card-on-map {
+    background: #27241d;
+    border-color: #44403c;
+    color: #e7e5e4;
+  }
+
+  .card-tape {
+    background: rgba(68, 64, 60, 0.7);
+  }
+
+  .auth-card,
+  .panel,
+  .map-inspector,
+  .map-toolbar,
+  .locale-menu,
+  .board-card {
+    background: var(--panel);
+    border-color: var(--border);
+  }
+
+  .filter-select,
+  .input-text,
+  .inspector-form input,
+  .inspector-form select {
+    background: #27272a;
+    color: var(--ink);
+    border-color: var(--border);
+  }
+
+  .workspace-badge,
+  .type-tag,
+  .entity-type-tag {
+    background: #27272a;
+    color: var(--muted);
+  }
+
+  .nav-item.active {
+    background: #27272a;
+  }
+
+  .wiki-card {
+    background: #27272a;
+  }
+
+  .wiki-card:hover {
+    background: #18181b;
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .app-sidebar {
+    position: fixed;
+    left: -250px;
+    transition: left 0.3s;
+    z-index: 1000;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
+  }
+
+  .app-sidebar.mobile-open {
+    left: 0;
+  }
+
+  .layout-3-pane {
+    grid-template-columns: 1fr;
+  }
+
+  .layout-2-pane,
+  .layout-2-pane-sidebar {
+    grid-template-columns: 1fr;
+  }
+
+  .pane-left,
+  .pane-sidebar,
+  .pane-right-drawer {
+    display: none;
+  }
+
+  .article-layout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .article-sidebar-col {
+    border-radius: 0;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .app-body {
+    padding: 16px;
+  }
+
+  .app-topbar {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
+
+  .filter-bar {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .map-toolbar {
+    flex-wrap: wrap;
+    max-width: 90%;
+  }
+
+  .map-inspector {
+    width: 100%;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    max-height: 50vh;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .entity-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .link-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
