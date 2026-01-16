@@ -294,3 +294,67 @@ export async function fetchWikiImageInfo(
 export function safeFilename(value: string): string {
   return value.replace(/[^a-z0-9._-]/gi, "_");
 }
+
+export function parseWikiImageInput(
+  input: string,
+  lang?: string | null
+): { lang: string; title: string } | null {
+  const trimmed = (input ?? "").trim();
+  if (!trimmed) return null;
+
+  const normalizeTitle = (value: string) =>
+    value.startsWith("File:") ? value : `File:${value}`;
+
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    let resolvedLang: string | null = null;
+    if (host === "commons.wikimedia.org" || host === "upload.wikimedia.org") {
+      resolvedLang = "commons";
+    } else if (host.endsWith(".wikipedia.org")) {
+      resolvedLang = host.split(".")[0] ?? null;
+    } else if (host.endsWith(".wikimedia.org")) {
+      resolvedLang = "commons";
+    }
+
+    const queryTitle = url.searchParams.get("title");
+    if (queryTitle) {
+      return {
+        lang: normalizeLang(resolvedLang ?? lang),
+        title: normalizeTitle(decodeURIComponent(queryTitle))
+      };
+    }
+
+    const pathname = url.pathname || "";
+    if (pathname.startsWith("/wiki/")) {
+      const slug = decodeURIComponent(pathname.slice(6));
+      if (slug.startsWith("File:")) {
+        return { lang: normalizeLang(resolvedLang ?? lang), title: slug };
+      }
+      if (slug.startsWith("Special:FilePath/")) {
+        const fileName = slug.split("/").pop();
+        if (fileName) {
+          return {
+            lang: normalizeLang(resolvedLang ?? lang),
+            title: normalizeTitle(fileName)
+          };
+        }
+      }
+    }
+
+    const lastSegment = decodeURIComponent(pathname.split("/").pop() ?? "");
+    if (lastSegment) {
+      return {
+        lang: normalizeLang(resolvedLang ?? lang),
+        title: normalizeTitle(lastSegment)
+      };
+    }
+  } catch {
+    // Not a URL.
+  }
+
+  return {
+    lang: normalizeLang(lang),
+    title: trimmed.startsWith("File:") ? trimmed : `File:${trimmed}`
+  };
+}

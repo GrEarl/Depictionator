@@ -5,7 +5,7 @@ import { Prisma, SourceTargetType } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
-import { fetchWikiImageInfo, safeFilename } from "@/lib/wiki";
+import { fetchWikiImageInfo, safeFilename, parseWikiImageInput } from "@/lib/wiki";
 
 export async function POST(request: Request) {
   let session;
@@ -19,11 +19,12 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "").trim();
   const lang = String(form.get("lang") ?? "").trim();
   const imageTitle = String(form.get("imageTitle") ?? "").trim();
+  const imageUrl = String(form.get("imageUrl") ?? "").trim();
   const mapTitle = String(form.get("mapTitle") ?? "").trim();
   const parentMapId = String(form.get("parentMapId") ?? "").trim();
   const boundsRaw = String(form.get("bounds") ?? "").trim();
 
-  if (!workspaceId || !imageTitle || !mapTitle) {
+  if (!workspaceId || (!imageTitle && !imageUrl) || !mapTitle) {
     return apiError("Missing fields", 400);
   }
 
@@ -33,7 +34,12 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
-  const info = await fetchWikiImageInfo(lang || null, imageTitle);
+  const resolved = parseWikiImageInput(imageUrl || imageTitle, lang || null);
+  if (!resolved?.title) {
+    return apiError("Invalid image reference", 400);
+  }
+
+  const info = await fetchWikiImageInfo(resolved.lang, resolved.title);
   if (!info) return apiError("Image not found", 404);
 
   const download = await fetch(info.url);
