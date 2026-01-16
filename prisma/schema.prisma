@@ -409,6 +409,7 @@ model Viewpoint {
   overlays  ArticleOverlay[]
   pins      Pin[]
   paths     Path[]
+  mapScenes MapScene[]
 
   @@index([workspaceId])
 }
