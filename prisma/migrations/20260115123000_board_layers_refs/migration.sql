@@ -1,4 +1,4 @@
-﻿-- Add map layers, scenes, evidence boards, references, and citations
+-- Add map layers, scenes, evidence boards, references, and citations
 CREATE TYPE "EvidenceItemType" AS ENUM ('entity', 'asset', 'reference', 'note', 'url', 'quote', 'frame');
 CREATE TYPE "EvidenceLinkStyle" AS ENUM ('line', 'arrow', 'dashed', 'dotted');
 CREATE TYPE "ReferenceType" AS ENUM ('url', 'book', 'pdf', 'image', 'file', 'internal', 'other');
