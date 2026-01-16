@@ -1,6 +1,56 @@
 import type { UiLocale } from "@/lib/locale";
 
-export const UI_COPY = {
+export type UiCopy = {
+  nav: {
+    dashboard: string;
+    articles: string;
+    maps: string;
+    timeline: string;
+    reviews: string;
+    settings: string;
+    signOut: string;
+  };
+  workspace: {
+    none: string;
+    selected: string;
+    role: string;
+    open: string;
+    quickLinks: string;
+  };
+  dashboard: {
+    workspaces: string;
+    notifications: string;
+    create: string;
+    createAction: string;
+    join: string;
+    joinAction: string;
+    name: string;
+    slug: string;
+    workspaceSlug: string;
+    none: string;
+    noUnread: string;
+    markRead: string;
+  };
+  locale: {
+    label: string;
+    english: string;
+    japanese: string;
+  };
+  filters: {
+    worldEra: string;
+    storyChapter: string;
+    viewpoint: string;
+    mode: string;
+    modeCanon: string;
+    modeViewpoint: string;
+    modeCompare: string;
+    allEras: string;
+    allChapters: string;
+    omni: string;
+  };
+};
+
+export const UI_COPY: Record<UiLocale, UiCopy> = {
   en: {
     nav: {
       dashboard: "Dashboard",
@@ -99,9 +149,7 @@ export const UI_COPY = {
       omni: "全知（正史）"
     }
   }
-} as const;
-
-export type UiCopy = (typeof UI_COPY)["en"];
+};
 
 export function getUiCopy(locale: UiLocale): UiCopy {
   return UI_COPY[locale] ?? UI_COPY.en;
