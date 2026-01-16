@@ -122,7 +122,17 @@ export function LlmPanel({
       });
 
       if (!res.ok) {
-        setResponse("Error: " + res.statusText);
+        const errorText = await res.text();
+        try {
+          const json = JSON.parse(errorText);
+          if (json?.error) {
+            setResponse(`Error: ${json.error}`);
+          } else {
+            setResponse(`Error: ${JSON.stringify(json, null, 2)}`);
+          }
+        } catch {
+          setResponse(`Error: ${errorText || res.statusText}`);
+        }
         return;
       }
 
@@ -164,6 +174,11 @@ export function LlmPanel({
                else setResponse(JSON.stringify(json, null, 2));
                firstChunk = false;
                continue; 
+             }
+             if (json.error) {
+               setResponse(`Error: ${json.error}`);
+               firstChunk = false;
+               continue;
              }
            } catch {
              // Not valid JSON, treat as text stream

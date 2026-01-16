@@ -3,16 +3,35 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-export function Sidebar({ workspaceName, userName }: { workspaceName?: string; userName?: string }) {
+type SidebarLabels = {
+  dashboard: string;
+  articles: string;
+  maps: string;
+  timeline: string;
+  reviews: string;
+  settings: string;
+  signOut: string;
+  workspaceFallback: string;
+};
+
+export function Sidebar({
+  workspaceName,
+  userName,
+  labels
+}: {
+  workspaceName?: string;
+  userName?: string;
+  labels: SidebarLabels;
+}) {
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/", label: "Dashboard", icon: "D" },
-    { href: "/articles", label: "Articles", icon: "A" },
-    { href: "/maps", label: "Maps", icon: "M" },
-    { href: "/timeline", label: "Timeline", icon: "T" },
-    { href: "/reviews", label: "Reviews", icon: "R" },
-    { href: "/settings", label: "Settings", icon: "S" }
+    { href: "/", label: labels.dashboard, icon: "D" },
+    { href: "/articles", label: labels.articles, icon: "A" },
+    { href: "/maps", label: labels.maps, icon: "M" },
+    { href: "/timeline", label: labels.timeline, icon: "T" },
+    { href: "/reviews", label: labels.reviews, icon: "R" },
+    { href: "/settings", label: labels.settings, icon: "S" }
   ];
 
   return (
@@ -21,7 +40,7 @@ export function Sidebar({ workspaceName, userName }: { workspaceName?: string; u
         <Link href="/" className="brand-link">
           Depictionator
         </Link>
-        <div className="workspace-badge">{workspaceName ?? "No Workspace"}</div>
+        <div className="workspace-badge">{workspaceName ?? labels.workspaceFallback}</div>
       </div>
 
       <nav className="sidebar-nav">
@@ -47,7 +66,7 @@ export function Sidebar({ workspaceName, userName }: { workspaceName?: string; u
         </div>
         <form action="/api/auth/logout" method="post">
           <button type="submit" className="logout-button" title="Logout">
-            Sign out
+            {labels.signOut}
           </button>
         </form>
       </div>

@@ -1,11 +1,13 @@
-import Link from "next/link";
 import { GlobalFilterProvider } from "@/components/GlobalFilterProvider";
 import { GlobalFilters } from "@/components/GlobalFilters";
 import { LlmPanel } from "@/components/LlmPanel";
 import { Sidebar } from "@/components/Sidebar";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
-import { getCurrentSession, requireUser } from "@/lib/auth";
+import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { getActiveWorkspace } from "@/lib/workspaces";
+import { getLocaleFromCookies } from "@/lib/locale";
+import { getUiCopy } from "@/lib/i18n";
 
 const DEFAULT_PROVIDERS = ["gemini_ai", "gemini_vertex", "codex_cli"] as const;
 type OptionSource = { id: string; name: string };
@@ -28,8 +30,10 @@ export default async function AppLayout({
   children: React.ReactNode;
 }) {
   const user = await requireUser();
-  const session = await getCurrentSession();
-  const workspaceId = session?.workspace?.id;
+  const locale = await getLocaleFromCookies();
+  const copy = getUiCopy(locale);
+  const workspace = await getActiveWorkspace(user.id);
+  const workspaceId = workspace?.id ?? null;
 
   const [eras, chapters, viewpoints] = workspaceId
     ? await Promise.all([
@@ -39,16 +43,16 @@ export default async function AppLayout({
       ])
     : [[], [], []];
 
-  const eraOptions = [{ value: "all", label: "All Eras" }].concat(
+  const eraOptions = [{ value: "all", label: copy.filters.allEras }].concat(
     eras.map((era: OptionSource) => ({ value: era.id, label: era.name }))
   );
-  const chapterOptions = [{ value: "all", label: "All Chapters" }].concat(
+  const chapterOptions = [{ value: "all", label: copy.filters.allChapters }].concat(
     chapters.map((chapter: OptionSource) => ({
       value: chapter.id,
       label: chapter.name
     }))
   );
-  const viewpointOptions = [{ value: "canon", label: "Omni (Canon)" }].concat(
+  const viewpointOptions = [{ value: "canon", label: copy.filters.omni }].concat(
     viewpoints.map((viewpoint: OptionSource) => ({
       value: viewpoint.id,
       label: viewpoint.name
@@ -68,18 +72,34 @@ export default async function AppLayout({
   return (
     <GlobalFilterProvider>
       <div className="app-shell">
-        <Sidebar workspaceName={session?.workspace?.name} userName={user.name ?? user.email} />
+        <Sidebar
+          workspaceName={workspace?.name}
+          userName={user.name ?? user.email}
+          labels={{
+            ...copy.nav,
+            workspaceFallback: copy.workspace.none
+          }}
+        />
         <div className="app-main">
           <header className="app-topbar">
-             <GlobalFilters eras={eraOptions} chapters={chapterOptions} viewpoints={viewpointOptions} />
+             <GlobalFilters
+               eras={eraOptions}
+               chapters={chapterOptions}
+               viewpoints={viewpointOptions}
+               labels={copy.filters}
+             />
              <div className="topbar-actions">
-               <LocaleSwitcher />
+               <LocaleSwitcher
+                 locale={locale}
+                 workspaceId={workspaceId}
+                 labels={copy.locale}
+               />
              </div>
           </header>
           <div className="app-body">{children}</div>
         </div>
         <LlmPanel
-          workspaceId={session?.workspace?.id}
+          workspaceId={workspaceId ?? undefined}
           enabledProviders={enabledProviders}
           defaultProvider={defaultProvider}
           defaultGeminiModel={defaultGeminiModel}

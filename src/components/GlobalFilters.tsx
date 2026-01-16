@@ -2,15 +2,26 @@
 import { useGlobalFilters } from "./GlobalFilterProvider";
 
 type Option = { value: string; label: string };
+type FilterLabels = {
+  worldEra: string;
+  storyChapter: string;
+  viewpoint: string;
+  mode: string;
+  modeCanon: string;
+  modeViewpoint: string;
+  modeCompare: string;
+};
 
 export function GlobalFilters({
   eras,
   chapters,
-  viewpoints
+  viewpoints,
+  labels
 }: {
   eras: Option[];
   chapters: Option[];
   viewpoints: Option[];
+  labels: FilterLabels;
 }) {
   const { eraId, chapterId, viewpointId, mode, setFilters } = useGlobalFilters();
 
@@ -18,7 +29,7 @@ export function GlobalFilters({
     <div className="filter-bar">
       <div className="filter-group">
         <div className="filter-item">
-          <span className="filter-label">World Era</span>
+          <span className="filter-label">{labels.worldEra}</span>
           <select
             className="filter-select"
             value={eraId}
@@ -32,7 +43,7 @@ export function GlobalFilters({
           </select>
         </div>
         <div className="filter-item">
-          <span className="filter-label">Story Chapter</span>
+          <span className="filter-label">{labels.storyChapter}</span>
           <select
              className="filter-select"
             value={chapterId}
@@ -51,7 +62,7 @@ export function GlobalFilters({
 
       <div className="filter-group">
         <div className="filter-item">
-          <span className="filter-label">Viewpoint</span>
+          <span className="filter-label">{labels.viewpoint}</span>
           <select
              className="filter-select"
             value={viewpointId}
@@ -65,15 +76,15 @@ export function GlobalFilters({
           </select>
         </div>
         <div className="filter-item">
-          <span className="filter-label">Mode</span>
+          <span className="filter-label">{labels.mode}</span>
           <select
              className="filter-select"
             value={mode}
             onChange={(event) => setFilters({ mode: event.target.value as typeof mode })}
           >
-            <option value="canon">Canon</option>
-            <option value="viewpoint">As Viewpoint</option>
-            <option value="compare">Compare</option>
+            <option value="canon">{labels.modeCanon}</option>
+            <option value="viewpoint">{labels.modeViewpoint}</option>
+            <option value="compare">{labels.modeCompare}</option>
           </select>
         </div>
       </div>

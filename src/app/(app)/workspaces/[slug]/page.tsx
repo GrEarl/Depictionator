@@ -1,12 +1,15 @@
 import { requireWorkspaceMembership } from "@/lib/auth";
-import Link from "next/link";
 import { LlmContext } from "@/components/LlmContext";
+import { getLocaleFromCookies } from "@/lib/locale";
+import { getUiCopy } from "@/lib/i18n";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
 export default async function WorkspacePage({ params }: PageProps) {
   const { slug } = await params;
   const membership = await requireWorkspaceMembership(slug);
+  const locale = await getLocaleFromCookies();
+  const copy = getUiCopy(locale);
 
   return (
     <div className="panel">
@@ -19,13 +22,26 @@ export default async function WorkspacePage({ params }: PageProps) {
         }}
       />
       <h2>{membership.workspace.name}</h2>
-      <p className="muted">Role: {membership.role}</p>
+      <p className="muted">
+        {copy.workspace.role}: {membership.role}
+      </p>
+      <h3>{copy.workspace.quickLinks}</h3>
       <div className="link-grid">
-        <Link href="/articles">Articles</Link>
-        <Link href="/maps">Maps</Link>
-        <Link href="/timeline">Timeline</Link>
-        <Link href="/reviews">Reviews</Link>
-        <Link href="/settings">Settings</Link>
+        {[
+          { href: "/articles", label: copy.nav.articles },
+          { href: "/maps", label: copy.nav.maps },
+          { href: "/timeline", label: copy.nav.timeline },
+          { href: "/reviews", label: copy.nav.reviews },
+          { href: "/settings", label: copy.nav.settings }
+        ].map((item) => (
+          <form key={item.href} action="/api/workspaces/open" method="post">
+            <input type="hidden" name="slug" value={membership.workspace.slug} />
+            <input type="hidden" name="redirectTo" value={item.href} />
+            <button type="submit" className="link-card">
+              {item.label}
+            </button>
+          </form>
+        ))}
       </div>
     </div>
   );
