@@ -11,6 +11,7 @@ import { getUiCopy } from "@/lib/i18n";
 
 const DEFAULT_PROVIDERS = ["gemini_ai", "gemini_vertex", "codex_cli"] as const;
 type OptionSource = { id: string; name: string };
+type SelectOption = { value: string; label: string };
 
 function normalizeProvider(value: string) {
   const normalized = value.trim().toLowerCase();
@@ -43,21 +44,24 @@ export default async function AppLayout({
       ])
     : [[], [], []];
 
-  const eraOptions = [{ value: "all", label: copy.filters.allEras }].concat(
-    eras.map((era: OptionSource) => ({ value: era.id, label: era.name }))
-  );
-  const chapterOptions = [{ value: "all", label: copy.filters.allChapters }].concat(
-    chapters.map((chapter: OptionSource) => ({
+  const eraOptions: SelectOption[] = [
+    { value: "all", label: copy.filters.allEras },
+    ...eras.map((era: OptionSource) => ({ value: era.id, label: era.name }))
+  ];
+  const chapterOptions: SelectOption[] = [
+    { value: "all", label: copy.filters.allChapters },
+    ...chapters.map((chapter: OptionSource) => ({
       value: chapter.id,
       label: chapter.name
     }))
-  );
-  const viewpointOptions = [{ value: "canon", label: copy.filters.omni }].concat(
-    viewpoints.map((viewpoint: OptionSource) => ({
+  ];
+  const viewpointOptions: SelectOption[] = [
+    { value: "canon", label: copy.filters.omni },
+    ...viewpoints.map((viewpoint: OptionSource) => ({
       value: viewpoint.id,
       label: viewpoint.name
     }))
-  );
+  ];
 
   const enabledProviders = process.env.LLM_PROVIDERS_ENABLED
     ? process.env.LLM_PROVIDERS_ENABLED.split(",")
