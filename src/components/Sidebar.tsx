@@ -26,13 +26,14 @@ export function Sidebar({
   const pathname = usePathname();
 
   const navItems = [
-    { href: "/", label: labels.dashboard, icon: "D" },
-    { href: "/articles", label: labels.articles, icon: "A" },
-    { href: "/maps", label: labels.maps, icon: "M" },
-    { href: "/boards", label: "Boards", icon: "B" },
-    { href: "/timeline", label: labels.timeline, icon: "T" },
-    { href: "/reviews", label: labels.reviews, icon: "R" },
-    { href: "/settings", label: labels.settings, icon: "S" }
+    { href: "/", label: labels.dashboard, icon: "🏠" },
+    { href: "/ai", label: "AI Assistant", icon: "🤖" },
+    { href: "/articles", label: labels.articles, icon: "📝" },
+    { href: "/maps", label: labels.maps, icon: "🗺️" },
+    { href: "/boards", label: "Boards", icon: "📋" },
+    { href: "/timeline", label: labels.timeline, icon: "⏱️" },
+    { href: "/reviews", label: labels.reviews, icon: "✅" },
+    { href: "/settings", label: labels.settings, icon: "⚙️" }
   ];
 
   return (

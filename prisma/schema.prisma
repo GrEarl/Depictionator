@@ -310,6 +310,7 @@ model Entity {
   parentEntityId     String?
   mainImageId        String?
   summaryMd          String?
+  embedding          Unsupported("vector(768)")?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   createdById        String?
@@ -381,14 +382,17 @@ model ArticleRevision {
   targetType       ArticleTargetType
   articleId        String?
   overlayId        String?
+  title            String            @default("")
   bodyMd           String
   changeSummary    String
+  embedding        Unsupported("vector(768)")?
   createdAt        DateTime          @default(now())
   createdById      String?
   status           RevisionStatus
   approvedAt       DateTime?
   approvedById     String?
   parentRevisionId String?
+  softDeletedAt    DateTime?
 
   workspace    Workspace  @relation(fields: [workspaceId], references: [id])
   article      Article?   @relation("ArticleRevisions", fields: [articleId], references: [entityId])
