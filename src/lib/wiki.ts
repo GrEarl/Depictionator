@@ -143,13 +143,18 @@ export async function fetchWikiPage(
   if (!page) return null;
 
   const wikitext = page.revisions?.[0]?.slots?.main?.["*"] ?? "";
+  const imageTitles = (page.images ?? []).map((img) => img.title);
+  if (page.title?.startsWith("File:") && !imageTitles.includes(page.title)) {
+    imageTitles.unshift(page.title);
+  }
+
   return {
     pageId: page.pageid,
     title: page.title,
     url: page.fullurl ?? pageUrl(resolvedLang, page.title),
     extract: page.extract ?? "",
     wikitext,
-    images: (page.images ?? []).map((img) => img.title)
+    images: imageTitles
   };
 }
 
@@ -356,5 +361,59 @@ export function parseWikiImageInput(
   return {
     lang: normalizeLang(lang),
     title: trimmed.startsWith("File:") ? trimmed : `File:${trimmed}`
+  };
+}
+
+export function parseWikiPageInput(
+  input: string,
+  lang?: string | null
+): { lang: string; title: string } | null {
+  const trimmed = (input ?? "").trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.toLowerCase();
+    let resolvedLang: string | null = null;
+    if (host === "commons.wikimedia.org") {
+      resolvedLang = "commons";
+    } else if (host.endsWith(".wikipedia.org")) {
+      resolvedLang = host.split(".")[0] ?? null;
+    } else if (host.endsWith(".wikimedia.org")) {
+      resolvedLang = "commons";
+    }
+
+    const queryTitle = url.searchParams.get("title");
+    if (queryTitle) {
+      return {
+        lang: normalizeLang(resolvedLang ?? lang),
+        title: decodeURIComponent(queryTitle)
+      };
+    }
+
+    const pathname = url.pathname || "";
+    if (pathname.startsWith("/wiki/")) {
+      const slug = decodeURIComponent(pathname.slice(6));
+      if (slug.startsWith("Special:FilePath/")) {
+        const fileName = slug.split("/").pop();
+        if (fileName) {
+          return {
+            lang: normalizeLang(resolvedLang ?? lang),
+            title: fileName.startsWith("File:") ? fileName : `File:${fileName}`
+          };
+        }
+      }
+      return {
+        lang: normalizeLang(resolvedLang ?? lang),
+        title: slug
+      };
+    }
+  } catch {
+    // Not a URL.
+  }
+
+  return {
+    lang: normalizeLang(lang),
+    title: trimmed
   };
 }

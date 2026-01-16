@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireApiSession, apiError } from "@/lib/api";
-import { fetchWikiPage } from "@/lib/wiki";
+import { fetchWikiPage, parseWikiPageInput } from "@/lib/wiki";
 
 export async function POST(request: Request) {
   try {
@@ -12,14 +12,17 @@ export async function POST(request: Request) {
   const form = await request.formData();
   const lang = String(form.get("lang") ?? "").trim();
   const pageId = String(form.get("pageId") ?? "").trim();
-  const title = String(form.get("title") ?? "").trim();
+  const rawTitle = String(form.get("title") ?? "").trim();
 
-  if (!pageId && !title) {
+  if (!pageId && !rawTitle) {
     return apiError("pageId or title required", 400);
   }
 
   try {
-    const page = await fetchWikiPage(lang || null, { pageId, title });
+    const parsed = rawTitle ? parseWikiPageInput(rawTitle, lang || null) : null;
+    const resolvedLang = parsed?.lang ?? (lang || null);
+    const title = parsed?.title ?? rawTitle;
+    const page = await fetchWikiPage(resolvedLang, { pageId, title });
     if (!page) return apiError("Page not found", 404);
     return NextResponse.json({ page });
   } catch (error) {
