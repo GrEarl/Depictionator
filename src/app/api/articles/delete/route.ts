@@ -3,6 +3,7 @@ import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   let session;
@@ -37,6 +38,14 @@ export async function POST(request: Request) {
     action: "delete",
     targetType: "entity",
     targetId: entityId
+  });
+
+  await notifyWatchers({
+    workspaceId,
+    targetType: "entity",
+    targetId: entityId,
+    type: "entity_deleted",
+    payload: { entityId }
   });
 
   return NextResponse.redirect(toRedirectUrl(request, "/articles"));

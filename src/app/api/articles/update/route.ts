@@ -5,6 +5,7 @@ import { EntityStatus } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { parseCsv, parseOptionalString } from "@/lib/forms";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   let session;
@@ -33,6 +34,16 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  const storyIntroChapterId = parseOptionalString(form.get("storyIntroChapterId"));
+  if (storyIntroChapterId) {
+    const chapter = await prisma.chapter.findFirst({
+      where: { id: storyIntroChapterId, workspaceId, softDeletedAt: null }
+    });
+    if (!chapter) {
+      return apiError("Story chapter not found", 404);
+    }
+  }
+
   const entity = await prisma.entity.update({
     where: { id: entityId, workspaceId },
     data: {
@@ -42,7 +53,7 @@ export async function POST(request: Request) {
       tags: parseCsv(form.get("tags")),
       worldExistFrom: parseOptionalString(form.get("worldExistFrom")),
       worldExistTo: parseOptionalString(form.get("worldExistTo")),
-      storyIntroChapterId: parseOptionalString(form.get("storyIntroChapterId")),
+      storyIntroChapterId,
       updatedById: session.userId
     }
   });
@@ -53,6 +64,14 @@ export async function POST(request: Request) {
     action: "update",
     targetType: "entity",
     targetId: entity.id
+  });
+
+  await notifyWatchers({
+    workspaceId,
+    targetType: "entity",
+    targetId: entity.id,
+    type: "entity_updated",
+    payload: { entityId: entity.id }
   });
 
   return NextResponse.redirect(toRedirectUrl(request, `/articles/${entity.id}`));

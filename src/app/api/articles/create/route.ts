@@ -23,6 +23,7 @@ export async function POST(request: Request) {
   const title = String(form.get("title") ?? "").trim();
   const bodyMd = String(form.get("bodyMd") ?? "").trim();
   const changeSummary = String(form.get("changeSummary") ?? "Initial draft").trim();
+  const storyIntroChapterId = parseOptionalString(form.get("storyIntroChapterId"));
 
   if (!workspaceId || !title) {
     return apiError("Missing required fields", 400);
@@ -32,6 +33,15 @@ export async function POST(request: Request) {
     await requireWorkspaceAccess(session.userId, workspaceId, "editor");
   } catch {
     return apiError("Forbidden", 403);
+  }
+
+  if (storyIntroChapterId) {
+    const chapter = await prisma.chapter.findFirst({
+      where: { id: storyIntroChapterId, workspaceId, softDeletedAt: null }
+    });
+    if (!chapter) {
+      return apiError("Story chapter not found", 404);
+    }
   }
 
   const entity = await prisma.entity.create({
@@ -44,6 +54,7 @@ export async function POST(request: Request) {
       status: "draft",
       worldExistFrom: parseOptionalString(form.get("worldExistFrom")),
       worldExistTo: parseOptionalString(form.get("worldExistTo")),
+      storyIntroChapterId: storyIntroChapterId || null,
       createdById: session.userId,
       updatedById: session.userId
     }
