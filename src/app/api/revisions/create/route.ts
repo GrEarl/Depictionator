@@ -3,6 +3,7 @@ import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/db";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { notifyWatchers } from "@/lib/notifications";
 
 export async function POST(request: Request) {
   let session;
@@ -34,35 +35,62 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
-  if (targetType === "base") {
+  const isBase = targetType === "base";
+  let parentRevisionId: string | null = null;
+  let overlayEntityId: string | null = null;
+
+  if (isBase) {
     const article = await prisma.article.findFirst({
-      where: { entityId: articleId, workspaceId }
+      where: { entityId: articleId, workspaceId },
+      select: { baseRevisionId: true }
     });
     if (!article) {
       return apiError("Article not found", 404);
     }
-  }
-  if (targetType === "overlay") {
+    parentRevisionId = article.baseRevisionId ?? null;
+  } else {
     const overlay = await prisma.articleOverlay.findFirst({
-      where: { id: overlayId, workspaceId, softDeletedAt: null }
+      where: { id: overlayId, workspaceId, softDeletedAt: null },
+      select: { entityId: true, activeRevisionId: true }
     });
     if (!overlay) {
       return apiError("Overlay not found", 404);
     }
+    overlayEntityId = overlay.entityId;
+    parentRevisionId = overlay.activeRevisionId ?? null;
   }
 
+  const now = new Date();
   const revision = await prisma.articleRevision.create({
     data: {
       workspaceId,
       targetType,
-      articleId: targetType === "base" ? articleId : null,
-      overlayId: targetType === "overlay" ? overlayId : null,
+      articleId: isBase ? articleId : null,
+      overlayId: isBase ? null : overlayId,
       bodyMd,
       changeSummary,
       createdById: session.userId,
-      status: "draft"
+      status: isBase ? "approved" : "draft",
+      approvedAt: isBase ? now : null,
+      approvedById: isBase ? session.userId : null,
+      parentRevisionId
     }
   });
+
+  if (isBase) {
+    await prisma.article.update({
+      where: { entityId: articleId },
+      data: { baseRevisionId: revision.id }
+    });
+
+    await notifyWatchers({
+      workspaceId,
+      targetType: "entity",
+      targetId: articleId,
+      type: "article_updated",
+      payload: { revisionId: revision.id }
+    });
+  }
 
   await logAudit({
     workspaceId,
@@ -73,7 +101,8 @@ export async function POST(request: Request) {
     meta: { targetType }
   });
 
-  return NextResponse.redirect(toRedirectUrl(request, `/articles/${articleId || overlayId}`));
+  const redirectTarget = isBase ? articleId : overlayEntityId ?? overlayId;
+  return NextResponse.redirect(toRedirectUrl(request, `/articles/${redirectTarget}`));
 }
 
 

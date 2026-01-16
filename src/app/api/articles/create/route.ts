@@ -67,6 +67,7 @@ export async function POST(request: Request) {
     }
   });
 
+  const now = new Date();
   const revision = await prisma.articleRevision.create({
     data: {
       workspaceId,
@@ -75,8 +76,15 @@ export async function POST(request: Request) {
       bodyMd: bodyMd || "",
       changeSummary,
       createdById: session.userId,
-      status: "draft"
+      status: "approved",
+      approvedAt: now,
+      approvedById: session.userId
     }
+  });
+
+  await prisma.article.update({
+    where: { entityId: article.entityId },
+    data: { baseRevisionId: revision.id }
   });
 
   await logAudit({
