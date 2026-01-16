@@ -32,9 +32,7 @@ export async function POST(request: Request) {
     meta: { locale }
   });
 
-  const response = NextResponse.redirect(
-    toRedirectUrl(request, request.headers.get("referer") ?? "/settings")
-  );
+  const response = NextResponse.json({ success: true });
   setLocaleCookie(response, locale);
   return response;
 }

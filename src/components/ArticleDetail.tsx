@@ -8,20 +8,34 @@ import Link from "next/link";
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
 
 type Entity = any;
+type Asset = { id: string; storageKey: string; mimeType: string } | null;
+type EntityRef = { id: string; title: string; type: string };
+type RelatedEntity = EntityRef & { relation: string; direction: 'to' | 'from' };
+type LocationPin = { id: string; map: { id: string; title: string } | null };
 
-export function ArticleDetail({ 
-  entity, 
-  workspaceId, 
-  user 
-}: { 
-  entity: Entity; 
+export function ArticleDetail({
+  entity,
+  workspaceId,
+  user,
+  mainImage,
+  parentEntity,
+  childEntities,
+  relatedEntities,
+  locations
+}: {
+  entity: Entity;
   workspaceId: string;
   user: any;
+  mainImage?: Asset;
+  parentEntity?: EntityRef | null;
+  childEntities?: EntityRef[];
+  relatedEntities?: RelatedEntity[];
+  locations?: LocationPin[];
 }) {
-  const [tab, setTab] = useState<"read" | "edit" | "history" | "compare">("read");
+  const [tab, setTab] = useState<"read" | "edit" | "history" | "relations">("read");
   const { mode, viewpointId, eraId, chapterId } = useGlobalFilters();
 
-  // 1. Determine Context (Base vs Overlay)
+  // Context (Base vs Overlay)
   const isCanonMode = mode === "canon" || viewpointId === "canon";
   const overlayCandidates = (entity.overlays ?? []).filter((overlay: any) => {
     if (eraId !== "all") {
@@ -40,28 +54,25 @@ export function ArticleDetail({
     }
     return true;
   });
-  
+
   const activeOverlay = !isCanonMode && viewpointId !== "canon"
     ? overlayCandidates.find((o: any) => o.viewpointId === viewpointId) ?? null
     : null;
 
-  // 2. Resolve Revisions & Content
+  // Revisions & Content
   const baseRevisions = entity.article?.revisions || [];
   const overlayRevisions = activeOverlay?.revisions || [];
   const relevantRevisions = activeOverlay ? overlayRevisions : baseRevisions;
 
-  // Logic: Prefer active/base revision (published state), fallback to latest revision (draft/head).
   const publishedRevision = activeOverlay ? activeOverlay.activeRevision : entity.article?.baseRevision;
-  const latestRevision = relevantRevisions[0]; // Assumes desc sort by date
-  
+  const latestRevision = relevantRevisions[0];
+
   const currentRevision = publishedRevision || latestRevision;
   const displayBody = currentRevision?.bodyMd || "";
   const displayTitle = activeOverlay ? activeOverlay.title : entity.title;
 
-  // For Compare Tab: Previous Revision
-  // Find the revision *after* the current one in the sorted list (which means it's older)
+  // Compare Tab
   const currentIndex = relevantRevisions.findIndex((r: any) => r.id === currentRevision?.id);
-  // If current is not found (e.g. unsaved state?), default to 0. If found, next is +1.
   const compareIndex = currentIndex === -1 ? 1 : currentIndex + 1;
   const previousRevision = relevantRevisions[compareIndex] || null;
 
@@ -69,44 +80,216 @@ export function ArticleDetail({
   const targetType = activeOverlay ? "overlay" : "base";
   const targetId = activeOverlay ? activeOverlay.id : entity.id;
 
+  // Group relations by type
+  const relationsByType = (relatedEntities || []).reduce((acc, rel) => {
+    const key = rel.relation.replace(/_/g, " ");
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(rel);
+    return acc;
+  }, {} as Record<string, RelatedEntity[]>);
+
   return (
-    <div className="article-container">
+    <div className="article-container wiki-style">
+      {/* Header */}
       <div className="article-header">
         <div className="article-title-row">
-          <h1>{displayTitle}</h1>
+          <div>
+            {parentEntity && (
+              <div className="article-breadcrumb">
+                <Link href={`/articles/${parentEntity.id}`}>{parentEntity.title}</Link>
+                <span className="breadcrumb-sep">/</span>
+              </div>
+            )}
+            <h1>{displayTitle}</h1>
+            {entity.aliases?.length > 0 && (
+              <div className="article-aliases">
+                Also known as: {entity.aliases.join(", ")}
+              </div>
+            )}
+          </div>
           <div className="article-badges">
             <span className={`badge type-${entity.type.toLowerCase()}`}>{entity.type}</span>
             <span className={`badge status-${entity.status}`}>{entity.status}</span>
-            {activeOverlay && <span className="badge overlay">Viewpoint: {viewpointId}</span>}
+            {activeOverlay && <span className="badge overlay">Viewpoint</span>}
             {!publishedRevision && latestRevision && <span className="badge status-draft">Draft</span>}
           </div>
         </div>
         <div className="article-tabs">
-          {["read", "edit", "history", "compare"].map((t) => (
-            <button 
+          {(["read", "edit", "history", "relations"] as const).map((t) => (
+            <button
               key={t}
               className={`tab-btn ${tab === t ? "active" : ""}`}
-              onClick={() => setTab(t as any)}
+              onClick={() => setTab(t)}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {t === "relations" ? "Relations" : t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="article-layout-grid">
-        <main className="article-content">
+      <div className="article-layout-wiki">
+        {/* Infobox (Right sidebar in wiki style) */}
+        <aside className="article-infobox">
+          {/* Main Image */}
+          {mainImage && (
+            <div className="infobox-image">
+              <img
+                src={`/api/assets/file/${mainImage.id}`}
+                alt={entity.title}
+              />
+            </div>
+          )}
+          {!mainImage && (
+            <div className="infobox-image-placeholder">
+              <span>{entity.type.charAt(0)}</span>
+            </div>
+          )}
+
+          <h3 className="infobox-title">{entity.title}</h3>
+
+          <table className="infobox-table">
+            <tbody>
+              <tr>
+                <th>Type</th>
+                <td>{entity.type}</td>
+              </tr>
+              <tr>
+                <th>Status</th>
+                <td>{entity.status}</td>
+              </tr>
+              {entity.worldExistFrom && (
+                <tr>
+                  <th>Active Period</th>
+                  <td>{entity.worldExistFrom} - {entity.worldExistTo || "Present"}</td>
+                </tr>
+              )}
+              {entity.tags?.length > 0 && (
+                <tr>
+                  <th>Tags</th>
+                  <td>
+                    {entity.tags.map((tag: string) => (
+                      <span key={tag} className="tag-chip">{tag}</span>
+                    ))}
+                  </td>
+                </tr>
+              )}
+              {parentEntity && (
+                <tr>
+                  <th>Parent</th>
+                  <td>
+                    <Link href={`/articles/${parentEntity.id}`} className="entity-link">
+                      {parentEntity.title}
+                    </Link>
+                  </td>
+                </tr>
+              )}
+              {locations && locations.length > 0 && (
+                <tr>
+                  <th>Locations</th>
+                  <td>
+                    {locations.filter(l => l.map).map((loc) => (
+                      <Link
+                        key={loc.id}
+                        href={`/maps?map=${loc.map?.id}`}
+                        className="entity-link"
+                      >
+                        {loc.map?.title}
+                      </Link>
+                    ))}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          {/* Quick Actions */}
+          <div className="infobox-actions">
+            <form action="/api/entities/update" method="post" className="inline-form">
+              <input type="hidden" name="workspaceId" value={workspaceId} />
+              <input type="hidden" name="entityId" value={entity.id} />
+              <label className="file-upload-label">
+                <span>Set Main Image</span>
+                <input type="file" name="mainImage" accept="image/*" />
+              </label>
+            </form>
+          </div>
+        </aside>
+
+        {/* Main Content */}
+        <main className="article-main-content">
           {tab === "read" && (
-            <div className="read-view">
-              {displayBody ? (
-                <MarkdownView value={displayBody} />
-              ) : (
-                <div className="empty-state-centered">
-                  <p className="muted">No content available for this view.</p>
-                  <button className="btn-primary" onClick={() => setTab("edit")}>Start writing</button>
+            <>
+              {/* Summary/Lead section */}
+              {entity.summaryMd && (
+                <div className="article-summary">
+                  <MarkdownView value={entity.summaryMd} />
                 </div>
               )}
-            </div>
+
+              {/* Table of Contents */}
+              {displayBody && (
+                <div className="article-toc-inline">
+                  <MarkdownToc value={displayBody} />
+                </div>
+              )}
+
+              {/* Main Body */}
+              <div className="read-view">
+                {displayBody ? (
+                  <MarkdownView value={displayBody} />
+                ) : (
+                  <div className="empty-content">
+                    <p>This article has no content yet.</p>
+                    <button className="btn-primary" onClick={() => setTab("edit")}>
+                      Start writing
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Child Entities */}
+              {childEntities && childEntities.length > 0 && (
+                <div className="article-section">
+                  <h2>Sub-entries</h2>
+                  <div className="entity-grid">
+                    {childEntities.map((child) => (
+                      <Link
+                        key={child.id}
+                        href={`/articles/${child.id}`}
+                        className="entity-card"
+                      >
+                        <span className="entity-card-type">{child.type}</span>
+                        <span className="entity-card-title">{child.title}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Related Entities (brief) */}
+              {relatedEntities && relatedEntities.length > 0 && (
+                <div className="article-section">
+                  <h2>Related</h2>
+                  <div className="related-list">
+                    {relatedEntities.slice(0, 10).map((rel) => (
+                      <Link
+                        key={`${rel.id}-${rel.relation}`}
+                        href={`/articles/${rel.id}`}
+                        className="related-item"
+                      >
+                        <span className="related-type">{rel.relation.replace(/_/g, " ")}</span>
+                        <span className="related-title">{rel.title}</span>
+                      </Link>
+                    ))}
+                    {relatedEntities.length > 10 && (
+                      <button className="btn-link" onClick={() => setTab("relations")}>
+                        View all {relatedEntities.length} relations
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {tab === "edit" && (
@@ -116,36 +299,50 @@ export function ArticleDetail({
                 <input type="hidden" name="targetType" value={targetType} />
                 <input type="hidden" name="articleId" value={entity.id} />
                 {activeOverlay && <input type="hidden" name="overlayId" value={targetId} />}
-                
-                <MarkdownEditor 
-                  name="bodyMd" 
-                  label={`Editing ${activeOverlay ? "Overlay (Draft)" : "Base Article (Public)"}`} 
+
+                <MarkdownEditor
+                  name="bodyMd"
+                  label={`Editing ${activeOverlay ? "Overlay (Draft)" : "Base Article"}`}
                   defaultValue={displayBody}
-                  rows={25}
-                  placeholder="# Start writing here..."
+                  rows={30}
+                  placeholder="# Article Title
+
+Write your article content here using Markdown or WikiText syntax.
+
+## Section Heading
+
+Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
+
+### Subsection
+
+- Bullet point
+- Another point
+
+[[File:example.jpg|thumb|Caption text]]
+"
                 />
-                
-                <div className="panel" style={{ marginTop: '24px', background: '#f8f9fa' }}>
-                  <div className="form-grid">
+
+                <div className="edit-footer">
+                  <div className="edit-summary-row">
                     <label>
-                      <strong>Change Summary</strong> <span className="muted">(Required)</span>
-                      <input 
-                        name="changeSummary" 
-                        required 
-                        placeholder="e.g. Fixed typos in the second paragraph..." 
-                        className="input-text" 
+                      <strong>Edit Summary</strong>
+                      <input
+                        name="changeSummary"
+                        required
+                        placeholder="Describe your changes..."
+                        className="input-text"
                       />
                     </label>
-                    <div className="edit-actions" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span className="text-xs muted">
-                        {targetType === "base" 
-                          ? "Note: Base edits publish immediately." 
-                          : "Note: Overlay edits are saved as drafts first."}
-                      </span>
-                      <button type="submit" className="btn-primary">
-                        {targetType === "base" ? "Publish Changes" : "Save Draft"}
-                      </button>
-                    </div>
+                  </div>
+                  <div className="edit-actions">
+                    <span className="edit-hint">
+                      {targetType === "base"
+                        ? "Changes will be published immediately."
+                        : "Changes will be saved as draft."}
+                    </span>
+                    <button type="submit" className="btn-primary">
+                      {targetType === "base" ? "Publish" : "Save Draft"}
+                    </button>
                   </div>
                 </div>
               </form>
@@ -154,105 +351,118 @@ export function ArticleDetail({
 
           {tab === "history" && (
             <div className="history-view">
-               <div className="list-header" style={{ marginBottom: '16px' }}>
-                 <h3>Revision History ({relevantRevisions.length})</h3>
-               </div>
-               {relevantRevisions.length === 0 ? (
-                 <p className="muted">No revisions found.</p>
-               ) : (
-                 <ul className="history-list">
-                   {relevantRevisions.map((rev: any) => (
-                     <li key={rev.id} className="history-item">
-                       <div className="history-meta">
-                         <span className={`status-dot ${rev.status === 'approved' || rev.status === 'published' ? 'green' : ''}`}></span>
-                         <span className="history-date">
-                           {new Date(rev.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
-                         </span>
-                         <span className="type-tag" style={{ fontSize: '10px' }}>{rev.status}</span>
-                       </div>
-                       <div className="history-summary">{rev.changeSummary || "No summary provided"}</div>
-                       <div className="history-actions">
-                         <Link href={`/revisions/${rev.id}`} className="history-link">View Revision</Link>
-                         {/* Could add Restore button here later */}
-                       </div>
-                     </li>
-                   ))}
-                 </ul>
-               )}
+              <h2>Revision History ({relevantRevisions.length})</h2>
+              {relevantRevisions.length === 0 ? (
+                <p className="muted">No revisions found.</p>
+              ) : (
+                <table className="history-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Summary</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {relevantRevisions.map((rev: any, idx: number) => (
+                      <tr key={rev.id} className={idx === 0 ? "current" : ""}>
+                        <td className="history-date">
+                          {new Date(rev.createdAt).toLocaleString()}
+                        </td>
+                        <td className="history-summary">
+                          {rev.changeSummary || "(No summary)"}
+                        </td>
+                        <td>
+                          <span className={`status-badge ${rev.status}`}>{rev.status}</span>
+                        </td>
+                        <td>
+                          <Link href={`/revisions/${rev.id}`} className="btn-link">
+                            View
+                          </Link>
+                          {idx > 0 && (
+                            <form action="/api/revisions/restore" method="post" className="inline-form">
+                              <input type="hidden" name="workspaceId" value={workspaceId} />
+                              <input type="hidden" name="revisionId" value={rev.id} />
+                              <button type="submit" className="btn-link">Restore</button>
+                            </form>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           )}
 
-          {tab === "compare" && (
-            <div className="compare-view">
-              <div className="compare-layout">
-                <div className="compare-pane">
-                  <div className="compare-pane-header">
-                    Previous {previousRevision ? `(${new Date(previousRevision.createdAt).toLocaleDateString()})` : "(None)"}
-                  </div>
-                  <div className="read-view" style={{ fontSize: '14px' }}>
-                    {previousRevision ? (
-                      <MarkdownView value={previousRevision.bodyMd} />
-                    ) : (
-                      <p className="muted">No previous revision to compare against.</p>
-                    )}
+          {tab === "relations" && (
+            <div className="relations-view">
+              <h2>All Relations</h2>
+
+              {/* Add Relation Form */}
+              <details className="add-relation-form">
+                <summary>Add New Relation</summary>
+                <form action="/api/entity-relations/create" method="post" className="form-grid">
+                  <input type="hidden" name="workspaceId" value={workspaceId} />
+                  <input type="hidden" name="fromEntityId" value={entity.id} />
+
+                  <label>
+                    Related Entity ID
+                    <input name="toEntityId" required placeholder="Entity ID..." />
+                  </label>
+                  <label>
+                    Relation Type
+                    <select name="relationType">
+                      <option value="related_to">Related To</option>
+                      <option value="member_of">Member Of</option>
+                      <option value="allied_with">Allied With</option>
+                      <option value="enemy_of">Enemy Of</option>
+                      <option value="parent_of">Parent Of</option>
+                      <option value="child_of">Child Of</option>
+                      <option value="located_in">Located In</option>
+                      <option value="owns">Owns</option>
+                      <option value="created_by">Created By</option>
+                      <option value="participated_in">Participated In</option>
+                      <option value="custom">Custom</option>
+                    </select>
+                  </label>
+                  <label>
+                    Custom Label (optional)
+                    <input name="customLabel" placeholder="e.g., mentor of..." />
+                  </label>
+                  <button type="submit" className="btn-primary">Add Relation</button>
+                </form>
+              </details>
+
+              {/* Relations grouped by type */}
+              {Object.entries(relationsByType).map(([relType, rels]) => (
+                <div key={relType} className="relation-group">
+                  <h3>{relType}</h3>
+                  <div className="entity-grid">
+                    {rels.map((rel) => (
+                      <Link
+                        key={`${rel.id}-${rel.direction}`}
+                        href={`/articles/${rel.id}`}
+                        className="entity-card"
+                      >
+                        <span className="entity-card-type">{rel.type}</span>
+                        <span className="entity-card-title">{rel.title}</span>
+                        <span className="entity-card-direction">
+                          {rel.direction === 'to' ? 'outgoing' : 'incoming'}
+                        </span>
+                      </Link>
+                    ))}
                   </div>
                 </div>
-                <div className="compare-pane">
-                  <div className="compare-pane-header">
-                    Current {currentRevision ? `(${new Date(currentRevision.createdAt).toLocaleDateString()})` : "(Live)"}
-                  </div>
-                  <div className="read-view" style={{ fontSize: '14px' }}>
-                     <MarkdownView value={displayBody} />
-                  </div>
-                </div>
-              </div>
+              ))}
+
+              {(!relatedEntities || relatedEntities.length === 0) && (
+                <p className="muted">No relations defined yet.</p>
+              )}
             </div>
           )}
         </main>
-
-        <aside className="article-sidebar-col">
-          {tab === "read" && displayBody && (
-            <div className="sidebar-section toc-section">
-              <MarkdownToc value={displayBody} />
-            </div>
-          )}
-          
-          <div className="sidebar-section metadata-section">
-            <h4>Entity Metadata</h4>
-            <div className="meta-grid">
-              <div className="meta-item">
-                <span className="meta-label">ID</span>
-                <span className="meta-value" style={{ fontFamily: 'monospace', fontSize: '12px' }}>{entity.id.substring(0,8)}...</span>
-              </div>
-              <div className="meta-item">
-                <span className="meta-label">Tags</span>
-                <span className="meta-value">{entity.tags.join(", ") || "-"}</span>
-              </div>
-              <div className="meta-item">
-                <span className="meta-label">World Existence</span>
-                <span className="meta-value">
-                   {entity.worldExistFrom ? `${entity.worldExistFrom} - ${entity.worldExistTo || 'Present'}` : "Always"}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="sidebar-section">
-             <h4>Context</h4>
-             <div className="meta-grid">
-               <div className="meta-item">
-                 <span className="meta-label">Viewpoint</span>
-                 <span className="meta-value">{viewpointId === 'canon' ? 'Canon (Objective)' : viewpointId}</span>
-               </div>
-               {activeOverlay && (
-                 <div className="meta-item">
-                   <span className="meta-label">Overlay Status</span>
-                   <span className="meta-value">{activeOverlay.activeRevision?.status ?? 'draft'}</span>
-                 </div>
-               )}
-             </div>
-          </div>
-        </aside>
       </div>
     </div>
   );

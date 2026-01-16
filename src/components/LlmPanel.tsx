@@ -79,7 +79,6 @@ export function LlmPanel({
     const form = new FormData();
     form.append("provider", provider);
     form.append("prompt", prompt);
-    if (workspaceId) form.append("workspaceId", workspaceId);
 
     if (provider === "gemini_ai") {
       form.append("model", geminiModel);
@@ -100,7 +99,7 @@ export function LlmPanel({
     }
 
     const contextEl = document.getElementById("llm-context");
-    let pageContext: unknown = null;
+    let pageContext: any = null;
     if (contextEl?.textContent) {
       try {
         pageContext = JSON.parse(contextEl.textContent);
@@ -114,6 +113,10 @@ export function LlmPanel({
       page: pageContext
     };
     form.append("context", JSON.stringify(contextPayload));
+
+    // Resolve workspaceId from context if available (layout prop might be stale)
+    const activeWorkspaceId = pageContext?.workspaceId ?? pageContext?.currentWorkspaceId ?? workspaceId;
+    if (activeWorkspaceId) form.append("workspaceId", activeWorkspaceId);
 
     try {
       const res = await fetch("/api/llm/execute", {

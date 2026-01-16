@@ -29,6 +29,7 @@ export function Sidebar({
     { href: "/", label: labels.dashboard, icon: "D" },
     { href: "/articles", label: labels.articles, icon: "A" },
     { href: "/maps", label: labels.maps, icon: "M" },
+    { href: "/boards", label: "Boards", icon: "B" },
     { href: "/timeline", label: labels.timeline, icon: "T" },
     { href: "/reviews", label: labels.reviews, icon: "R" },
     { href: "/settings", label: labels.settings, icon: "S" }
@@ -64,9 +65,9 @@ export function Sidebar({
           <div className="user-avatar">{userName?.[0]?.toUpperCase() ?? "U"}</div>
           <div className="user-name">{userName ?? "User"}</div>
         </div>
-        <form action="/api/auth/logout" method="post">
+        <form action="/api/auth/logout" method="post" className="logout-form">
           <button type="submit" className="logout-button" title="Logout">
-            {labels.signOut}
+            &times;
           </button>
         </form>
       </div>

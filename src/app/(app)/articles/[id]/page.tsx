@@ -27,9 +27,6 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
 
   const overlayWhere = {
-    // We fetch all relevant overlays to allow switching in the client if we wanted, 
-    // but for now let's respect the filter to keep payload small if needed.
-    // Actually, fetching all non-deleted overlays is better for client-side switching if we implement it later.
     softDeletedAt: null,
   };
 
@@ -48,11 +45,51 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
           revisions: { orderBy: { createdAt: "desc" } },
           activeRevision: true
         }
+      },
+      mainImage: true,
+      parentEntity: { select: { id: true, title: true, type: true } },
+      childEntities: {
+        where: { softDeletedAt: null },
+        select: { id: true, title: true, type: true },
+        take: 20
+      },
+      relationsFrom: {
+        where: { softDeletedAt: null },
+        include: { toEntity: { select: { id: true, title: true, type: true } } },
+        take: 50
+      },
+      relationsTo: {
+        where: { softDeletedAt: null },
+        include: { fromEntity: { select: { id: true, title: true, type: true } } },
+        take: 50
+      },
+      pins: {
+        where: { softDeletedAt: null },
+        include: { map: { select: { id: true, title: true } } },
+        take: 10
       }
     }
   });
 
   if (!entity) return <div className="panel">Not found.</div>;
+
+  // Get related entities for the sidebar
+  const allRelated = [
+    ...entity.relationsFrom.map(r => ({
+      id: r.toEntity.id,
+      title: r.toEntity.title,
+      type: r.toEntity.type,
+      relation: r.relationType,
+      direction: 'to' as const
+    })),
+    ...entity.relationsTo.map(r => ({
+      id: r.fromEntity.id,
+      title: r.fromEntity.title,
+      type: r.fromEntity.type,
+      relation: r.relationType,
+      direction: 'from' as const
+    }))
+  ];
 
   return (
     <>
@@ -75,11 +112,16 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
         targetId={entity.id}
         lastReadRevisionId={entity.article?.baseRevisionId ?? null}
       />
-      
-      <ArticleDetail 
-        entity={entity} 
-        workspaceId={workspace.id} 
-        user={user} 
+
+      <ArticleDetail
+        entity={entity}
+        workspaceId={workspace.id}
+        user={user}
+        mainImage={entity.mainImage}
+        parentEntity={entity.parentEntity}
+        childEntities={entity.childEntities}
+        relatedEntities={allRelated}
+        locations={entity.pins}
       />
     </>
   );

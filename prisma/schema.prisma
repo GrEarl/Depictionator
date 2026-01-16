@@ -277,6 +277,9 @@ model Workspace {
   notifications Notification[]
   readStates  ReadState[]
   sourceRecords SourceRecord[]
+  entityRelations EntityRelation[]
+  mapCards    MapCard[]
+  cardConnections CardConnection[]
 }
 
 model WorkspaceMember {
@@ -304,6 +307,9 @@ model Entity {
   worldExistFrom     String?
   worldExistTo       String?
   storyIntroChapterId String?
+  parentEntityId     String?
+  mainImageId        String?
+  summaryMd          String?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
   createdById        String?
@@ -314,12 +320,17 @@ model Entity {
   storyIntroChapter Chapter? @relation(fields: [storyIntroChapterId], references: [id])
   createdBy User? @relation("EntityCreatedBy", fields: [createdById], references: [id])
   updatedBy User? @relation("EntityUpdatedBy", fields: [updatedById], references: [id])
+  parentEntity Entity? @relation("EntityParent", fields: [parentEntityId], references: [id])
+  childEntities Entity[] @relation("EntityParent")
+  mainImage Asset? @relation("EntityMainImage", fields: [mainImageId], references: [id])
 
   article   Article?
   overlays  ArticleOverlay[]
   viewpoints Viewpoint[]
   pins      Pin[]
   evidenceItems EvidenceItem[]
+  relationsFrom EntityRelation[] @relation("RelationFrom")
+  relationsTo   EntityRelation[] @relation("RelationTo")
 
   @@index([workspaceId, type])
 }
@@ -530,6 +541,8 @@ model Map {
   layers MapLayer[]
   scenes MapScene[]
   citations Citation[]
+  mapCards MapCard[]
+  cardConnections CardConnection[]
 
   @@index([workspaceId])
 }
@@ -670,6 +683,7 @@ model Asset {
   maps      Map[]
   evidenceItems EvidenceItem[]
   references Reference[]
+  entityMainImages Entity[] @relation("EntityMainImage")
 
   @@index([workspaceId])
 }
@@ -965,3 +979,108 @@ model SourceRecord {
   @@index([workspaceId, targetType, targetId])
 }
 
+enum RelationType {
+  member_of
+  allied_with
+  enemy_of
+  parent_of
+  child_of
+  sibling_of
+  located_in
+  owns
+  created_by
+  participated_in
+  related_to
+  custom
+}
+
+model EntityRelation {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  fromEntityId  String
+  toEntityId    String
+  relationType  RelationType
+  customLabel   String?
+  description   String?
+  worldFrom     String?
+  worldTo       String?
+  storyFromChapterId String?
+  storyToChapterId   String?
+  createdAt     DateTime     @default(now())
+  softDeletedAt DateTime?
+
+  workspace  Workspace @relation(fields: [workspaceId], references: [id])
+  fromEntity Entity    @relation("RelationFrom", fields: [fromEntityId], references: [id])
+  toEntity   Entity    @relation("RelationTo", fields: [toEntityId], references: [id])
+
+  @@index([workspaceId, fromEntityId])
+  @@index([workspaceId, toEntityId])
+}
+
+
+
+enum MapCardType {
+  entity
+  article
+  event
+  note
+  image
+}
+
+enum CardConnectionType {
+  timeline
+  causal
+  reference
+  spatial
+}
+
+model MapCard {
+  id          String      @id @default(cuid())
+  workspaceId String
+  mapId       String
+  type        MapCardType
+  title       String
+  content     String?
+  x           Float
+  y           Float
+  width       Float?
+  height      Float?
+  rotation    Float?
+  zIndex      Int?
+  entityId    String?
+  articleId   String?
+  eventId     String?
+  assetId     String?
+  data        Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  map       Map       @relation(fields: [mapId], references: [id])
+  connectionsFrom CardConnection[] @relation("CardConnectionFrom")
+  connectionsTo   CardConnection[] @relation("CardConnectionTo")
+
+  @@index([workspaceId, mapId])
+}
+
+model CardConnection {
+  id          String             @id @default(cuid())
+  workspaceId String
+  mapId       String
+  fromCardId  String
+  toCardId    String
+  type        CardConnectionType @default(timeline)
+  label       String?
+  style       String?
+  data        Json?
+  createdAt   DateTime           @default(now())
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  map       Map       @relation(fields: [mapId], references: [id])
+  fromCard  MapCard   @relation("CardConnectionFrom", fields: [fromCardId], references: [id])
+  toCard    MapCard   @relation("CardConnectionTo", fields: [toCardId], references: [id])
+
+  @@index([workspaceId, mapId])
+}

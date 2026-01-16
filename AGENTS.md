@@ -1,443 +1,351 @@
-﻿# WorldLore Atlas - AGENTS.md (for Codex)
+# Depictionator — AGENTS.md
 
-このリポジトリは、ゲーム開発チーム向けの「世界観設定・資料集約Webアプリ」です。
-記事ビュー（Markdown中心）と地図ビュー（世界地図〜都市地図の階層、ピン＆動線）を核に、
-タイムライン整理（世界史ライン / ゲームストーリーラインを分離）、関係図、PDF出力、
-LLM（Gemini API / Codex CLI exec）統合を提供します。
-
-本プロダクトは **小規模チームが共有利用するため、何らかのサービス（PaaS）またはVPSにデプロイ**して運用します。
+> このファイルは **Depictionator（世界観・資料集約 “Worldbuilding Atlas”）** の改善計画兼、実装時の「正しいやり方」をまとめた **コーディングエージェント向け指示書** です。  
+> 目的は **既存のMVP実装（バックエンド中心・UIは最小）を、非エンジニア（多忙なデザイナー/ライター）が“講習なしで使える”プロダクト品質へ引き上げる** ことです。
 
 ---
 
-## 0. 重要原則（MUST）
+## 0. まず守ること（Non‑negotiables）
 
-### 0.1 データ保全
-- MUST: 破壊的操作（ハード削除、強制上書き、rm -rf 等）をしない。
-- MUST: 削除はソフトデリート＋復元。
-- MUST: 変更履歴（リビジョン）と監査ログ（audit）を全主要オブジェクトに残す。
+### 0.1 ユーザー前提（最重要）
+- 主な利用者は **非エンジニア**。システム講習に時間を割けない。
+- したがってUIは **直感操作（ドラッグ&ドロップ / 直接操作 / すぐ結果が見える）** が必須。
+- “設定画面で頑張る”ではなく、**作業画面で完結**させる（Progressive Disclosure）。
 
-### 0.2 “正史” と “視点情報” を混同しない
-- MUST: 世界の「正史（Canon）」と、キャラクター/陣営が「そう信じている情報（Belief）」を分離して保存できること。
-- MUST: Beliefには「誤認／虚偽／プロパガンダ」を明示できること（信頼できない語り手の表現）。
+### 0.2 破壊しない（データ保全）
+- **ハード削除禁止**。削除はソフトデリート + 復元。
+- 主要オブジェクトは **監査ログ（audit）** と **差分/履歴（revision）** を残す。
+- DBマイグレーションは後方互換を意識し、段階移行（expand → migrate → contract）。
 
-### 0.3 “時代” と “ストーリー進行” を混同しない
-- MUST: 世界史（ワールド時間）と、ゲーム内のストーリー進行（章/シーン順）を別軸として扱う。
-  - 例: フラッシュバックは「ワールド時間は過去」だが「ストーリー進行は後」になり得る。
+### 0.3 “正史”と“視点情報”を混同しない
+- 世界設定には「正史（Canon）」と「登場人物/陣営が信じる情報（Belief）」がある。
+- Beliefには **誤認・虚偽・プロパガンダ** を扱える必要がある（信頼できない語り手）。
 
-### 0.4 外部引用の扱い
-- MUST: Wikipedia/Wikimedia等から引用・画像取り込みをする場合、出典URL・取得日時・作者・ライセンス・クレジット文（TASL等）を保存し、PDFにも出力する。
+### 0.4 Wikipedia / Wikimedia 取り込みはライセンス最優先
+- テキスト/画像の再利用は **出典URL・作者・ライセンス・取得日時** を必ず保存。
+- PDF出力や共有画面では **TASL（Title/Author/Source/License）** 形式でクレジットを必ず出す。
+- “画像”は Commons 由来でもライセンスが個別なので、**画像ごとに**権利情報を保持。
 
-### 0.5 デプロイ運用
-- MUST: Dockerで再現可能（Dockerfile + docker-compose.yml）。
-- MUST: DB/Assetsは永続ボリューム。バックアップ手順をREADMEに記載。
-- MUST: APIキー（Gemini等）はサーバ側で管理し、クライアントへ配布しない。
-
----
-
-## 1. 成果物（ゴール）
-
-### 1.1 MVP（到達状態）
-- サービス or VPS にデプロイできるWebアプリ
-- ワークスペース（プロジェクト）単位でデータ分離
-- 認証（ログイン）と権限（RBAC）
-- 記事（MD）CRUD、テンプレ作成、画像D&D添付
-- 地図CRUD（世界→地域→都市）、ピン、動線（矢印）編集
-- タイムライン
-  - 世界史ライン（World History）
-  - ゲームストーリーライン（Game Storyline / Chapters）
-  - それぞれを区別し、相互リンク可能
-- **グローバルフィルタ**
-  - (A) ワールド時代/日付
-  - (B) ストーリー章/シーン
-  - (C) 視点（キャラ/陣営/プレイヤー/全知=正史）
-  - で、記事・地図・タイムラインの表示が一貫して切り替わる
-- 監査（作成者/編集者/レビュー履歴）、コメント、レビュー（承認/差し戻し）
-- ウォッチ（更新通知）と既読/未読
-- PDF出力（記事＋地図＋年表＋図を任意組み合わせ、目次・クレジット付き）
-- どの画面でもLLMパネルでGemini API / Codex CLI exec を呼べる
-
-### 1.2 非ゴール（MVPではしない）
-- 完全リアルタイム共同編集（Phase2）
-- 複雑な承認ワークフロー（MVPは「レビュー依頼→承認/差し戻し」まで）
-- 公開配布向け（社内運用前提）
+### 0.5 エージェント運用（Codex等）
+- 変更は小さく、1 PR = 1 目的。
+- まず現状把握（既存API/DB/画面の棚卸し）→ 影響範囲 → 実装 → テスト → 仕上げ。
+- “動く”だけでなく、**非エンジニアの操作フロー**を必ず通してから完了とする。
 
 ---
 
-## 2. 技術スタック（提案）
-- TypeScript
-- Web: Next.js（App RouterでもPagesでも可） or React + Node API
-- DB: Postgres（デプロイ前提のためMVPからPostgres推奨）
-- ORM: Prisma 等
-- Assets: S3互換（VPSならMinIO） or ローカル永続ボリューム
-- 地図: Leaflet
-  - 架空地図は画像オーバーレイ（CRS.Simple相当の非地理座標）
-  - 矢印付き動線は PolylineDecorator 相当で実装
-- Markdown:
-  - 編集: MD + 画像D&D
-  - 表示: MDレンダラ（拡張ブロック対応）
-- 図: Mermaid（相関図/組織図）
-- PDF: Puppeteer（HTML/CSS→PDF）
-- 通知: In-app通知（必須） + Email（任意、SMTP設定がある場合）
-- Job実行: 単純には同一プロセスでも可。ただしPDF生成・外部取得・通知送信は将来worker化しやすく設計。
+## 1. 現状の前提（このリポジトリの土台）
+- Next.js + TypeScript を前提（MVPとしてバックエンドのコアがある）。
+- Postgres + Prisma を前提（docker-compose / docker compose が同梱）。
+- PDF出力は Puppeteer を使う（`/api/pdf/export`）。
+- LLMは Gemini（AI Studio / Vertex）と Codex CLI を切り替えられる前提（envで有効化）。
+
+> ここから先の改善は **既存実装を最大限活かす**（全面刷新はしない）。  
+> ただしUX達成のために必要なら、UI側の導線・状態管理・Canvas系コンポーネントは増設する。
 
 ---
 
-## 3. コア概念（“情報の区別” を実現する設計）
+## 2. プロダクトの核（North Star）
+### 2.1 3つの主画面（最優先）
+1. **World View（ワールド俯瞰）**
+   - 入口ダッシュボード：地図 / タイムライン / 主要エンティティ / 最近更新 / “エビデンスボード” を1画面で。
+2. **Article View（記事）**
+   - 1つのエンティティに関する情報を集約（MD保存は維持しつつ、UIはブロック編集で直感化）。
+3. **Map View（地図）**
+   - 架空地図（画像）上にピン/動線/レイヤーを直感配置。章や時代で切り替える。
 
-### 3.1 3つの軸
-本ツールは情報を次の3軸でフィルタリングできる必要がある：
-
-1) **World Time（世界史時間）**
-- Era（時代）で区切る
-- Entityの存在期間、Eventの発生期間、Map要素（ピン/動線）の有効期間を持つ
-
-2) **Story Progress（ストーリー進行）**
-- Chapter/Scene（章/シーン順）で区切る
-- 「プレイヤーがその時点で知ってよい情報」を制御する（ネタバレ防止・演出）
-
-3) **Viewpoint（視点/認識主体）**
-- Player、特定Faction、特定Characterなど
-- 同じ対象でも視点によって “見えている情報” を変える
-- 誤認/虚偽情報（unreliable narrator）も視点ごとに持てる
-
-### 3.2 Canon と Belief
-- Canon: 正史（制作側が採用している正しい設定）
-- Belief: ある視点が信じている情報（正誤を問わない）
-  - truthFlag: canonical / rumor / mistaken / propaganda / unknown
-  - optional: canonicalRef（対応する正史情報への参照）
+### 2.2 “非エンジニアが迷わない”成功条件
+- 「新しい人物を登録 → 参考画像を貼る → 地図に置く → 関連人物と紐付け → PDFに出す」までを **数分で**実行できる。
+- 主要操作は **ドラッグ&ドロップ**で完結：
+  - エンティティを地図へドロップ → ピン作成
+  - 画像/URLを記事へドロップ → 取り込み/引用作成
+  - カードをボードへドロップ → 情報整理
+- システム講習がなくても、**最初の30分で成果物が出る**UI。
 
 ---
 
-## 4. データモデル（MVP必須）
+## 3. データモデル方針（Prisma/DBの“正しい形”）
 
-### 4.1 ワークスペース & ユーザー
-- Workspace
-  - id, name, slug, createdAt
-- User
-  - id, email, name, avatarUrl, createdAt
-- WorkspaceMember
-  - workspaceId, userId, role
-  - role: admin / editor / reviewer / viewer
+> 既存スキーマは尊重しつつ、足りない“運用機能”を拡張する。
 
-### 4.2 エンティティ（世界観の対象）
-- EntityType（最低限）
-  - Nation, Faction, Character, Location, Building, Item, Event, Map, Concept(世界観設定:魔法体系/技術/用語)
-- Entity（共通）
-  - id, workspaceId, type, title, aliases[], tags[]
-  - status: draft / in_review / approved / deprecated
-  - worldExistFrom (nullable), worldExistTo (nullable)   # 世界史上の存在期間
-  - storyIntroChapterId (nullable)                      # ストーリー上の初登場（“知られてよい”開始）
-  - createdAt, updatedAt, createdBy, updatedBy
-  - softDeletedAt (nullable)
+### 3.1 追加（または明確化）すべきコア概念
+- **Workspace / Project**：ゲームタイトル単位。権限もここに紐付く。
+- **Entity**：人物/陣営/国家/場所/アイテム/出来事…（型 + テンプレ + メタ）。
+- **Article**：Entityの本文（保存はMDを維持しつつ、内部はBlock JSONでも可）。
+- **Map / MapLayer / Scene**：
+  - Map：画像地図（世界→地域→都市の階層も可）
+  - MapLayer：時代/視点で出し分ける集合
+  - Scene：章/シーンの「地図状態スナップショット」（表示レイヤー、注目地点、動線）
+- **Perspective（視点）**：Canon / Player / Faction / Character などのレンズ。
+- **Era（時代）**：世界史上の区切り（期間）。“この時代に存在するものだけ”フィルタの基準。
+- **EvidenceBoard**：エビデンス/リファレンス/メモを自由配置するキャンバス。
+- **Reference / Citation**：文献・URL・画像の出典と、記事・ボード・PDFへの紐付け。
+- **AuditLog / Revision**：編集履歴・差分・誰が何をしたか。
+- **Review / Approval**：下書き→レビュー→承認の状態遷移。
+- **Watch / Notification / ReadState**：ウォッチ、更新通知、既読。
 
-### 4.3 記事（Markdown）
-記事は「正史ベース」と「視点/時代/章で切り替わるオーバーレイ」に分ける。
+### 3.2 “正史”と“視点情報”の実装戦略（段階）
+**Phase 1（現実的・すぐ効く）**
+- Canon本文（Article）に対して、視点/時代ごとの **Overlay（追記/注釈）** を別テーブルで持つ。
+  - 例：`ArticleOverlay(articleId, perspectiveId, eraId?, bodyMd, reliability, notes)`
+- UI上は「レンズ選択（Era + Perspective）」で合成表示。
+- “誤認”は Overlay に `reliability = "false_belief"` 等を持たせ、表示上の表現（警告/色/ラベル）で明確化。
 
-- Article
-  - entityId (PK), workspaceId
-  - baseRevisionId（現在の公開/採用リビジョン）
-- ArticleOverlay
-  - overlayId, entityId, workspaceId
-  - viewpointId (nullable: null=Canon overlay)
-  - worldFrom/worldTo (nullable)
-  - storyFromChapterId/storyToChapterId (nullable)
-  - truthFlag（canonical/rumor/mistaken/propaganda/unknown）
-  - title（例: "帝国軍が信じる史実"）
-  - activeRevisionId（現在の採用リビジョン）
-- ArticleRevision
-  - revisionId, targetType: base|overlay, targetId (entityId or overlayId)
-  - bodyMd
-  - changeSummary
-  - createdAt, createdBy
-  - status: draft / submitted / approved / rejected
-  - approvedAt, approvedBy（nullable）
-  - parentRevisionId（差分追跡用）
-
-### 4.4 視点（Viewpoint）
-- Viewpoint
-  - id, workspaceId
-  - type: player / faction / character / omniscient
-  - entityId（faction/characterの場合）
-  - name
-  - description
-
-### 4.5 タイムライン（世界史ライン / ストーリーライン分離）
-- Timeline
-  - id, workspaceId
-  - type: world_history / game_storyline / dev_meta(optional)
-  - name
-- Event（EntityType=Event としても扱えるが、タイムライン機能のため別表でも可）
-  - id, workspaceId, timelineId
-  - title
-  - worldStart/worldEnd（世界史上の日時/時代。MVPはISO文字列+Eraでも可）
-  - storyOrder（ストーリー表示順の数値 or chapterId参照）
-  - summaryMd
-  - involvedEntityIds[]
-  - locationRef: { mapId, pinId?, x?, y? } (nullable)
-  - createdAt, updatedAt, createdBy, updatedBy
-  - softDeletedAt
-
-- Era（世界史の区切り）
-  - id, workspaceId
-  - name
-  - worldStart/worldEnd（MVPは文字列でも可）
-  - sortKey（表示順）
-
-- Chapter（ストーリー進行）
-  - id, workspaceId
-  - name
-  - orderIndex（必須）
-  - description
-
-### 4.6 地図（階層地図 / フィルタ連動）
-- Map
-  - id, workspaceId
-  - title
-  - parentMapId（世界→地域→都市）
-  - imageAssetId
-  - crs: "simple"
-  - bounds: [[y0,x0],[y1,x1]]
-  - createdAt, updatedAt, createdBy, updatedBy
-  - softDeletedAt
-- Pin
-  - id, mapId, workspaceId
-  - x,y
-  - entityId（人物/施設/都市等）
-  - worldFrom/worldTo（nullable）
-  - storyFromChapterId/storyToChapterId（nullable）
-  - viewpointId（nullable: null=正史表示）
-  - truthFlag（canonical/rumor/mistaken/propaganda/unknown）
-  - label, iconKey
-- Path（動線）
-  - id, mapId, workspaceId
-  - polyline: [{x,y}...]
-  - worldFrom/worldTo（nullable）
-  - storyFromChapterId/storyToChapterId（nullable）
-  - viewpointId（nullable）
-  - truthFlag
-  - arrowStyle（矢印/点線等）
-  - relatedEntityIds[]
-  - relatedEventId（nullable）
-
-### 4.7 Assets & クレジット
-- Asset
-  - id, workspaceId
-  - kind: image / file
-  - storageKey, mimeType, size
-  - width,height（画像のみ）
-  - createdAt, createdBy
-  - source:
-    - sourceUrl (nullable)
-    - author (nullable)
-    - licenseId (nullable)
-    - licenseUrl (nullable)
-    - attributionText (nullable)
-    - retrievedAt (nullable)
+**Phase 2（必要になったら）**
+- 記事をブロック化し、ブロック単位に visibility（era/perspective/reliability）を付ける。
+- これはUXと実装コストが跳ねるので、Phase 1で運用が回るか必ず検証してから進める。
 
 ---
 
-## 5. 監査（Audit）・権限（Authority）・レビュー（Review）
+## 4. UX実装の最重要ポイント（ここが弱いと失敗する）
 
-### 5.1 監査ログ（必須）
-- AuditLog
-  - id, workspaceId
-  - actorUserId
-  - action: create/update/delete/restore/submit_review/approve/reject/login/etc
-  - targetType, targetId
-  - meta（差分サマリ、IP等は必要なら）
-  - createdAt
+### 4.1 Map View：直感操作の必須要件
+**“置くだけで動く”**を満たすこと。
 
-MUST:
-- 記事編集は「誰が」「いつ」「どのリビジョンを」「何として（要約）」を追えること。
+- **エンティティ一覧 → 地図へドラッグ → 自動でピン作成**
+- ピンは **ドラッグで移動**、複数選択、スナップ/整列（ガイド）を用意
+- 動線（Path）は **描くだけ**：
+  - “開始地点”→“終点”をクリック/ドラッグで線ができる
+  - 矢印/点線/太さ/色はプリセット（選ぶだけ）
+- 章/シーンでの切替：
+  - Sceneを選ぶと、表示レイヤー/動線/注目地点が復元される
+- 迷子防止：
+  - “現在のレンズ（Era/Perspective）”を常に画面上部に固定表示
 
-### 5.2 RBAC（必須）
-- viewer: 閲覧のみ
-- editor: 下書き作成/編集、レビュー依頼
-- reviewer: 承認/差し戻し
-- admin: メンバー管理、設定、削除復元
+> 架空地図（画像）座標は “地理座標” ではなく “画像座標（ピクセル系）” を基本にする（LeafletのCRS.Simpleなどの方式が典型）。
 
-MUST:
-- “視点情報（Belief）” は誤認を含むため、編集権限を厳しめにできる設計（例: reviewer以上のみ作成可）も可能に。
+### 4.2 Evidence Board：必須（別機能としても、地図のサブとしても）
+- “エビデンスボード”は **当然必要**（要件）。
+- 目的：非エンジニアが **断片情報を置いて、線で繋いで、俯瞰で理解する**。
+- 必須機能：
+  - カード（Entity / 画像 / URL / 引用 / メモ / タグ）を自由配置
+  - 線で接続（矢印/注釈）
+  - グループ化/フレーム（章、陣営、論点、時代…）
+  - 画像の切り抜き/キャプション（軽量で良い）
+  - “このカードの出典”が必ず辿れる（Reference紐付け）
+- 実装候補：
+  - **tldraw**（whiteboard SDK）または **Excalidraw** を埋め込み、カードをカスタム拡張する
+  - もしくは、ノードベースUI（React Flow）で最小を作る
 
-### 5.3 レビュー（必須）
-- ReviewRequest
-  - id, workspaceId
-  - revisionId
-  - requestedBy, requestedAt
-  - assignedReviewerIds[]
-  - status: open/approved/rejected
-- ReviewComment（スレッド式でも可）
-  - id, reviewRequestId, userId, bodyMd, createdAt
+> ただし、ユーザーが求めるのは“ワークフロー図”ではなく“ムードボード/証拠壁”なので、UX的には whiteboard SDK を優先する。
 
-仕様:
-- editorがrevisionを `submitted` にし、reviewerが `approved` にすると、そのrevisionが `activeRevisionId/baseRevisionId` に昇格する。
-- 差し戻しの場合は `rejected`。理由コメント必須。
-
----
-
-## 6. ウォッチ（更新通知）・既読/未読
-
-### 6.1 Watch（必須）
-- Watch
-  - userId, workspaceId
-  - targetType: entity/map/timeline/event/review
-  - targetId
-  - notify: in_app (必須) / email（任意）
-  - createdAt
-
-通知トリガ:
-- 対象が更新（新リビジョン採用/承認）
-- コメントが付いた
-- レビュー依頼が来た / 承認された / 差し戻しされた
-- 自分がメンションされた
-
-### 6.2 Notification（必須）
-- Notification
-  - id, userId, workspaceId
-  - type
-  - payload（target, message, url等）
-  - createdAt
-  - readAt (nullable)
-
-### 6.3 既読（必須）
-- ReadState
-  - userId, workspaceId
-  - targetType, targetId
-  - lastReadAt
-  - lastReadRevisionId（記事の場合）
-
-UI要件:
-- 記事一覧/地図一覧で「未読更新バッジ」を表示（最新採用revision > lastReadRevision）。
-- 記事を開いたら既読にする（設定でOFFも可）。
+### 4.3 Article View：MDを維持しつつ “ブロック編集UX” に寄せる
+- 永続形式はMDでもよいが、編集体験は **Notion / Google Docs寄り**にする：
+  - 画像D&D、カード埋め込み、引用ブロック、脚注/出典
+  - エンティティ参照（@Character 等）でリンク作成
+- 最低限の自動化：
+  - テンプレ（人物/国家/陣営/場所/アイテム）から見出し生成
+  - “関連”の自動抽出（バックリンク、タグ、登場イベント）
 
 ---
 
-## 7. UI/UX要件（MVP）
+## 5. Wikipedia / Wikidata インポート（効率化 + コンプライアンス）
 
-### 7.1 グローバルフィルタ（最重要）
-全画面の上部（固定バー）に以下を置く：
-- World: Era（必須） + 日付/範囲（任意）
-- Story: Chapter（任意。指定時はネタバレ制御が効く）
-- Viewpoint: Omni(Canon) / Player / Faction / Character
-- 表示モード:
-  - Canon（正史のみ）
-  - As Viewpoint（視点情報のみ）
-  - Compare（正史 vs 視点 を左右分割で比較）
+### 5.1 取り込みフロー（UX）
+- 入力：URL または タイトル（言語選択）
+- まず **プレビュー**：
+  - 概要（サマリ）
+  - 代表画像（あれば）
+  - カテゴリ/関連リンク（任意）
+- “取り込み”はワンクリックで：
+  - Entity作成（テンプレ適用）
+  - Articleに引用ブロックとして挿入（必要最小限）
+  - Referenceを自動作成（出典・取得日・ライセンス）
+  - 画像を取り込む場合：画像ごとに author/license/source を保存
 
-### 7.2 記事ビュー
-- 左: エンティティ一覧（type/tags/status、全文検索、未読フィルタ）
-- 右: 記事
-  - 上部に “このページをウォッチ” “既読/未読” “レビュー依頼” “変更履歴”
-  - 表示はグローバルフィルタに従う（base + overlays のうち該当するものだけ）
-- 編集:
-  - base編集（正史ベース）
-  - overlay編集（視点/時代/章/真偽フラグを付けて作成）
-  - 画像D&D→Asset化→MDに自動挿入
-- 履歴:
-  - revision一覧、diff表示、復元（新revisionとして）
+### 5.2 実装（API選定）
+- 基本は **Wikimedia / MediaWiki の REST API** を使う（検索・サマリ・ページ）。
+- 必要に応じて Action API（`action=query`）や Wikidata REST を補助で使う。
+- 取得したデータはキャッシュし、同一URLの連打で外部APIを叩かない。
 
-### 7.3 地図ビュー
-- 地図階層（世界→地域→都市）
-- ピン/動線のCRUD
-- ピン/動線にも overlay 相当のメタ（world/story/viewpoint/truthFlag）があり、グローバルフィルタで出し分ける
-- クリックで関連記事へ、記事側からピンへジャンプ
-- “シーンスナップショット”（表示レイヤー状態保存）はPhase2でも良いが、設計は入れておく
-
-### 7.4 タイムライン
-- タブで timeline type を切替:
-  - World History（世界史）
-  - Game Storyline（ストーリーライン）
-- Event一覧はグローバルフィルタで絞り込み
-- Event→地図位置へジャンプ、関与エンティティへジャンプ
-- 1つのEventに worldStart/worldEnd と storyOrder の両方を持たせられる（回想表現のため）
-
-### 7.5 相関図/組織図
-- Mermaidソースを記事に埋め込み or 専用エンティティで管理
-- フィルタ（時代/視点）により、表示対象エンティティが変わっても破綻しないように “存在しないノードは灰色/非表示” 等のルールを定める（実装簡略化のためMVPは非表示推奨）
-
-### 7.6 LLMパネル（全画面）
-- 右ドロワーで開く
-- プロバイダ切替:
-  - Gemini API
-  - Codex CLI exec（サーバ側）
-- 入力に自動で現在コンテキストを添付:
-  - 開いている記事（base/overlay、フィルタ状態も）
-  - 選択中のピン/動線/イベント
-- 出力は “提案（下書き）” として扱い、勝手に本番反映しない
-- 実行ログを保存（監査対象）
+### 5.3 ライセンス実装（必須）
+- `Reference` と `Asset` に以下を必ず保存：
+  - title / author / sourceUrl / licenseId / licenseUrl / retrievedAt / attributionText
+- PDF出力時は「クレジット一覧ページ」を末尾に自動付与（TASL）。
 
 ---
 
-## 8. PDF出力（印刷セット）
-- “印刷セットビルダー”
-  - 記事、地図（現在フィルタ状態のレンダリング結果）、タイムライン、図を任意に追加
-  - ドラッグで並び替え
-  - 表紙/目次/ページ番号
-  - 外部引用/画像のクレジット一覧（必須）
-- PDFはPuppeteerで生成（サーバ側）
+## 6. 文献管理（Bibliography）と “知識の足場” の作り方
+
+### 6.1 Referenceライブラリ（Zotero-lite）
+- 目的：世界観が大規模化したとき、**根拠が失われない**ようにする。
+- Referenceは URL / 書籍 / PDF / 画像 / 社内資料（ファイル）を扱う。
+- 取り込み：
+  - DOI / BibTeX / RIS / URL / Wikidata などからメタデータ生成（可能なら）
+- UI：
+  - Reference一覧（タグ/著者/年/種類）
+  - Reference詳細（メモ、紐付くEntity/記事/ボード/イベント）
+  - “この情報はどこから来た？”がワンクリックで追える
+
+### 6.2 Citation（記事・PDFと接続）
+- 記事本文に出典を挿入できる（脚注または引用カード）。
+- PDF出力には自動で脚注/文献一覧を生成する。
 
 ---
 
-## 9. デプロイ要件（サービス/VPS）
-MUST:
-- Dockerfile / docker-compose.yml を提供
-- .env.example を用意
-- DBマイグレーション手順
-- 永続化:
-  - Postgres volume
-  - Assets volume（またはS3/MinIO）
-- ヘルスチェック:
-  - GET /health で200
-- バックアップ:
-  - DB dump（cron想定） + Assetsのバックアップ手順をREADMEに記載
+## 7. ナレッジベース（検索・関連・RAG）
 
-推奨:
-- 逆プロキシ（Nginx/Caddy）でTLS終端
-- ログは構造化（JSON）して、VPSならjournald/ファイルで回収できる
+### 7.1 まずは “強い検索” を作る（最優先）
+- 非エンジニアはUIより先に **検索**で詰まる。ここを最速で強化する。
+- 最低限：
+  - タイトル/別名/タグ/本文/出典/画像キャプション を横断検索
+  - 絞り込み：EntityType / Era / Perspective / Status（draft/approved）
+  - 最近更新 / 自分の担当 / ウォッチ中 のクイックフィルタ
 
----
-
-## 10. 実装マイルストーン（推奨）
-
-### Milestone 1: デプロイ可能なスキャフォールド
-- Next.js/Node API + Postgres + 認証 + RBAC
-- Workspace作成/参加
-
-### Milestone 2: Entity/Article 基本 + リビジョン
-- base記事CRUD + revision履歴 + diff/復元
-
-### Milestone 3: Overlay（時代/章/視点）とグローバルフィルタ
-- overlay CRUD
-- Canon / As Viewpoint / Compare 表示
-
-### Milestone 4: 地図 + ピン（フィルタ連動）
-- 地図画像登録、CRS.Simple表示、ピンCRUD、記事リンク
-
-### Milestone 5: 動線 + タイムライン（世界史/ストーリー分離）
-- Path（矢印）+ Event CRUD
-- timeline type 切替、地図連携
-
-### Milestone 6: レビュー/監査/通知/既読
-- ReviewRequest、AuditLog、Watch、Notification、ReadState
-
-### Milestone 7: PDF出力 + LLM統合
-- 印刷セット + Puppeteer
-- Gemini API / Codex CLI exec + 実行ログ + 安全策（allowlist）
+### 7.2 “知識ベース”としての関連性
+- バックリンク（どこから参照されているか）
+- 関連候補（同タグ、同陣営、同地点、同イベント）
+- 余力が出たら：
+  - ベクトル検索（埋め込み）で “意味検索”
+  - LLMによる “要約・比較・矛盾検出” を補助（ただし人が最終判断）
 
 ---
 
-## 11. Codexへの開発ルール
-- 変更は小さく、必ずlint/testを通す
-- DBスキーマ変更は後方互換を意識
-- UIは “フィルタの一貫性” を最優先（記事/地図/タイムラインで挙動がズレない）
-- LLM出力は必ず下書き扱い、監査ログを残す
+## 8. LLM統合（Gemini / Codex CLI）— 正しい組み込み方
+
+### 8.1 UI：常設の LLM パネル
+- どの画面でも開ける右ドロワー（LLM Panel）。
+- “生成して終わり”ではなく、**結果を安全に反映**できることが重要。
+
+### 8.2 生成を安全にする（Structured Output + Tooling）
+- LLMは **JSON Schema 等の構造化出力**を基本にし、アプリ側で検証してから反映する。
+- 例：地図ピン生成、イベント作成、記事テンプレ生成、Reference生成。
+- “自動反映”は必ず段階的に：
+  1) 提案（下書き）生成
+  2) 差分レビュー
+  3) 承認して反映
+
+### 8.3 ログと監査
+- LLM実行ログ：誰が、どのコンテキストで、何を依頼し、何が返り、何を反映したか。
+- 外部APIキーは **絶対にクライアントへ出さない**（サーバ側で保持）。
+
+### 8.4 Codex CLI 実行（サーバ側）
+- `codex` は強力なので、実行は allowlist / timeout / workspace制限を必須にする。
+- 実行結果はすべてログ化し、失敗時に再現できる情報を残す。
 
 ---
 
-## 12. 参考（実装時にリンクとして使う: ※URLはコード内のみ記載）
-- Leaflet: https://leafletjs.com/
-- Leaflet CRS.Simple example: https://leafletjs.com/examples/crs-simple/crs-simple.html
-- Leaflet PolylineDecorator: https://github.com/bbecquet/Leaflet.PolylineDecorator
-- Mermaid: https://mermaid.js.org/
-- Puppeteer PDF: https://pptr.dev/guides/pdf-generation
-- OpenAI Codex AGENTS.md: https://developers.openai.com/codex/guides/agents-md
+## 9. PDF出力（“現場で使える”印刷物）
+
+### 9.1 印刷セット（Print Pack）ビルダー
+- 記事/地図/タイムライン/ボード をドラッグして並べ、テンプレを選んでPDF化。
+- 必須：
+  - 目次
+  - ページ番号
+  - 参照リンク（最低限の内部参照）
+  - クレジット一覧（外部コンテンツ）
+
+### 9.2 実装原則
+- PDFは Puppeteer（HTML/CSS → PDF）を基盤にする。
+- レイアウトは “印刷”が目的：フォント/余白/改ページ制御を持つ。
+
+---
+
+## 10. 運用機能（チーム利用に必要）
+
+### 10.1 権限（RBAC）
+- Workspace単位で：viewer / editor / admin（まずは3段階）
+- 可能なら：EntityType / MapLayer / Perspective ごとに権限を細分化（Phase 2）
+
+### 10.2 レビュー（合意形成）
+- draft → in_review → approved の状態
+- コメント、メンション、差分表示
+- 承認者の記録
+
+### 10.3 ウォッチ/既読/通知
+- Watch：Entity/Article/Map/Board/Event を購読
+- 既読：ユーザー単位で “最後に見たリビジョン” を保持
+- 通知：アプリ内通知 +（必要なら）メール/SlackはPhase 2
+
+---
+
+## 11. 実装ロードマップ（既存実装を引き上げる順番）
+
+> 大事なのは「全部同時にやらない」こと。  
+> まず非エンジニアUXの詰まり（Map/Board/Search）を最優先で解消する。
+
+### Phase 0：棚卸し（必須）
+- 既存DBモデル、API、画面、LLM、PDFの実装を一覧化（1枚でわかるドキュメント）。
+- “今できること/できないこと”をUI視点で整理（ユーザーフローで）。
+
+### Phase 1：UX土台
+- World View（入口）を作る：検索 + 最近更新 + 地図/タイムラインのショートカット
+- レンズ（Era/Perspective）をグローバルUIに固定
+- “新規作成”の導線を統一（テンプレ選択 → 作成 → 次アクション提案）
+
+### Phase 2：Map View をプロダクト品質へ
+- D&Dでピン作成、ドラッグで移動、複数選択
+- 動線（矢印）作成を“描くだけ”に
+- Scene（章）スナップショット
+- フィルタ（Era/Perspective/Layer）
+
+### Phase 3：Evidence Board（必須）
+- Whiteboard SDK 埋め込み（tldraw / Excalidraw など）
+- カード（Entity/Asset/Reference/Note）を配置・接続
+- 出典（Reference）との紐付け
+- ボード→PDF/画像エクスポート
+
+### Phase 4：Wikipedia/Wikidata import
+- URL入力→プレビュー→1クリック取り込み
+- Reference/Asset のライセンス情報自動保存
+- 取り込みテンプレ（人物/地名/組織）へ割当
+
+### Phase 5：文献管理（Reference/Citation）
+- ReferenceライブラリUI
+- 記事本文への引用挿入
+- PDFの文献一覧/クレジット自動生成
+
+### Phase 6：Knowledge Base 強化（検索 + 関連 + RAG）
+- DB全文検索（まずはキーワード）
+- 関連候補、バックリンク
+- 余力でベクトル検索 + LLM補助（要約/比較）
+
+### Phase 7：運用機能（監査/レビュー/通知）
+- AuditLog / Revision の整備
+- Reviewフロー
+- Watch / ReadState / Notification
+
+---
+
+## 12. Definition of Done（必ず満たす）
+
+### 12.1 UX DoD（非エンジニア向け）
+- 主要フロー（人物登録→地図配置→資料貼付→PDF）を、説明なしで辿れる。
+- 失敗しても戻れる（Undo/Cancel/復元、少なくともソフトデリート）。
+- 空状態（データがない）でも次にやることが明確（Empty State設計）。
+
+### 12.2 技術 DoD
+- Prisma migration が安全（本番で壊れない）
+- APIは入力検証（zod等） + 権限チェック + 監査ログ
+- 主要画面にE2E（Playwright等）または最低限の統合テストを追加
+- PDF出力は再現性（フォント/改ページ/クレジット）を担保
+
+---
+
+## 13. すぐ使える開発コマンド（README準拠）
+```bash
+# local
+cp .env.example .env
+docker-compose up -d db
+npm install
+npx prisma generate
+npx prisma migrate dev --name init
+npm run dev
+curl http://localhost:3000/health
+
+# docker (app + db)
+docker compose up --build
+```
+
+---
+
+## 14. エージェントへのお願い（作業の進め方）
+- **必ず最初に**：現状の実装を読んで、既存の流儀（フォルダ構成/命名/パターン）に合わせる。
+- 迷ったら、まずは “UXで詰まっている点（Map/Board/Search）” を優先する。
+- 新規依存を入れる場合は、以下を説明すること：
+  - なぜ必要か（ユーザーフローのどこが改善されるか）
+  - 代替案と比較
+  - ライセンス / バンドルサイズ / 保守性
+
+---
+
+（EOF）

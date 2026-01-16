@@ -42,7 +42,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
   const viewpointFilter = String(resolvedSearchParams.viewpoint ?? "canon");
   const mode = String(resolvedSearchParams.mode ?? "canon");
 
-  const [maps, markerStyles, archivedMaps] = workspace
+  const [maps, markerStyles, archivedMaps, entities] = workspace
     ? await Promise.all([
         prisma.map.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
@@ -59,15 +59,36 @@ export default async function MapsPage({ searchParams }: PageProps) {
         prisma.map.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: { not: null } },
           orderBy: { createdAt: "desc" }
+        }),
+        prisma.entity.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: null },
+          select: { id: true, title: true, type: true },
+          orderBy: { title: "asc" }
         })
       ])
-    : [[], [], []];
+    : [[], [], [], []];
 
   if (!workspace) return <div className="panel">Select a workspace.</div>;
 
   const mapQuery = query.trim().toLowerCase();
   const visibleMaps = mapQuery ? maps.filter((m) => m.title.toLowerCase().includes(mapQuery)) : maps;
   const activeMap = maps.find((m) => m.id === selectedMapId) || maps[0];
+
+  // Build breadcrumb trail (parent hierarchy)
+  const breadcrumbs: { id: string; title: string }[] = [];
+  if (activeMap) {
+    let current = activeMap;
+    breadcrumbs.unshift({ id: current.id, title: current.title });
+    while (current.parentMapId) {
+      const parent = maps.find(m => m.id === current.parentMapId);
+      if (!parent) break;
+      breadcrumbs.unshift({ id: parent.id, title: parent.title });
+      current = parent;
+    }
+  }
+
+  // Get child maps for quick navigation
+  const childMaps = activeMap ? maps.filter(m => m.parentMapId === activeMap.id) : [];
 
   const buildUrl = (overrides: Record<string, string | undefined>) => {
     const params = new URLSearchParams();
@@ -159,12 +180,49 @@ export default async function MapsPage({ searchParams }: PageProps) {
       {/* Pane 2: Center - Map Editor */}
       <main className="pane-center overflow-hidden">
         {activeMap ? (
-          <MapEditorClient
-            map={mapPayload as any}
-            workspaceId={workspace.id}
-            markerStyles={markerStyles as any}
-            locationTypes={LOCATION_TYPES}
-          />
+          <div className="map-editor-wrapper">
+            {/* Map Breadcrumb & Child Navigation */}
+            <div className="map-navigation-bar">
+              <div className="map-breadcrumb">
+                <span className="breadcrumb-label">📍 Location:</span>
+                {breadcrumbs.map((crumb, idx) => (
+                  <span key={crumb.id} className="breadcrumb-item">
+                    {idx > 0 && <span className="breadcrumb-separator">→</span>}
+                    <Link
+                      href={buildUrl({ map: crumb.id })}
+                      className={`breadcrumb-link ${crumb.id === activeMap.id ? 'active' : ''}`}
+                    >
+                      {crumb.title}
+                    </Link>
+                  </span>
+                ))}
+              </div>
+
+              {/* Child Maps Quick Access */}
+              {childMaps.length > 0 && (
+                <div className="child-maps-nav">
+                  <span className="child-maps-label">🔍 Zoom into:</span>
+                  {childMaps.map((child) => (
+                    <Link
+                      key={child.id}
+                      href={buildUrl({ map: child.id })}
+                      className="child-map-chip"
+                      title={`Zoom into ${child.title}`}
+                    >
+                      {child.title}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <MapEditorClient
+              map={mapPayload as any}
+              workspaceId={workspace.id}
+              markerStyles={markerStyles as any}
+              locationTypes={LOCATION_TYPES}
+            />
+          </div>
         ) : (
           <div className="empty-state-centered">
             <div className="hero-icon">Map</div>
@@ -177,6 +235,9 @@ export default async function MapsPage({ searchParams }: PageProps) {
       {/* Pane 3: Right - Actions / Forms */}
       <aside className="pane-right-drawer">
         <div className="pane-header-tabs">
+          <Link href={buildUrl({ tab: "entities" })} className={`tab-link ${tab === "entities" ? "active" : ""}`}>
+            Entities
+          </Link>
           <Link href={buildUrl({ tab: "manage" })} className={`tab-link ${tab === "manage" ? "active" : ""}`}>
             Manage
           </Link>
@@ -189,6 +250,36 @@ export default async function MapsPage({ searchParams }: PageProps) {
         </div>
 
         <div className="drawer-content scroll-content">
+          {tab === "entities" && activeMap && (
+            <div className="p-4">
+              <h4 className="text-xs muted mb-4">DRAG TO MAP</h4>
+              <p className="text-sm mb-4 muted">
+                Drag entities below onto the map to create location pins.
+              </p>
+
+              <div className="entity-list">
+                {entities.slice(0, 50).map((entity) => (
+                  <div
+                    key={entity.id}
+                    className="draggable-item entity-drag-card"
+                    draggable
+                    data-type="entity"
+                    data-id={entity.id}
+                    data-title={entity.title}
+                  >
+                    <span className={`entity-type-tag type-${entity.type}`}>
+                      {entity.type}
+                    </span>
+                    <span className="entity-title">{entity.title}</span>
+                  </div>
+                ))}
+                {entities.length === 0 && (
+                  <div className="muted text-sm">No entities yet. Create some first!</div>
+                )}
+              </div>
+            </div>
+          )}
+
           {tab === "manage" && (
             <>
               <details className="action-details" open>

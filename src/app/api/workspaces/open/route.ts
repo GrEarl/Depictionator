@@ -34,5 +34,5 @@ export async function POST(request: Request) {
   });
 
   const destination = redirectTo || `/workspaces/${workspace.slug}`;
-  return NextResponse.redirect(toRedirectUrl(request, destination));
+  return NextResponse.redirect(toRedirectUrl(request, destination), 303);
 }

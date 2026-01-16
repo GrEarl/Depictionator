@@ -44,6 +44,13 @@ type MapPayload = {
     strokeWidth?: number | null;
     markerStyle?: { color: string } | null;
   }[];
+  events?: {
+    id: string;
+    title: string;
+    worldStart?: string | null;
+    worldEnd?: string | null;
+    storyOrder?: number | null;
+  }[];
 };
 
 type MapEditorProps = {
@@ -104,10 +111,185 @@ export function MapEditor({
 }: MapEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
-  const [mode, setMode] = useState<"select" | "pin" | "path">("select");
+  const [mode, setMode] = useState<"select" | "pin" | "path" | "card">("select");
   const [showImage, setShowImage] = useState(true);
   const [showPins, setShowPins] = useState(true);
   const [showPaths, setShowPaths] = useState(true);
+
+  // Card state - cards on map (evidence/article cards)
+  const [mapCards, setMapCards] = useState<Array<{
+    id: string;
+    x: number;
+    y: number;
+    type: 'entity' | 'article' | 'event' | 'note';
+    title: string;
+    content?: string;
+    entityId?: string;
+    articleId?: string;
+    eventId?: string;
+  }>>([]);
+
+  // Card connections (lines between cards)
+  const [cardConnections, setCardConnections] = useState<Array<{
+    id: string;
+    fromCardId: string;
+    toCardId: string;
+    type: 'timeline' | 'causal' | 'reference';
+    label?: string;
+  }>>([]);
+
+  // Connection mode state
+  const [connectingFromCardId, setConnectingFromCardId] = useState<string | null>(null);
+
+  // Card dragging state
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
+  const [cardDragOffset, setCardDragOffset] = useState({ x: 0, y: 0 });
+
+  // Load cards from DB on mount
+  useEffect(() => {
+    if (!map?.id) return;
+
+    async function loadCardsFromDB() {
+      try {
+        const res = await fetch(`/api/map-cards/load?mapId=${map.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.cards && data.cards.length > 0) {
+            setMapCards(data.cards);
+          }
+          if (data.connections && data.connections.length > 0) {
+            setCardConnections(data.connections);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load cards:', error);
+      }
+    }
+
+    loadCardsFromDB();
+  }, [map?.id]);
+
+  // Save cards to DB
+  const saveCardsToDatabase = useCallback(async () => {
+    if (!map?.id) return;
+
+    try {
+      const res = await fetch('/api/map-cards/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspaceId,
+          mapId: map.id,
+          cards: mapCards,
+          connections: cardConnections
+        })
+      });
+
+      if (res.ok) {
+        alert('Cards saved successfully! ✅');
+      } else {
+        alert('Failed to save cards');
+      }
+    } catch (error) {
+      console.error('Failed to save cards:', error);
+      alert('Error saving cards');
+    }
+  }, [map?.id, workspaceId, mapCards, cardConnections]);
+
+  // Handle card drag
+  const handleCardMouseDown = useCallback((e: React.MouseEvent, card: typeof mapCards[0]) => {
+    if (connectingFromCardId) return; // Don't drag while connecting
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.target as HTMLElement).closest('.evidence-card-on-map')?.getBoundingClientRect();
+    if (!rect) return;
+    setDraggingCardId(card.id);
+    setCardDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+  }, [connectingFromCardId]);
+
+  const handleCardMouseMove = useCallback((e: MouseEvent) => {
+    if (!draggingCardId || !containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const newX = e.clientX - containerRect.left;
+    const newY = e.clientY - containerRect.top;
+
+    setMapCards((prev) =>
+      prev.map((card) =>
+        card.id === draggingCardId
+          ? { ...card, x: newX, y: newY }
+          : card
+      )
+    );
+  }, [draggingCardId]);
+
+  const handleCardMouseUp = useCallback(() => {
+    setDraggingCardId(null);
+  }, []);
+
+  // Add global mouse event listeners for card dragging
+  useEffect(() => {
+    if (draggingCardId) {
+      document.addEventListener('mousemove', handleCardMouseMove);
+      document.addEventListener('mouseup', handleCardMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleCardMouseMove);
+        document.removeEventListener('mouseup', handleCardMouseUp);
+      };
+    }
+  }, [draggingCardId, handleCardMouseMove, handleCardMouseUp]);
+
+  // Auto-arrange events in timeline order
+  const autoArrangeEvents = useCallback(() => {
+    if (!map?.events || map.events.length === 0) {
+      alert('No events found on this map');
+      return;
+    }
+
+    // Sort events by worldStart or storyOrder
+    const sortedEvents = [...map.events].sort((a, b) => {
+      if (a.storyOrder !== null && b.storyOrder !== null) {
+        return a.storyOrder - b.storyOrder;
+      }
+      if (a.worldStart && b.worldStart) {
+        return a.worldStart.localeCompare(b.worldStart);
+      }
+      return 0;
+    });
+
+    // Arrange in a timeline layout (left to right, top to bottom)
+    const startX = 150;
+    const startY = 100;
+    const horizontalGap = 300;
+    const verticalGap = 200;
+    const maxPerRow = 4;
+
+    const newCards = sortedEvents.map((event, index) => {
+      const row = Math.floor(index / maxPerRow);
+      const col = index % maxPerRow;
+
+      return {
+        id: `event-card-${event.id}`,
+        x: startX + col * horizontalGap,
+        y: startY + row * verticalGap,
+        type: 'event' as const,
+        title: event.title,
+        content: event.worldStart || event.storyOrder?.toString(),
+        eventId: event.id
+      };
+    });
+
+    // Create timeline connections
+    const newConnections = sortedEvents.slice(0, -1).map((event, index) => ({
+      id: `timeline-conn-${index}`,
+      fromCardId: `event-card-${event.id}`,
+      toCardId: `event-card-${sortedEvents[index + 1].id}`,
+      type: 'timeline' as const,
+      label: '→'
+    }));
+
+    setMapCards(newCards);
+    setCardConnections(newConnections);
+  }, [map]);
   
   // Selection State
   const [selectedPinId, setSelectedPinId] = useState("");
@@ -277,6 +459,68 @@ export function MapEditor({
           setPinDraft(createPinDraft());
         }
       });
+
+      // Handle entity drag and drop onto map
+      const mapContainer = containerRef.current;
+      const handleDragOver = (e: DragEvent) => {
+        e.preventDefault();
+        e.dataTransfer!.dropEffect = "copy";
+      };
+
+      const handleDrop = async (e: DragEvent) => {
+        e.preventDefault();
+        const type = e.dataTransfer?.getData("type");
+        const entityId = e.dataTransfer?.getData("id");
+        const title = e.dataTransfer?.getData("title");
+
+        if (type === "entity" && entityId && map) {
+          // Get map coordinates from mouse position
+          const containerRect = mapContainer.getBoundingClientRect();
+          const mouseX = e.clientX - containerRect.left;
+          const mouseY = e.clientY - containerRect.top;
+
+          // Convert to Leaflet coordinates
+          const point = mapInstance.containerPointToLatLng([mouseX, mouseY]);
+          const x = Number(point.lng.toFixed(1));
+          const y = Number(point.lat.toFixed(1));
+
+          // If in card mode, create a card instead of pin
+          if (mode === "card") {
+            // Create evidence card on map (visual only for now)
+            const newCard = {
+              id: `card-${Date.now()}`,
+              x: mouseX,
+              y: mouseY,
+              type: 'entity' as const,
+              title: title || "",
+              entityId: entityId
+            };
+            setMapCards((prev) => [...prev, newCard]);
+            return;
+          }
+
+          // Default: Create pin automatically
+          const form = new FormData();
+          form.append("workspaceId", workspaceId);
+          form.append("mapId", map.id);
+          form.append("entityId", entityId);
+          form.append("label", title || "");
+          form.append("x", String(x));
+          form.append("y", String(y));
+          form.append("locationType", defaultLocationType);
+          form.append("truthFlag", "canonical");
+
+          const response = await fetch("/api/pins/create", { method: "POST", body: form });
+          if (response.ok) {
+            window.location.reload();
+          } else {
+            alert("Failed to create pin. Check console for details.");
+          }
+        }
+      };
+
+      mapContainer.addEventListener("dragover", handleDragOver);
+      mapContainer.addEventListener("drop", handleDrop);
     };
 
     void init();
@@ -432,12 +676,34 @@ export function MapEditor({
         >
           Pin
         </button>
-        <button 
+        <button
           className={`tool-btn ${mode === "path" ? "active" : ""}`}
           onClick={() => { setMode("path"); setSelectedPinId(""); }}
           title="Draw Path"
         >
           Path
+        </button>
+        <button
+          className={`tool-btn ${mode === "card" ? "active" : ""}`}
+          onClick={() => { setMode("card"); setSelectedPinId(""); }}
+          title="Place Evidence Card"
+        >
+          📋 Card
+        </button>
+        <div className="toolbar-divider" />
+        <button
+          className="tool-btn tool-btn-special"
+          onClick={autoArrangeEvents}
+          title="Auto-arrange events in timeline order"
+        >
+          ⏱️ Auto Timeline
+        </button>
+        <button
+          className="tool-btn tool-btn-save"
+          onClick={saveCardsToDatabase}
+          title="Save cards and connections to database"
+        >
+          💾 Save
         </button>
         <div className="toolbar-divider" />
         <label title="Show Image">
@@ -490,7 +756,109 @@ export function MapEditor({
 
       {/* Canvas */}
       <div ref={containerRef} className="map-canvas-fullscreen" />
-      
+
+      {/* Evidence Cards Layer - overlay on map */}
+      <div className="map-cards-layer">
+        {/* Connection lines */}
+        <svg className="card-connections-svg" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          <defs>
+            <marker id="arrowhead-timeline" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#f39c12" />
+            </marker>
+            <marker id="arrowhead-causal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+              <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" />
+            </marker>
+          </defs>
+          {cardConnections.map((conn) => {
+            const fromCard = mapCards.find(c => c.id === conn.fromCardId);
+            const toCard = mapCards.find(c => c.id === conn.toCardId);
+            if (!fromCard || !toCard) return null;
+
+            return (
+              <line
+                key={conn.id}
+                x1={fromCard.x}
+                y1={fromCard.y}
+                x2={toCard.x}
+                y2={toCard.y}
+                className={`connection-line ${conn.type}`}
+                stroke={conn.type === 'timeline' ? '#f39c12' : conn.type === 'causal' ? '#e74c3c' : '#95a5a6'}
+                strokeWidth={conn.type === 'timeline' ? 3 : 2}
+                strokeDasharray={conn.type === 'reference' ? '5,5' : 'none'}
+                markerEnd={conn.type === 'causal' ? 'url(#arrowhead-causal)' : conn.type === 'timeline' ? 'url(#arrowhead-timeline)' : 'none'}
+              />
+            );
+          })}
+        </svg>
+
+        {/* Cards */}
+        {mapCards.map((card) => (
+          <div
+            key={card.id}
+            className={`evidence-card-on-map ${connectingFromCardId === card.id ? 'connecting-from' : ''} ${connectingFromCardId && connectingFromCardId !== card.id ? 'connectable' : ''} ${draggingCardId === card.id ? 'dragging' : ''}`}
+            style={{
+              position: 'absolute',
+              left: `${card.x}px`,
+              top: `${card.y}px`,
+              transform: 'translate(-50%, -50%)'
+            }}
+            onMouseDown={(e) => handleCardMouseDown(e, card)}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (connectingFromCardId) {
+                // Complete connection
+                if (connectingFromCardId !== card.id) {
+                  const newConnection = {
+                    id: `conn-${Date.now()}`,
+                    fromCardId: connectingFromCardId,
+                    toCardId: card.id,
+                    type: 'timeline' as const
+                  };
+                  setCardConnections((prev) => [...prev, newConnection]);
+                }
+                setConnectingFromCardId(null);
+              }
+            }}
+          >
+            <div className={`card-header type-${card.type}`}>
+              <span className="card-icon">
+                {card.type === 'entity' && '👤'}
+                {card.type === 'article' && '📄'}
+                {card.type === 'event' && '⚡'}
+                {card.type === 'note' && '📝'}
+              </span>
+              <span className="card-title-text">{card.title}</span>
+              <button
+                className="card-connect-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setConnectingFromCardId(card.id);
+                }}
+                title="Connect to another card"
+              >
+                🔗
+              </button>
+            </div>
+            {card.content && (
+              <div className="card-content-preview">
+                {card.content.slice(0, 100)}...
+              </div>
+            )}
+            <div className="card-tape"></div>
+          </div>
+        ))}
+
+        {/* Connection mode hint */}
+        {connectingFromCardId && (
+          <div className="connection-hint-overlay">
+            Click another card to connect (timeline)
+            <button onClick={() => setConnectingFromCardId(null)} className="cancel-connection-btn">
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Legend */}
       <div className="map-legend floating">
          <strong>Legend</strong>
