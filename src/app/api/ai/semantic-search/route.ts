@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
           softDeletedAt: null,
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
-            { description: { contains: query, mode: 'insensitive' } }
+            { summaryMd: { contains: query, mode: 'insensitive' } }
           ]
         },
         take: Math.floor(limit / 8)
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
           softDeletedAt: null,
           OR: [
             { title: { contains: query, mode: 'insensitive' } },
-            { description: { contains: query, mode: 'insensitive' } }
+            { summaryMd: { contains: query, mode: 'insensitive' } }
           ]
         },
         take: Math.floor(limit / 8)
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         id: e.id,
         type: 'event' as const,
         title: e.title,
-        snippet: `${e.worldStart || 'unknown date'}: ${e.description?.slice(0, 150) || ''}...`,
+        snippet: `${e.worldStart || 'unknown date'}: ${e.summaryMd?.slice(0, 150) || ''}...`,
         score: e.score || 0.5,
         metadata: { worldStart: e.worldStart, worldEnd: e.worldEnd }
       })),
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
         id: m.id,
         type: 'map' as const,
         title: m.title,
-        snippet: m.description?.slice(0, 200) || '',
+        snippet: m.summaryMd?.slice(0, 200) || '',
         score: m.score || 0.5,
         metadata: {}
       }))

@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
         prisma.event.findMany({
           where: {
             workspaceId,
-            participantEntities: { has: focusEntityId }
+            involvedEntityIds: { has: focusEntityId }
           },
           take: 20
         })
@@ -96,7 +96,7 @@ ${a.bodyMd.slice(0, 400)}...
 `).join('\n')}
 
 # Events
-${contextEvents.map(e => `- ${e.title} (${e.worldStart || 'unknown'}): ${e.description || ''}`).join('\n')}
+${contextEvents.map(e => `- ${e.title} (${e.worldStart || 'unknown'}): ${e.summaryMd || ''}`).join('\n')}
 `;
 
     // Call LLM

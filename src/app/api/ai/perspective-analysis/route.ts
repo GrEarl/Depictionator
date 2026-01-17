@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
         where: {
           workspaceId,
           softDeletedAt: null,
-          participantEntities: { has: entityId }
+          involvedEntityIds: { has: entityId }
         },
         take: 10
       }),
@@ -90,11 +90,11 @@ ${relatedEntities.map(e => `- ${e.title} (${e.type})`).join('\n')}
 
 ## Relationships
 ${relationships.map(r =>
-  `- ${r.fromEntityId === entityId ? 'This entity' : 'Other'} → ${r.relationType} → ${r.toEntityId === entityId ? 'This entity' : 'Other'}: ${r.description || ''}`
+  `- ${r.fromEntityId === entityId ? 'This entity' : 'Other'} → ${r.relationType} → ${r.toEntityId === entityId ? 'This entity' : 'Other'}: ${r.summaryMd || ''}`
 ).join('\n')}
 
 ## Related Events
-${relatedEvents.map(e => `- ${e.title} (${e.worldStart || 'unknown'}): ${e.description || ''}`).join('\n')}
+${relatedEvents.map(e => `- ${e.title} (${e.worldStart || 'unknown'}): ${e.summaryMd || ''}`).join('\n')}
 `;
 
     // Generate analysis using LLM

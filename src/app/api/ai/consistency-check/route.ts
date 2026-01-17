@@ -46,11 +46,11 @@ export async function POST(req: NextRequest) {
         select: {
           id: true,
           title: true,
-          description: true,
+          summaryMd: true,
           worldStart: true,
           worldEnd: true,
           storyOrder: true,
-          participantEntities: true
+          involvedEntityIds: true
         },
         take: scope === 'full' ? 100 : 30
       }),
@@ -93,14 +93,14 @@ ${events.sort((a, b) => {
   return 0;
 }).map(e => `
 - ${e.title} (${e.worldStart || 'unknown'} - ${e.worldEnd || 'ongoing'})
-  ${e.description || ''}
-  Participants: ${(e.participantEntities || []).join(', ')}
+  ${e.summaryMd || ''}
+  Participants: ${(e.involvedEntityIds || []).join(', ')}
 `).join('\n')}
 
 ## Relationships
 ${relationships.map(r => `
 - Entity ${r.fromEntityId} → ${r.relationType} → Entity ${r.toEntityId}
-  ${r.description || ''}
+  ${r.summaryMd || ''}
 `).join('\n')}
 `;
 

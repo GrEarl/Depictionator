@@ -16,7 +16,14 @@
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nfeat: 地図統合機能 - すべての情報を地図上に集約\n\n## 🎯 主要機能\n- 地図上に証拠カード配置（刑事ドラマ風デザイン）\n- カード間の接続線（時系列/因果/参照）\n- カードのドラッグ＆ドロップ移動\n- Event自動配置（時系列順）\n- DB永続化（MapCard/CardConnection）\n- グローバルレンズUI（Era/Perspective表示）\n- 地図階層化ナビゲーション\n- World Viewダッシュボード改善\n\n## 📦 技術的変更\n- Prismaスキーマ：MapCard/CardConnectionモデル追加\n- API：/api/map-cards/{save,load}エンドポイント\n- MapEditor：DB連携・保存ボタン追加\n- CSS：刑事ドラマ風スタイル（紙・ピン・テープ）\n\n## 🚀 次のステップ\n- 同時共同編集機能\n- サーバーデプロイ\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git push:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(codex run:*)",
+      "Bash(sshpass -p 'rl7Sh5R2D\\)@Uj1' ssh -o StrictHostKeyChecking=no root@38.109.11.200 \"cd /root && if [ -d Depictionator ]; then echo ''Repository exists''; else echo ''Repository not found''; fi && ls -la | grep -i depic\")",
+      "Bash(ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no root@38.109.11.200 \"echo ''rl7Sh5R2D\\)@Uj1'' | sudo -S whoami && cd /root && ls -la | grep -i depic\")",
+      "Bash(ssh:*)",
+      "Bash(npm install)",
+      "Bash(find:*)"
     ]
   }
 }

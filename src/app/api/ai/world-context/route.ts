@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         select: {
           id: true,
           title: true,
-          description: true,
+          summaryMd: true,
           worldStart: true,
           worldEnd: true,
           storyOrder: true

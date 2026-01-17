@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
         }),
         prisma.event.findMany({
           where: { workspaceId, softDeletedAt: null },
-          select: { id: true, title: true, description: true, worldStart: true },
+          select: { id: true, title: true, summaryMd: true, worldStart: true },
           take: 30
         })
       ]);
@@ -46,7 +46,7 @@ ${entities.map(e => `- [${e.type}] ${e.title}${e.aliases ? ` (別名: ${e.aliase
 ${articles.map(a => `- ${a.title}\n  ${a.bodyMd.slice(0, 200)}...`).join('\n\n')}
 
 ## Events (${events.length} total)
-${events.map(e => `- ${e.title} (${e.worldStart || 'unknown date'})${e.description ? `\n  ${e.description.slice(0, 150)}...` : ''}`).join('\n\n')}
+${events.map(e => `- ${e.title} (${e.worldStart || 'unknown date'})${e.summaryMd ? `\n  ${e.summaryMd.slice(0, 150)}...` : ''}`).join('\n\n')}
 
 ---
 
