@@ -29,12 +29,17 @@ module.exports = {
       },
       colors: {
         ink: 'var(--ink)',
+        'ink-secondary': 'var(--ink-secondary)',
         muted: 'var(--muted)',
         bg: 'var(--bg)',
+        'bg-elevated': 'var(--bg-elevated)',
         panel: 'var(--panel)',
+        'panel-accent': 'var(--panel-accent)',
         accent: 'var(--accent)',
         'accent-hover': 'var(--accent-hover)',
+        'accent-secondary': 'var(--accent-secondary)',
         border: 'var(--border)',
+        'border-accent': 'var(--border-accent)',
         ring: 'var(--ring)',
       },
       animation: {
