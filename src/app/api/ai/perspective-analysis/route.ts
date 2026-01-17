@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Load perspective info
-    const perspective = await prisma.perspective.findUnique({
+    const perspective = await prisma.viewpoint.findUnique({
       where: { id: perspectiveId },
       include: {
         entity: true
