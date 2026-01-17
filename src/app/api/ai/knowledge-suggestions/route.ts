@@ -56,7 +56,13 @@ export async function POST(req: NextRequest) {
       // Focus on specific article
       const article = await prisma.articleRevision.findUnique({
         where: { id: focusArticleId },
-        include: { entity: true }
+        include: {
+          article: {
+            include: {
+              entity: true
+            }
+          }
+        }
       });
 
       if (!article) {
@@ -64,7 +70,7 @@ export async function POST(req: NextRequest) {
       }
 
       contextArticles = [article];
-      contextEntities = article.entity ? [article.entity] : [];
+      contextEntities = article.article?.entity ? [article.article.entity] : [];
       contextEvents = [];
     } else {
       // General suggestions for entire workspace
