@@ -1,5 +1,5 @@
 ﻿import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { VisualTimeline } from "@/components/VisualTimeline";

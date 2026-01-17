@@ -1,7 +1,7 @@
 ﻿import Link from "next/link";
 import { FilterSummary } from "@/components/FilterSummary";
 import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { MarkdownEditor } from "@/components/MarkdownEditor";

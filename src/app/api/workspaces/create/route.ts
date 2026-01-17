@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { toRedirectUrl } from "@/lib/redirect";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { slugify } from "@/lib/slug";
 import { SESSION_COOKIE } from "@/lib/auth";
 

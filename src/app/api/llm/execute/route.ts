@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";

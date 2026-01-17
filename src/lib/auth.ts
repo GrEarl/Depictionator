@@ -1,7 +1,7 @@
 ﻿import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import type { NextResponse } from "next/server";
 
 export const SESSION_COOKIE = "wl_session";

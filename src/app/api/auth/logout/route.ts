@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { toRedirectUrl } from "@/lib/redirect";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { clearSessionCookie, SESSION_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
 

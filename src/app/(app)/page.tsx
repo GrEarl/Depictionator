@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getCurrentSession, requireUser } from "@/lib/auth";
 import { LlmContext } from "@/components/LlmContext";
 import { getLocaleFromCookies } from "@/lib/locale";

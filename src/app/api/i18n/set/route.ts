@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireApiSession, apiError } from "@/lib/api";
 import { normalizeLocale, setLocaleCookie } from "@/lib/locale";
 import { logAudit } from "@/lib/audit";

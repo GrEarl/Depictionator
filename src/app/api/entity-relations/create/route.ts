@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireWorkspaceRole } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
 

@@ -4,7 +4,7 @@ import { LlmPanel } from "@/components/LlmPanel";
 import { Sidebar } from "@/components/Sidebar";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
 import { requireUser } from "@/lib/auth";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { getLocaleFromCookies } from "@/lib/locale";
 import { getUiCopy } from "@/lib/i18n";

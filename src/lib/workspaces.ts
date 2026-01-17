@@ -1,4 +1,4 @@
-﻿import { prisma } from "@/lib/db";
+﻿import { prisma } from "@/lib/prisma";
 import { getCurrentSession } from "@/lib/auth";
 
 export async function getActiveWorkspace(userId: string) {

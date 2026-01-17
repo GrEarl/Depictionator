@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { toRedirectUrl } from "@/lib/redirect";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { toRedirectUrl } from "@/lib/redirect";
 import { cookies } from "next/headers";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE } from "@/lib/auth";
 
 export async function POST(request: Request) {

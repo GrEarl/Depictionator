@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { toRedirectUrl } from "@/lib/redirect";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";

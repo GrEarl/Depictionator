@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import puppeteer from "puppeteer";
 import { Buffer } from "node:buffer";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 
 type AssetSummary = {
   storageKey: string;

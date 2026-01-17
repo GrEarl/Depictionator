@@ -1,7 +1,7 @@
 ﻿import { diffLines } from "diff";
 import { requireUser } from "@/lib/auth";
 import { requireWorkspaceRole } from "@/lib/rbac";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { LlmContext } from "@/components/LlmContext";
 
 type PageProps = { params: Promise<{ id: string }> };

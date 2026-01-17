@@ -3,7 +3,7 @@ import puppeteer from "puppeteer";
 import { readFile } from "fs/promises";
 import { Buffer } from "node:buffer";
 import path from "path";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { requireApiSession, apiError, requireWorkspaceAccess } from "@/lib/api";
 type EntitySummary = {
   title: string;

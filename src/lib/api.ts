@@ -1,6 +1,6 @@
 ﻿import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { SESSION_COOKIE } from "@/lib/auth";
 import { requireWorkspaceRole } from "@/lib/rbac";
 

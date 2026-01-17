@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { toRedirectUrl } from "@/lib/redirect";
-import { prisma } from "@/lib/db";
+import { prisma } from "@/lib/prisma";
 import { EntityType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { parseCsv, parseOptionalString } from "@/lib/forms";
