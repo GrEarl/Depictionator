@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       const entity = await prisma.entity.findUnique({
         where: { id: focusEntityId },
         include: {
-          articles: { where: { status: 'approved' }, take: 1 }
+          article: true
         }
       });
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
           },
           take: 30
         }),
-        entity.articles,
+        entity.article ? Promise.resolve([entity.article]) : Promise.resolve([]),
         prisma.event.findMany({
           where: {
             workspaceId,

@@ -34,9 +34,10 @@ export async function POST(req: NextRequest) {
     const entity = await prisma.entity.findUnique({
       where: { id: entityId },
       include: {
-        articles: {
-          where: { status: 'approved' },
-          take: 1
+        article: {
+          include: {
+            baseRevision: true
+          }
         }
       }
     });
@@ -83,7 +84,7 @@ export async function POST(req: NextRequest) {
     const worldContext = `
 # Entity: ${entity.title}
 Type: ${entity.type}
-${entity.articles[0]?.bodyMd ? `\n## Canon Information\n${entity.articles[0].bodyMd}\n` : ''}
+${entity.article?.baseRevision?.bodyMd ? `\n## Canon Information\n${entity.article.baseRevision.bodyMd}\n` : ''}
 
 ## Related Entities
 ${relatedEntities.map(e => `- ${e.title} (${e.type})`).join('\n')}
