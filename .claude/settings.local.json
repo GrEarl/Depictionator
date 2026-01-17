@@ -24,7 +24,8 @@
       "Bash(ssh:*)",
       "Bash(npm install)",
       "Bash(find:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

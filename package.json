@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "@prisma/client": "^7.2.0",
-    "@prisma/adapter-pg": "^7.2.0",
+    "@prisma/adapter-pg": "^6.6.0",
+    "@prisma/client": "^6.6.0",
     "bcryptjs": "^2.4.3",
     "diff": "^7.0.0",
     "leaflet": "^1.9.4",
@@ -43,7 +43,7 @@
     "@types/react-dom": "^19.2.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^16.1.2",
-    "prisma": "^7.2.0",
+    "prisma": "^6.6.0",
     "typescript": "^5.7.0"
   }
 }
