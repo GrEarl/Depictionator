@@ -78,7 +78,7 @@ ${entities.map(e => `- [${e.type}] ${e.title} (ID: ${e.id})`).join('\n')}
 
 ## Articles & Lore
 ${articles.map(a => `
-### ${a.title} (Entity ID: ${a.entityId || 'N/A'})
+### ${a.title} (Article ID: ${a.articleId || 'N/A'})
 ${a.bodyMd.slice(0, 500)}...
 `).join('\n')}
 
