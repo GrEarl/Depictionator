@@ -1,4 +1,14 @@
 internal.copiqta.com {
   encode gzip
-  reverse_proxy app:3000
+
+  # Use Cloudflare Origin Certificate
+  tls /certs/cloudflare-origin.pem /certs/cloudflare-origin.key
+
+  reverse_proxy app:3000 {
+    header_up Host {host}
+    header_up X-Real-IP {remote}
+    header_up X-Forwarded-For {remote}
+    header_up X-Forwarded-Proto {scheme}
+    header_up X-Forwarded-Host {host}
+  }
 }

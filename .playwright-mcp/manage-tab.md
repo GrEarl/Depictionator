@@ -1,0 +1,142 @@
+### Page state
+- Page URL: https://internal.copiqta.com/maps?era=all&chapter=all&viewpoint=canon&mode=canon&map=cmki8frf60009l43uausp5hgj&tab=manage
+- Page Title: Depictionator
+- Page Snapshot:
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e4]:
+        - link "Depictionator" [ref=e5] [cursor=pointer]:
+          - /url: /
+        - generic [ref=e6]: Test World
+      - navigation [ref=e7]:
+        - link "🏠 ダッシュボード" [ref=e8] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e9]: 🏠
+          - generic [ref=e10]: ダッシュボード
+        - link "🤖 AI Assistant" [ref=e11] [cursor=pointer]:
+          - /url: /ai
+          - generic [ref=e12]: 🤖
+          - generic [ref=e13]: AI Assistant
+        - link "📝 記事" [ref=e14] [cursor=pointer]:
+          - /url: /articles
+          - generic [ref=e15]: 📝
+          - generic [ref=e16]: 記事
+        - link "🗺️ 地図" [ref=e17] [cursor=pointer]:
+          - /url: /maps
+          - generic [ref=e18]: 🗺️
+          - generic [ref=e19]: 地図
+        - link "📋 Boards" [ref=e20] [cursor=pointer]:
+          - /url: /boards
+          - generic [ref=e21]: 📋
+          - generic [ref=e22]: Boards
+        - link "⏱️ 年表" [ref=e23] [cursor=pointer]:
+          - /url: /timeline
+          - generic [ref=e24]: ⏱️
+          - generic [ref=e25]: 年表
+        - link "✅ レビュー" [ref=e26] [cursor=pointer]:
+          - /url: /reviews
+          - generic [ref=e27]: ✅
+          - generic [ref=e28]: レビュー
+        - link "⚙️ 設定" [ref=e29] [cursor=pointer]:
+          - /url: /settings
+          - generic [ref=e30]: ⚙️
+          - generic [ref=e31]: 設定
+      - generic [ref=e32]:
+        - generic [ref=e33]:
+          - generic [ref=e34]: A
+          - generic [ref=e35]: Admin
+        - button "×" [ref=e37] [cursor=pointer]
+    - generic [ref=e38]:
+      - banner [ref=e39]:
+        - generic [ref=e40]:
+          - generic [ref=e41]:
+            - generic [ref=e42]: "🔭 Current Lens:"
+            - generic [ref=e44]:
+              - generic [ref=e45]: ✨
+              - text: 正史 (All Time)
+          - generic [ref=e47]:
+            - generic [ref=e48]:
+              - generic [ref=e49]: 時代
+              - combobox [ref=e50] [cursor=pointer]:
+                - option "全時代" [selected]
+            - generic [ref=e51]:
+              - generic [ref=e52]: 章
+              - combobox [ref=e53] [cursor=pointer]:
+                - option "全章" [selected]
+          - generic [ref=e55]:
+            - generic [ref=e56]:
+              - generic [ref=e57]: 視点
+              - combobox [ref=e58] [cursor=pointer]:
+                - option "全知（正史）" [selected]
+            - generic [ref=e59]:
+              - generic [ref=e60]: モード
+              - combobox [ref=e61] [cursor=pointer]:
+                - option "正史" [selected]
+                - option "視点"
+                - option "比較"
+        - 'button "言語: JA" [ref=e64] [cursor=pointer]'
+      - generic [ref=e66]:
+        - complementary [ref=e67]:
+          - generic [ref=e68]:
+            - heading "Maps (1)" [level=3] [ref=e69]
+            - textbox "Search maps..." [ref=e71]
+          - 'link "Map: Test World Map" [ref=e75] [cursor=pointer]':
+            - /url: "?era=all&chapter=all&viewpoint=canon&mode=canon&map=cmki8frf60009l43uausp5hgj&tab=manage"
+        - main [ref=e76]:
+          - generic [ref=e77]:
+            - generic [ref=e79]:
+              - generic [ref=e80]: "📍 Location:"
+              - generic [ref=e81]:
+                - link "Test World Map":
+                  - /url: "?era=all&chapter=all&viewpoint=canon&mode=canon&map=cmki8frf60009l43uausp5hgj&tab=manage"
+            - generic [ref=e82]:
+              - generic [ref=e83]:
+                - button "Select" [ref=e84] [cursor=pointer]
+                - button "Pin" [ref=e85] [cursor=pointer]
+                - button "Path" [ref=e86] [cursor=pointer]
+                - button "📋 Card" [ref=e87] [cursor=pointer]
+                - button "⏱️ Auto Timeline" [ref=e89] [cursor=pointer]
+                - button "💾 Save" [ref=e90] [cursor=pointer]
+                - generic "Show Image" [ref=e92]:
+                  - checkbox "Image" [checked] [ref=e93]
+                  - text: Image
+                - generic "Show Pins" [ref=e94]:
+                  - checkbox "Pins" [checked] [ref=e95]
+                  - text: Pins
+                - generic "Show Paths" [ref=e96]:
+                  - checkbox "Paths" [checked] [ref=e97]
+                  - text: Paths
+              - button [ref=e99] [cursor=pointer]
+              - generic:
+                - img
+              - strong [ref=e101]: Legend
+        - complementary [ref=e102]:
+          - generic [ref=e103]:
+            - link "Entities" [ref=e104] [cursor=pointer]:
+              - /url: "?era=all&chapter=all&viewpoint=canon&mode=canon&map=cmki8frf60009l43uausp5hgj&tab=entities"
+            - link "Manage" [ref=e105] [cursor=pointer]:
+              - /url: "?era=all&chapter=all&viewpoint=canon&mode=canon&map=cmki8frf60009l43uausp5hgj&tab=manage"
+            - link "Styles" [ref=e106] [cursor=pointer]:
+              - /url: "?era=all&chapter=all&viewpoint=canon&mode=canon&map=cmki8frf60009l43uausp5hgj&tab=styles"
+            - link "Wiki" [ref=e107] [cursor=pointer]:
+              - /url: "?era=all&chapter=all&viewpoint=canon&mode=canon&map=cmki8frf60009l43uausp5hgj&tab=wiki"
+          - generic [ref=e108]:
+            - group [ref=e109]:
+              - generic "Map Settings" [ref=e110] [cursor=pointer]
+              - generic [ref=e111]:
+                - generic [ref=e112]:
+                  - text: Title
+                  - textbox "Title" [ref=e113]: Test World Map
+                - generic [ref=e114]:
+                  - text: Image Asset ID
+                  - textbox "Image Asset ID" [ref=e115]
+                - button "Update Map" [ref=e116] [cursor=pointer]
+            - group [ref=e117]:
+              - generic "Create New Map" [ref=e118] [cursor=pointer]
+              - option "None" [selected]
+              - option "Test World Map"
+    - button "LLM" [ref=e120] [cursor=pointer]
+  - alert [ref=e121]
+```

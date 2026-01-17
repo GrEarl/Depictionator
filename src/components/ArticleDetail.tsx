@@ -89,134 +89,46 @@ export function ArticleDetail({
   }, {} as Record<string, RelatedEntity[]>);
 
   return (
-    <div className="article-container wiki-style">
-      {/* Header */}
-      <div className="article-header">
-        <div className="article-title-row">
-          <div>
-            {parentEntity && (
-              <div className="article-breadcrumb">
-                <Link href={`/articles/${parentEntity.id}`}>{parentEntity.title}</Link>
-                <span className="breadcrumb-sep">/</span>
-              </div>
-            )}
-            <h1>{displayTitle}</h1>
-            {entity.aliases?.length > 0 && (
-              <div className="article-aliases">
-                Also known as: {entity.aliases.join(", ")}
-              </div>
-            )}
-          </div>
-          <div className="article-badges">
-            <span className={`badge type-${entity.type.toLowerCase()}`}>{entity.type}</span>
-            <span className={`badge status-${entity.status}`}>{entity.status}</span>
-            {activeOverlay && <span className="badge overlay">Viewpoint</span>}
-            {!publishedRevision && latestRevision && <span className="badge status-draft">Draft</span>}
-          </div>
-        </div>
-        <div className="article-tabs">
-          {(["read", "edit", "history", "relations"] as const).map((t) => (
-            <button
-              key={t}
-              className={`tab-btn ${tab === t ? "active" : ""}`}
-              onClick={() => setTab(t)}
-            >
-              {t === "relations" ? "Relations" : t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="article-layout-wiki">
-        {/* Infobox (Right sidebar in wiki style) */}
-        <aside className="article-infobox">
-          {/* Main Image */}
-          {mainImage && (
-            <div className="infobox-image">
-              <img
-                src={`/api/assets/file/${mainImage.id}`}
-                alt={entity.title}
-              />
-            </div>
-          )}
-          {!mainImage && (
-            <div className="infobox-image-placeholder">
-              <span>{entity.type.charAt(0)}</span>
-            </div>
-          )}
-
-          <h3 className="infobox-title">{entity.title}</h3>
-
-          <table className="infobox-table">
-            <tbody>
-              <tr>
-                <th>Type</th>
-                <td>{entity.type}</td>
-              </tr>
-              <tr>
-                <th>Status</th>
-                <td>{entity.status}</td>
-              </tr>
-              {entity.worldExistFrom && (
-                <tr>
-                  <th>Active Period</th>
-                  <td>{entity.worldExistFrom} - {entity.worldExistTo || "Present"}</td>
-                </tr>
-              )}
-              {entity.tags?.length > 0 && (
-                <tr>
-                  <th>Tags</th>
-                  <td>
-                    {entity.tags.map((tag: string) => (
-                      <span key={tag} className="tag-chip">{tag}</span>
-                    ))}
-                  </td>
-                </tr>
-              )}
+    <>
+      {/* Center Pane: Content */}
+      <main className="pane-center">
+        <div className="article-header">
+          <div className="article-title-row">
+            <div>
               {parentEntity && (
-                <tr>
-                  <th>Parent</th>
-                  <td>
-                    <Link href={`/articles/${parentEntity.id}`} className="entity-link">
-                      {parentEntity.title}
-                    </Link>
-                  </td>
-                </tr>
+                <div className="article-breadcrumb">
+                  <Link href={`/articles/${parentEntity.id}`}>{parentEntity.title}</Link>
+                  <span className="breadcrumb-sep">/</span>
+                </div>
               )}
-              {locations && locations.length > 0 && (
-                <tr>
-                  <th>Locations</th>
-                  <td>
-                    {locations.filter(l => l.map).map((loc) => (
-                      <Link
-                        key={loc.id}
-                        href={`/maps?map=${loc.map?.id}`}
-                        className="entity-link"
-                      >
-                        {loc.map?.title}
-                      </Link>
-                    ))}
-                  </td>
-                </tr>
+              <h1>{displayTitle}</h1>
+              {entity.aliases?.length > 0 && (
+                <div className="article-aliases">
+                  Also known as: {entity.aliases.join(", ")}
+                </div>
               )}
-            </tbody>
-          </table>
-
-          {/* Quick Actions */}
-          <div className="infobox-actions">
-            <form action="/api/entities/update" method="post" className="inline-form">
-              <input type="hidden" name="workspaceId" value={workspaceId} />
-              <input type="hidden" name="entityId" value={entity.id} />
-              <label className="file-upload-label">
-                <span>Set Main Image</span>
-                <input type="file" name="mainImage" accept="image/*" />
-              </label>
-            </form>
+            </div>
+            <div className="article-badges">
+              <span className={`badge type-${entity.type.toLowerCase()}`}>{entity.type}</span>
+              <span className={`badge status-${entity.status}`}>{entity.status}</span>
+              {activeOverlay && <span className="badge overlay">Viewpoint</span>}
+              {!publishedRevision && latestRevision && <span className="badge status-draft">Draft</span>}
+            </div>
           </div>
-        </aside>
+          <div className="article-tabs">
+            {(["read", "edit", "history", "relations"] as const).map((t) => (
+              <button
+                key={t}
+                className={`tab-btn ${tab === t ? "active" : ""}`}
+                onClick={() => setTab(t)}
+              >
+                {t === "relations" ? "Relations" : t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
 
-        {/* Main Content */}
-        <main className="article-main-content">
+        <div className="article-main-content">
           {tab === "read" && (
             <>
               {/* Summary/Lead section */}
@@ -462,8 +374,105 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
               )}
             </div>
           )}
-        </main>
-      </div>
-    </div>
+        </div>
+      </main>
+
+      {/* Right Pane: Infobox / Metadata */}
+      <aside className="pane-right-drawer">
+         <div className="pane-header">
+           <h3>Infobox</h3>
+         </div>
+         <div className="drawer-content p-4">
+          {/* Main Image */}
+          {mainImage && (
+            <div className="infobox-image">
+              <img
+                src={`/api/assets/file/${mainImage.id}`}
+                alt={entity.title}
+              />
+            </div>
+          )}
+          {!mainImage && (
+            <div className="infobox-image-placeholder">
+              <span>{entity.type.charAt(0)}</span>
+            </div>
+          )}
+
+          <h3 className="infobox-title">{entity.title}</h3>
+
+          <table className="infobox-table">
+            <tbody>
+              <tr>
+                <th>Type</th>
+                <td>{entity.type}</td>
+              </tr>
+              <tr>
+                <th>Status</th>
+                <td>{entity.status}</td>
+              </tr>
+              {entity.worldExistFrom && (
+                <tr>
+                  <th>Active Period</th>
+                  <td>{entity.worldExistFrom} - {entity.worldExistTo || "Present"}</td>
+                </tr>
+              )}
+              {entity.tags?.length > 0 && (
+                <tr>
+                  <th>Tags</th>
+                  <td>
+                    {entity.tags.map((tag: string) => (
+                      <span key={tag} className="tag-chip">{tag}</span>
+                    ))}
+                  </td>
+                </tr>
+              )}
+              {parentEntity && (
+                <tr>
+                  <th>Parent</th>
+                  <td>
+                    <Link href={`/articles/${parentEntity.id}`} className="entity-link">
+                      {parentEntity.title}
+                    </Link>
+                  </td>
+                </tr>
+              )}
+              {locations && locations.length > 0 && (
+                <tr>
+                  <th>Locations</th>
+                  <td>
+                    {locations.filter(l => l.map).map((loc) => (
+                      <Link
+                        key={loc.id}
+                        href={`/maps?map=${loc.map?.id}`}
+                        className="entity-link"
+                      >
+                        {loc.map?.title}
+                      </Link>
+                    ))}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+
+          {/* Quick Actions */}
+          <div className="infobox-actions">
+            <details className="action-details">
+               <summary>Actions</summary>
+               <div className="p-2">
+                  <form action="/api/entities/update" method="post" className="form-grid">
+                    <input type="hidden" name="workspaceId" value={workspaceId} />
+                    <input type="hidden" name="entityId" value={entity.id} />
+                    <label className="file-upload-label">
+                      <span>Upload Main Image</span>
+                      <input type="file" name="mainImage" accept="image/*" />
+                    </label>
+                  </form>
+               </div>
+            </details>
+          </div>
+        </div>
+      </aside>
+    </>
   );
 }

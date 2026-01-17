@@ -4,6 +4,8 @@ import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import { AutoMarkRead } from "@/components/AutoMarkRead";
 import { ArticleDetail } from "@/components/ArticleDetail";
+import { ArticleList } from "@/components/ArticleList";
+import { getFilteredEntities } from "@/lib/data/articles";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -25,53 +27,72 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   const viewpoint = String(resolvedSearchParams.viewpoint ?? "canon");
   const eraFilter = String(resolvedSearchParams.era ?? "all");
   const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
+  const query = String(resolvedSearchParams.q ?? "").trim();
+  const typeFilter = String(resolvedSearchParams.type ?? "all");
 
-  const overlayWhere = {
-    softDeletedAt: null,
-  };
-
-  const entity = await prisma.entity.findUnique({
-    where: { id },
-    include: {
-      article: {
-        include: {
-          revisions: { orderBy: { createdAt: "desc" } },
-          baseRevision: true
+  const [entity, entities] = await Promise.all([
+    prisma.entity.findUnique({
+      where: { id },
+      include: {
+        article: {
+          include: {
+            revisions: { orderBy: { createdAt: "desc" } },
+            baseRevision: true
+          }
+        },
+        overlays: {
+          where: { softDeletedAt: null },
+          include: {
+            revisions: { orderBy: { createdAt: "desc" } },
+            activeRevision: true
+          }
+        },
+        mainImage: true,
+        parentEntity: { select: { id: true, title: true, type: true } },
+        childEntities: {
+          where: { softDeletedAt: null },
+          select: { id: true, title: true, type: true },
+          take: 20
+        },
+        relationsFrom: {
+          where: { softDeletedAt: null },
+          include: { toEntity: { select: { id: true, title: true, type: true } } },
+          take: 50
+        },
+        relationsTo: {
+          where: { softDeletedAt: null },
+          include: { fromEntity: { select: { id: true, title: true, type: true } } },
+          take: 50
+        },
+        pins: {
+          where: { softDeletedAt: null },
+          include: { map: { select: { id: true, title: true } } },
+          take: 10
         }
-      },
-      overlays: {
-        where: overlayWhere,
-        include: {
-          revisions: { orderBy: { createdAt: "desc" } },
-          activeRevision: true
-        }
-      },
-      mainImage: true,
-      parentEntity: { select: { id: true, title: true, type: true } },
-      childEntities: {
-        where: { softDeletedAt: null },
-        select: { id: true, title: true, type: true },
-        take: 20
-      },
-      relationsFrom: {
-        where: { softDeletedAt: null },
-        include: { toEntity: { select: { id: true, title: true, type: true } } },
-        take: 50
-      },
-      relationsTo: {
-        where: { softDeletedAt: null },
-        include: { fromEntity: { select: { id: true, title: true, type: true } } },
-        take: 50
-      },
-      pins: {
-        where: { softDeletedAt: null },
-        include: { map: { select: { id: true, title: true } } },
-        take: 10
       }
-    }
-  });
+    }),
+    getFilteredEntities({
+      workspaceId: workspace.id,
+      query,
+      type: typeFilter,
+      era: eraFilter,
+      chapter: chapterFilter,
+      userId: user.id
+    })
+  ]);
 
   if (!entity) return <div className="panel">Not found.</div>;
+
+  // Calculate unread state manually for list
+  const readStates = await prisma.readState.findMany({
+    where: { workspaceId: workspace.id, userId: user.id, targetType: "entity" }
+  });
+  const readStateMap = new Map(readStates.map(r => [r.targetId, r]));
+
+  const enrichedEntities = entities.map(e => ({
+     ...e,
+     isUnread: Boolean(e.article?.baseRevisionId && readStateMap.get(e.id)?.lastReadRevisionId !== e.article?.baseRevisionId)
+  }));
 
   // Get related entities for the sidebar
   const allRelated = [
@@ -92,7 +113,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   ];
 
   return (
-    <>
+    <div className="layout-3-pane">
       <LlmContext
         value={{
           type: "entity",
@@ -112,7 +133,15 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
         targetId={entity.id}
         lastReadRevisionId={entity.article?.baseRevisionId ?? null}
       />
+      
+      {/* Pane 1: List */}
+      <ArticleList 
+        entities={enrichedEntities} 
+        activeId={entity.id}
+        filters={{ query, type: typeFilter }} 
+      />
 
+      {/* Pane 2 & 3: Detail Component handles these */}
       <ArticleDetail
         entity={entity}
         workspaceId={workspace.id}
@@ -123,6 +152,6 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
         relatedEntities={allRelated}
         locations={entity.pins}
       />
-    </>
+    </div>
   );
 }

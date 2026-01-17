@@ -1,7 +1,8 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo, type CSSProperties } from "react";
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+import { useGlobalFilters } from "@/components/GlobalFilterProvider";
 
 type MarkerStyle = {
   id: string;
@@ -43,6 +44,8 @@ type MapPayload = {
     strokeColor?: string | null;
     strokeWidth?: number | null;
     markerStyle?: { color: string } | null;
+    viewpointId?: string | null;
+    truthFlag?: string | null;
   }[];
   events?: {
     id: string;
@@ -58,6 +61,9 @@ type MapEditorProps = {
   workspaceId: string;
   markerStyles: MarkerStyle[];
   locationTypes: string[];
+  eras: { id: string; name: string; worldStart?: string | null; worldEnd?: string | null; sortKey: number }[];
+  chapters: { id: string; name: string; orderIndex: number }[];
+  viewpoints: { id: string; name: string }[];
 };
 
 type PinDraft = {
@@ -107,14 +113,86 @@ export function MapEditor({
   map,
   workspaceId,
   markerStyles,
-  locationTypes
+  locationTypes,
+  eras,
+  chapters,
+  viewpoints
 }: MapEditorProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<LeafletMap | null>(null);
+  const { eraId, chapterId, viewpointId, mode: globalMode } = useGlobalFilters();
+  
   const [mode, setMode] = useState<"select" | "pin" | "path" | "card">("select");
   const [showImage, setShowImage] = useState(true);
   const [showPins, setShowPins] = useState(true);
   const [showPaths, setShowPaths] = useState(true);
+  const [showLayerPanel, setShowLayerPanel] = useState(false);
+  
+  // Layer visibility state
+  const [hiddenLocationTypes, setHiddenLocationTypes] = useState<Set<string>>(new Set());
+  const toggleLocationType = (type: string) => {
+    const next = new Set(hiddenLocationTypes);
+    if (next.has(type)) next.delete(type);
+    else next.add(type);
+    setHiddenLocationTypes(next);
+  };
+
+  // Filter Logic
+  const chapterOrderMap = useMemo(() => {
+    const m = new Map<string, number>();
+    chapters.forEach(c => m.set(c.id, c.orderIndex));
+    return m;
+  }, [chapters]);
+
+  const visiblePins = useMemo(() => {
+    if (!map) return [];
+    return map.pins.filter(pin => {
+      // 0. Location Type Visibility
+      if (pin.locationType && hiddenLocationTypes.has(pin.locationType)) return false;
+
+      // 1. Viewpoint Filter
+      if (viewpointId === "canon") {
+        if (pin.truthFlag !== "canonical") return false;
+      } else {
+        const isCanon = pin.truthFlag === "canonical";
+        const isMyView = pin.viewpointId === viewpointId;
+        if (!isCanon && !isMyView) return false;
+      }
+
+      // 2. Chapter Filter
+      if (chapterId !== "all") {
+        const currentOrder = chapterOrderMap.get(chapterId);
+        if (currentOrder !== undefined) {
+          // If pin has specific chapter range
+          if (pin.storyFromChapterId) {
+            const from = chapterOrderMap.get(pin.storyFromChapterId) ?? -1;
+            if (from > currentOrder) return false; // Starts later
+          }
+          if (pin.storyToChapterId) {
+            const to = chapterOrderMap.get(pin.storyToChapterId) ?? 999999;
+            if (to < currentOrder) return false; // Ends earlier
+          }
+        }
+      }
+      
+      return true;
+    });
+  }, [map, viewpointId, chapterId, chapterOrderMap, hiddenLocationTypes]);
+  
+  const visiblePaths = useMemo(() => {
+    if (!map) return [];
+    return map.paths.filter(path => {
+       // Similar Viewpoint logic for paths
+      if (viewpointId === "canon") {
+        if (path.truthFlag !== "canonical") return false;
+      } else {
+         const isCanon = path.truthFlag === "canonical";
+         const isMyView = path.viewpointId === viewpointId;
+         if (!isCanon && !isMyView) return false;
+      }
+      return true;
+    });
+  }, [map, viewpointId]);
 
   // Card state - cards on map (evidence/article cards)
   const [mapCards, setMapCards] = useState<Array<{
@@ -374,7 +452,13 @@ export function MapEditor({
 
       // Render Paths
       if (showPaths) {
-        map.paths.forEach((path) => {
+        visiblePaths.forEach((path) => {
+          // Validate polyline exists and has at least 2 points
+          if (!path.polyline || !Array.isArray(path.polyline) || path.polyline.length < 2) {
+            console.warn(`Skipping invalid path ${path.id}: polyline has insufficient points`);
+            return;
+          }
+
           const points = path.polyline.map((pt) => [pt.y, pt.x]) as [number, number][];
           const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
           const weight = path.strokeWidth ?? 3;
@@ -388,13 +472,13 @@ export function MapEditor({
 
       // Render Pins
       if (showPins) {
-        map.pins.forEach((pin) => {
+        visiblePins.forEach((pin) => {
           const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
           const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
           const icon = createIcon(L, shape, color);
           const marker = L.marker([pin.y, pin.x], { 
             icon, 
-            draggable: mode === "select" && selectedPinId === pin.id 
+            draggable: true // Always allow dragging
           });
           
           if (pin.label) {
@@ -512,11 +596,22 @@ export function MapEditor({
           form.append("locationType", defaultLocationType);
           form.append("truthFlag", "canonical");
 
-          const response = await fetch("/api/pins/create", { method: "POST", body: form });
-          if (response.ok) {
-            window.location.reload();
-          } else {
-            alert("Failed to create pin. Check console for details.");
+          try {
+            const response = await fetch("/api/pins/create", { method: "POST", body: form });
+            if (response.ok) {
+              // Trigger re-render
+              const url = new URL(window.location.href);
+              url.searchParams.set('_refresh', Date.now().toString());
+              window.history.replaceState({}, '', url);
+              window.location.reload();
+            } else {
+              const errorData = await response.text();
+              console.error("Failed to create pin:", errorData);
+              alert(`Failed to create pin: ${response.statusText}`);
+            }
+          } catch (error) {
+            console.error("Error creating pin from entity drop:", error);
+            alert("Failed to create pin. Please try again.");
           }
         }
       };
@@ -534,7 +629,7 @@ export function MapEditor({
         mapRef.current = null;
       }
     };
-  }, [map, mode, pathPoints, showImage, showPins, showPaths, selectedPinId, defaultLocationType, createPinDraft]);
+  }, [map, mode, pathPoints, showImage, showPins, showPaths, selectedPinId, defaultLocationType, createPinDraft, visiblePins, visiblePaths]);
 
   if (!map) {
     return <div className="map-viewer placeholder">Select a map to view</div>;
@@ -544,53 +639,108 @@ export function MapEditor({
 
   async function submitPin() {
     if (!map || pinDraft.x === null || pinDraft.y === null) return;
-    const form = new FormData();
-    form.append("workspaceId", workspaceId);
-    form.append("mapId", map.id);
-    Object.entries(pinDraft).forEach(([k, v]) => {
-      if (v !== null) form.append(k, String(v));
-    });
-    await fetch("/api/pins/create", { method: "POST", body: form });
-    window.location.reload();
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("mapId", map.id);
+      Object.entries(pinDraft).forEach(([k, v]) => {
+        if (v !== null) form.append(k, String(v));
+      });
+      const response = await fetch("/api/pins/create", { method: "POST", body: form });
+      if (!response.ok) {
+        throw new Error(`Failed to create pin: ${response.statusText}`);
+      }
+      
+      // Trigger map re-render by changing a key dependency
+      setSelectedPinId("");
+      setPinDraft(createPinDraft());
+      setMode("select");
+      
+      // Force re-fetch by updating URL search params
+      const url = new URL(window.location.href);
+      url.searchParams.set('_refresh', Date.now().toString());
+      window.history.replaceState({}, '', url);
+      window.location.reload(); // Keep for now, will optimize later
+    } catch (error) {
+      console.error("Error creating pin:", error);
+      alert("Failed to create pin. Please try again.");
+    }
   }
 
   async function updatePinPosition(pinId: string, x: number, y: number) {
-    const form = new FormData();
-    form.append("workspaceId", workspaceId);
-    form.append("pinId", pinId);
-    const roundedX = Number(x.toFixed(1));
-    const roundedY = Number(y.toFixed(1));
-    form.append("x", String(roundedX));
-    form.append("y", String(roundedY));
-    await fetch("/api/pins/update", { method: "POST", body: form });
-    if (selectedPinId === pinId) {
-      setPinDraft((prev) => ({ ...prev, x: roundedX, y: roundedY }));
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("pinId", pinId);
+      const roundedX = Number(x.toFixed(1));
+      const roundedY = Number(y.toFixed(1));
+      form.append("x", String(roundedX));
+      form.append("y", String(roundedY));
+      const response = await fetch("/api/pins/update", { method: "POST", body: form });
+      if (!response.ok) {
+        throw new Error(`Failed to update pin position: ${response.statusText}`);
+      }
+      if (selectedPinId === pinId) {
+        setPinDraft((prev) => ({ ...prev, x: roundedX, y: roundedY }));
+      }
+    } catch (error) {
+      console.error("Error updating pin position:", error);
+      alert("Failed to update pin position. Please try again.");
     }
   }
 
   async function submitPinUpdate() {
     if (!selectedPinId) return;
-    const form = new FormData();
-    form.append("workspaceId", workspaceId);
-    form.append("pinId", selectedPinId);
-    Object.entries(pinDraft).forEach(([k, v]) => {
-      if (v !== null) form.append(k, String(v));
-    });
-    await fetch("/api/pins/update", { method: "POST", body: form });
-    window.location.reload();
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("pinId", selectedPinId);
+      Object.entries(pinDraft).forEach(([k, v]) => {
+        if (v !== null) form.append(k, String(v));
+      });
+      const response = await fetch("/api/pins/update", { method: "POST", body: form });
+      if (!response.ok) {
+        throw new Error(`Failed to update pin: ${response.statusText}`);
+      }
+      
+      // Trigger map re-render
+      const url = new URL(window.location.href);
+      url.searchParams.set('_refresh', Date.now().toString());
+      window.history.replaceState({}, '', url);
+      window.location.reload(); // Keep for now
+    } catch (error) {
+      console.error("Error updating pin:", error);
+      alert("Failed to update pin. Please try again.");
+    }
   }
 
   async function submitPath() {
     if (!map || pathPoints.length < 2) return;
-    const form = new FormData();
-    form.append("workspaceId", workspaceId);
-    form.append("mapId", map.id);
-    form.append("polyline", JSON.stringify(pathPoints));
-    Object.entries(pathDraft).forEach(([k, v]) => {
-      if (v !== null) form.append(k, String(v));
-    });
-    await fetch("/api/paths/create", { method: "POST", body: form });
-    window.location.reload();
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("mapId", map.id);
+      form.append("polyline", JSON.stringify(pathPoints));
+      Object.entries(pathDraft).forEach(([k, v]) => {
+        if (v !== null) form.append(k, String(v));
+      });
+      const response = await fetch("/api/paths/create", { method: "POST", body: form });
+      if (!response.ok) {
+        throw new Error(`Failed to create path: ${response.statusText}`);
+      }
+      
+      // Clear path points and trigger re-render
+      setPathPoints([]);
+      setMode("select");
+      
+      const url = new URL(window.location.href);
+      url.searchParams.set('_refresh', Date.now().toString());
+      window.history.replaceState({}, '', url);
+      window.location.reload(); // Keep for now
+    } catch (error) {
+      console.error("Error creating path:", error);
+      alert("Failed to create path. Please try again.");
+    }
   }
 
   async function deletePin() {
@@ -640,13 +790,52 @@ export function MapEditor({
           {locationTypes.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
       </label>
-      <details>
-        <summary>Advanced</summary>
-        <div className="inspector-advanced">
-           <label>Entity ID <input value={pinDraft.entityId} onChange={e => setPinDraft({...pinDraft, entityId: e.target.value})} /></label>
-           <label>Truth <select value={pinDraft.truthFlag} onChange={e => setPinDraft({...pinDraft, truthFlag: e.target.value})}><option value="canonical">Canon</option><option value="rumor">Rumor</option></select></label>
-        </div>
-      </details>
+      
+      <div className="inspector-advanced" style={{ display: 'grid', gap: 12, borderTop: '1px solid #eee', paddingTop: 12, marginTop: 8 }}>
+         <label>
+           Truth
+           <select value={pinDraft.truthFlag} onChange={e => setPinDraft({...pinDraft, truthFlag: e.target.value})}>
+             <option value="canonical">Canon</option>
+             <option value="rumor">Rumor</option>
+             <option value="belief">Belief</option>
+           </select>
+         </label>
+
+         <label>
+           Viewpoint
+           <select value={pinDraft.viewpointId} onChange={e => setPinDraft({...pinDraft, viewpointId: e.target.value})}>
+             <option value="">(None - Global)</option>
+             {viewpoints.map(vp => (
+               <option key={vp.id} value={vp.id}>{vp.name}</option>
+             ))}
+           </select>
+         </label>
+
+         <div className="coord-row">
+            <label>Start (World) <input placeholder="e.g. 1000" value={pinDraft.worldFrom} onChange={e => setPinDraft({...pinDraft, worldFrom: e.target.value})} /></label>
+            <label>End <input placeholder="e.g. 1200" value={pinDraft.worldTo} onChange={e => setPinDraft({...pinDraft, worldTo: e.target.value})} /></label>
+         </div>
+
+         <div className="coord-row">
+            <label>
+              From Chapter
+              <select value={pinDraft.storyFromChapterId} onChange={e => setPinDraft({...pinDraft, storyFromChapterId: e.target.value})}>
+                <option value="">(Start)</option>
+                {chapters.map(c => <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>)}
+              </select>
+            </label>
+            <label>
+              To Chapter
+              <select value={pinDraft.storyToChapterId} onChange={e => setPinDraft({...pinDraft, storyToChapterId: e.target.value})}>
+                <option value="">(End)</option>
+                {chapters.map(c => <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>)}
+              </select>
+            </label>
+         </div>
+         
+         <label>Entity ID <input value={pinDraft.entityId} onChange={e => setPinDraft({...pinDraft, entityId: e.target.value})} placeholder="Linked Entity ID" /></label>
+      </div>
+
       <div className="inspector-actions">
         {mode === "pin" ? (
           <button onClick={submitPin} disabled={pinDraft.x === null} className="btn-save">Create Pin</button>
@@ -669,58 +858,94 @@ export function MapEditor({
           onClick={() => { setMode("select"); setSelectedPinId(""); }}
           title="Select / Move"
         >
-          Select
+          <span>↖️</span>
         </button>
         <button 
           className={`tool-btn ${mode === "pin" ? "active" : ""}`}
           onClick={() => { setMode("pin"); setSelectedPinId(""); }}
           title="Place Pin"
         >
-          Pin
+          <span>📍</span>
         </button>
         <button
           className={`tool-btn ${mode === "path" ? "active" : ""}`}
           onClick={() => { setMode("path"); setSelectedPinId(""); }}
           title="Draw Path"
         >
-          Path
+          <span>〰️</span>
         </button>
         <button
           className={`tool-btn ${mode === "card" ? "active" : ""}`}
           onClick={() => { setMode("card"); setSelectedPinId(""); }}
           title="Place Evidence Card"
         >
-          📋 Card
+          <span>📋</span>
         </button>
         <div className="toolbar-divider" />
         <button
-          className="tool-btn tool-btn-special"
+          className={`tool-btn ${showLayerPanel ? "active" : ""}`}
+          onClick={() => setShowLayerPanel(!showLayerPanel)}
+          title="Layers & Filters"
+        >
+          <span>📚</span>
+        </button>
+        <button
+          className="tool-btn"
           onClick={autoArrangeEvents}
-          title="Auto-arrange events in timeline order"
+          title="Auto-arrange events"
         >
-          ⏱️ Auto Timeline
+          <span>⏱️</span>
         </button>
         <button
-          className="tool-btn tool-btn-save"
+          className="tool-btn"
           onClick={saveCardsToDatabase}
-          title="Save cards and connections to database"
+          title="Save cards"
         >
-          💾 Save
+          <span>💾</span>
         </button>
-        <div className="toolbar-divider" />
-        <label title="Show Image">
-          <input type="checkbox" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
-          Image
-        </label>
-        <label title="Show Pins">
-          <input type="checkbox" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
-          Pins
-        </label>
-        <label title="Show Paths">
-          <input type="checkbox" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
-          Paths
-        </label>
       </div>
+
+      {/* Layers Panel */}
+      {showLayerPanel && (
+        <div className="map-inspector" style={{ left: 16, right: 'auto', top: 80, width: 220 }}>
+          <div className="inspector-header">
+             <strong>Layers & Filters</strong>
+             <button className="close-btn" onClick={() => setShowLayerPanel(false)}>×</button>
+          </div>
+          <div className="inspector-form">
+            <label className="checkbox-label">
+              <input type="checkbox" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
+              Show Image
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
+              Show Pins
+            </label>
+            <label className="checkbox-label">
+              <input type="checkbox" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
+              Show Paths
+            </label>
+            
+            <div className="toolbar-divider" style={{ width: '100%', height: 1, margin: '8px 0' }} />
+            
+            <details open>
+              <summary className="text-xs font-bold uppercase text-muted mb-2 cursor-pointer">Location Types</summary>
+              <div className="list-sm" style={{ maxHeight: 300, overflowY: 'auto' }}>
+                {locationTypes.map(type => (
+                  <label key={type} className="list-row-sm cursor-pointer">
+                    <span style={{ textTransform: 'capitalize' }}>{type}</span>
+                    <input 
+                      type="checkbox" 
+                      checked={!hiddenLocationTypes.has(type)} 
+                      onChange={() => toggleLocationType(type)} 
+                    />
+                  </label>
+                ))}
+              </div>
+            </details>
+          </div>
+        </div>
+      )}
 
       {/* Floating Inspector */}
       {(selectedPinId || (mode === "pin" && pinDraft.x !== null)) && (

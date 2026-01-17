@@ -42,7 +42,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
   const viewpointFilter = String(resolvedSearchParams.viewpoint ?? "canon");
   const mode = String(resolvedSearchParams.mode ?? "canon");
 
-  const [maps, markerStyles, archivedMaps, entities] = workspace
+  const [maps, markerStyles, archivedMaps, entities, eras, chapters, viewpoints] = workspace
     ? await Promise.all([
         prisma.map.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
@@ -64,9 +64,21 @@ export default async function MapsPage({ searchParams }: PageProps) {
           where: { workspaceId: workspace.id, softDeletedAt: null },
           select: { id: true, title: true, type: true },
           orderBy: { title: "asc" }
+        }),
+        prisma.era.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: null },
+          orderBy: { sortKey: "asc" }
+        }),
+        prisma.chapter.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: null },
+          orderBy: { orderIndex: "asc" }
+        }),
+        prisma.viewpoint.findMany({
+          where: { workspaceId: workspace.id, softDeletedAt: null },
+          orderBy: { name: "asc" }
         })
       ])
-    : [[], [], [], []];
+    : [[], [], [], [], [], [], []];
 
   if (!workspace) return <div className="panel">Select a workspace.</div>;
 
@@ -121,11 +133,27 @@ export default async function MapsPage({ searchParams }: PageProps) {
           ...p,
           markerStyle: p.markerStyle ? { shape: p.markerStyle.shape, color: p.markerStyle.color } : null
         })),
-        paths: activeMap.paths.map((p) => ({
-          ...p,
-          polyline: p.polyline as any,
-          markerStyle: p.markerStyle ? { color: p.markerStyle.color } : null
-        }))
+        paths: activeMap.paths.map((p) => {
+          // Parse polyline if it's a JSON string
+          let polyline = p.polyline;
+          if (typeof polyline === 'string') {
+            try {
+              polyline = JSON.parse(polyline);
+            } catch (e) {
+              console.error(`Failed to parse polyline for path ${p.id}:`, e);
+              polyline = [];
+            }
+          }
+          // Ensure polyline is an array
+          if (!Array.isArray(polyline)) {
+            polyline = [];
+          }
+          return {
+            ...p,
+            polyline,
+            markerStyle: p.markerStyle ? { color: p.markerStyle.color } : null
+          };
+        })
       }
     : null;
 
@@ -221,6 +249,9 @@ export default async function MapsPage({ searchParams }: PageProps) {
               workspaceId={workspace.id}
               markerStyles={markerStyles as any}
               locationTypes={LOCATION_TYPES}
+              eras={eras as any}
+              chapters={chapters as any}
+              viewpoints={viewpoints as any}
             />
           </div>
         ) : (
