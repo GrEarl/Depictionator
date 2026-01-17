@@ -100,10 +100,7 @@ export async function POST(req: NextRequest) {
         where: {
           workspaceId,
           softDeletedAt: null,
-          OR: [
-            { title: { contains: query, mode: 'insensitive' } },
-            { summaryMd: { contains: query, mode: 'insensitive' } }
-          ]
+          title: { contains: query, mode: 'insensitive' }
         },
         take: Math.floor(limit / 8)
       }).then(results => results.map(r => ({ ...r, score: 0.5 })))
