@@ -10,22 +10,21 @@ import { llmClient } from './llm-client';
 export async function generateEmbeddingsForWorkspace(workspaceId: string) {
   console.log(`🔄 Generating embeddings for workspace: ${workspaceId}`);
 
-  // Get entities without embeddings
-  const entities = await prisma.entity.findMany({
-    where: {
-      workspaceId,
-      embedding: null,
-      softDeletedAt: null
-    },
-    select: {
-      id: true,
-      title: true,
-      summaryMd: true,
-      tags: true,
-      aliases: true
-    },
-    take: 100 // Process in batches
-  });
+  // Get entities without embeddings (using raw SQL for vector check)
+  const entities = await prisma.$queryRaw<Array<{
+    id: string;
+    title: string;
+    summaryMd: string | null;
+    tags: string[];
+    aliases: string[];
+  }>>`
+    SELECT id, title, "summaryMd", tags, aliases
+    FROM "Entity"
+    WHERE "workspaceId" = ${workspaceId}
+      AND embedding IS NULL
+      AND "softDeletedAt" IS NULL
+    LIMIT 100
+  `;
 
   console.log(`📊 Found ${entities.length} entities to embed`);
 
@@ -57,21 +56,19 @@ export async function generateEmbeddingsForWorkspace(workspaceId: string) {
     }
   }
 
-  // Get articles without embeddings
-  const articles = await prisma.articleRevision.findMany({
-    where: {
-      workspaceId,
-      embedding: null,
-      status: 'approved',
-      softDeletedAt: null
-    },
-    select: {
-      id: true,
-      title: true,
-      bodyMd: true
-    },
-    take: 50 // Smaller batch for articles (larger content)
-  });
+  // Get articles without embeddings (using raw SQL for vector check)
+  const articles = await prisma.$queryRaw<Array<{
+    id: string;
+    title: string;
+    bodyMd: string;
+  }>>`
+    SELECT id, title, "bodyMd"
+    FROM "ArticleRevision"
+    WHERE "workspaceId" = ${workspaceId}
+      AND embedding IS NULL
+      AND status = 'approved'
+    LIMIT 50
+  `;
 
   console.log(`📊 Found ${articles.length} articles to embed`);
 

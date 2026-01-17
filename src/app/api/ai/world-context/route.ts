@@ -27,14 +27,13 @@ export async function GET(req: NextRequest) {
       prisma.articleRevision.findMany({
         where: {
           workspaceId,
-          status: 'approved',
-          softDeletedAt: null
+          status: 'approved'
         },
         select: {
           id: true,
           title: true,
           bodyMd: true,
-          entityId: true
+          articleId: true
         },
         take: 100
       }),
@@ -54,8 +53,7 @@ export async function GET(req: NextRequest) {
         where: { workspaceId, softDeletedAt: null },
         select: {
           id: true,
-          title: true,
-          description: true
+          title: true
         },
         take: 50
       }),

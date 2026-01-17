@@ -29,23 +29,23 @@ export async function POST(req: NextRequest) {
       const entity = await prisma.entity.findUnique({
         where: { id: entityId },
         include: {
-          articles: {
-            where: { status: 'approved' },
-            orderBy: { version: 'desc' },
-            take: 1
+          article: {
+            include: {
+              baseRevision: true
+            }
           }
         }
       });
 
-      if (!entity || !entity.articles[0]) {
+      if (!entity || !entity.article?.baseRevision) {
         return NextResponse.json(
           { error: 'Entity or article not found' },
           { status: 404 }
         );
       }
 
-      articleContent = entity.articles[0].bodyMd;
-      articleTitle = entity.articles[0].title;
+      articleContent = entity.article.baseRevision.bodyMd;
+      articleTitle = entity.article.baseRevision.title;
     } else {
       return NextResponse.json(
         { error: 'articleId, entityId, or customContent required' },

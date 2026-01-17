@@ -23,7 +23,8 @@
       "Bash(ssh -o StrictHostKeyChecking=no -o PubkeyAuthentication=no root@38.109.11.200 \"echo ''rl7Sh5R2D\\)@Uj1'' | sudo -S whoami && cd /root && ls -la | grep -i depic\")",
       "Bash(ssh:*)",
       "Bash(npm install)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

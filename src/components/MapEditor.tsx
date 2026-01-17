@@ -147,11 +147,13 @@ export function MapEditor({
 
   // Load cards from DB on mount
   useEffect(() => {
-    if (!map?.id) return;
+    if (!map || !map.id) return;
+
+    const mapId = map.id; // Capture mapId to avoid null reference inside async function
 
     async function loadCardsFromDB() {
       try {
-        const res = await fetch(`/api/map-cards/load?mapId=${map.id}`);
+        const res = await fetch(`/api/map-cards/load?mapId=${mapId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.cards && data.cards.length > 0) {
@@ -247,7 +249,7 @@ export function MapEditor({
 
     // Sort events by worldStart or storyOrder
     const sortedEvents = [...map.events].sort((a, b) => {
-      if (a.storyOrder !== null && b.storyOrder !== null) {
+      if (a.storyOrder != null && b.storyOrder != null) {
         return a.storyOrder - b.storyOrder;
       }
       if (a.worldStart && b.worldStart) {
