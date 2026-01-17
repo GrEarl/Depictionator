@@ -21,8 +21,8 @@ function createPrismaClient() {
   });
 }
 
-export const prisma =
-  globalForPrisma.prisma ??
-  createPrismaClient();
+// Production環境では常に新しいクライアントを作成（環境変数の変更を反映）
+export const prisma = createPrismaClient();
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+// Development環境でのみキャッシュを使用
+// if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
