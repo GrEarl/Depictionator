@@ -11,8 +11,8 @@ ENV PUPPETEER_SKIP_DOWNLOAD=1
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
 # ビルドタイムにはダミーのDATABASE_URLを設定（実際の接続は不要）
 ENV DATABASE_URL="postgresql://dummy:dummy@dummy:5432/dummy?schema=public"
-# ビルド時の静的解析をスキップ（API routesでのPrisma初期化を回避）
-ENV NEXT_SKIP_STATIC_EXPORT=1
+# Prisma v7のengine typeをbinaryに設定（ビルド時のPrisma初期化エラーを回避）
+ENV PRISMA_CLIENT_ENGINE_TYPE=binary
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
