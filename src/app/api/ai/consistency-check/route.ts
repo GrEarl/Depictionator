@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
           id: true,
           title: true,
           bodyMd: true,
-          entityId: true
+          articleId: true
         },
         take: scope === 'full' ? 100 : 30
       }),
