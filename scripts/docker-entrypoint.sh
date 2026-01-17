@@ -8,7 +8,7 @@ fi
 
 # pgvector拡張を有効化
 echo "Enabling pgvector extension..."
-npx prisma db execute --stdin <<SQL
+npx prisma db execute --schema=./prisma/schema.prisma --stdin <<SQL
 CREATE EXTENSION IF NOT EXISTS vector;
 SQL
 
