@@ -38,33 +38,34 @@ export function GlobalFilters({
 
   return (
     <div className="filter-bar">
-      {/* Current Lens Display - Large and Visual */}
+      {/* Current Lens Display - Clean & Professional */}
       <div className="current-lens-display">
-        <span className="lens-label">🔭 Current Lens:</span>
+        <span className="lens-label">Current Lens:</span>
         <div className="lens-chips">
           {isEraActive && (
             <span className="lens-chip lens-era">
-              <span className="chip-icon">📅</span> {currentEra}
+              {currentEra}
             </span>
           )}
           {isChapterActive && (
             <span className="lens-chip lens-chapter">
-              <span className="chip-icon">📖</span> {currentChapter}
+              {currentChapter}
             </span>
           )}
           {isViewpointActive && (
             <span className="lens-chip lens-viewpoint">
-              <span className="chip-icon">👁️</span> {currentViewpoint}
+              {currentViewpoint}
             </span>
           )}
           {isModeActive && (
             <span className="lens-chip lens-mode">
-              <span className="chip-icon">🔄</span> {mode}
+              {mode}
             </span>
           )}
           {!isEraActive && !isChapterActive && !isViewpointActive && !isModeActive && (
             <span className="lens-chip lens-default">
-              <span className="chip-icon">✨</span> {labels.modeCanon} (All Time)</span>
+              {labels.modeCanon}
+            </span>
           )}
         </div>
       </div>

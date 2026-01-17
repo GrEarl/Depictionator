@@ -54,33 +54,33 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
   en: {
     nav: {
       dashboard: "Dashboard",
-      articles: "Articles",
-      maps: "Maps",
-      timeline: "Timeline",
-      reviews: "Reviews",
+      articles: "Entities",
+      maps: "Atlas",
+      timeline: "Chronicle",
+      reviews: "Approvals",
       settings: "Settings",
-      signOut: "Sign out"
+      signOut: "Log out"
     },
     workspace: {
-      none: "No Workspace",
-      selected: "Selected",
-      role: "Role",
-      open: "Open workspace",
-      quickLinks: "Quick links"
+      none: "No Workspace Selected",
+      selected: "Active Project",
+      role: "Your Role",
+      open: "Enter Workspace",
+      quickLinks: "Quick Access"
     },
     dashboard: {
-      workspaces: "Workspaces",
-      notifications: "Notifications",
-      create: "Create workspace",
-      createAction: "Create",
-      join: "Join workspace",
-      joinAction: "Join",
-      name: "Name",
-      slug: "Slug",
-      workspaceSlug: "Workspace slug",
-      none: "No workspaces yet.",
-      noUnread: "No unread notifications.",
-      markRead: "Mark read"
+      workspaces: "Projects",
+      notifications: "Recent Updates",
+      create: "Start a New Project",
+      createAction: "Initialize",
+      join: "Join a Project",
+      joinAction: "Link",
+      name: "Project Name",
+      slug: "Unique ID (Slug)",
+      workspaceSlug: "Project slug",
+      none: "You haven't joined any projects yet.",
+      noUnread: "No new activity.",
+      markRead: "Mark as read"
     },
     locale: {
       label: "Language",
@@ -88,65 +88,65 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       japanese: "Japanese"
     },
     filters: {
-      worldEra: "World Era",
-      storyChapter: "Story Chapter",
-      viewpoint: "Viewpoint",
-      mode: "Mode",
-      modeCanon: "Canon",
-      modeViewpoint: "As Viewpoint",
-      modeCompare: "Compare",
+      worldEra: "Historical Era",
+      storyChapter: "Narrative Chapter",
+      viewpoint: "Active Perspective",
+      mode: "Viewing Mode",
+      modeCanon: "Canon (Ground Truth)",
+      modeViewpoint: "Perception",
+      modeCompare: "Cross-reference",
       allEras: "All Eras",
-      allChapters: "All Chapters",
-      omni: "Omni (Canon)"
+      allChapters: "Entire Story",
+      omni: "Universal View (Canon)"
     }
   },
   ja: {
     nav: {
       dashboard: "ダッシュボード",
-      articles: "記事",
-      maps: "地図",
-      timeline: "年表",
-      reviews: "レビュー",
-      settings: "設定",
-      signOut: "サインアウト"
+      articles: "設定項目",
+      maps: "地図・アトラス",
+      timeline: "年代記",
+      reviews: "承認待ち",
+      settings: "システム設定",
+      signOut: "ログアウト"
     },
     workspace: {
-      none: "ワークスペースなし",
-      selected: "選択中",
-      role: "権限",
-      open: "ワークスペースを開く",
-      quickLinks: "主要リンク"
+      none: "ワークスペース未選択",
+      selected: "現在のプロジェクト",
+      role: "ユーザー権限",
+      open: "プロジェクトに入る",
+      quickLinks: "クイックアクセス"
     },
     dashboard: {
-      workspaces: "ワークスペース",
-      notifications: "通知",
-      create: "ワークスペース作成",
-      createAction: "作成",
-      join: "ワークスペース参加",
-      joinAction: "参加",
-      name: "名称",
-      slug: "スラッグ",
-      workspaceSlug: "ワークスペーススラッグ",
-      none: "参加中のワークスペースがありません。",
-      noUnread: "未読の通知はありません。",
+      workspaces: "プロジェクト一覧",
+      notifications: "最新のアクティビティ",
+      create: "新規プロジェクト作成",
+      createAction: "初期化",
+      join: "プロジェクトに参加",
+      joinAction: "連携",
+      name: "プロジェクト名称",
+      slug: "固有ID (スラッグ)",
+      workspaceSlug: "プロジェクトIDを入力",
+      none: "参加中のプロジェクトはありません。",
+      noUnread: "新しい通知はありません。",
       markRead: "既読にする"
     },
     locale: {
-      label: "言語",
-      english: "英語",
+      label: "表示言語",
+      english: "English",
       japanese: "日本語"
     },
     filters: {
-      worldEra: "時代",
-      storyChapter: "章",
-      viewpoint: "視点",
-      mode: "モード",
-      modeCanon: "正史",
-      modeViewpoint: "視点",
-      modeCompare: "比較",
-      allEras: "全時代",
-      allChapters: "全章",
-      omni: "全知（正史）"
+      worldEra: "世界史の時代",
+      storyChapter: "物語の章",
+      viewpoint: "アクティブな視点",
+      mode: "表示モード",
+      modeCanon: "正史 (マスターデータ)",
+      modeViewpoint: "特定の視点情報",
+      modeCompare: "情報の比較照合",
+      allEras: "全ての時代",
+      allChapters: "物語の全期間",
+      omni: "全知視点（正史）"
     }
   }
 };

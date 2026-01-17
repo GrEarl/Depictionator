@@ -1,28 +1,30 @@
-import { PrismaClient } from '@prisma/client';
+﻿import { PrismaClient } from "@prisma/client";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// ビルド時（page data collection時）にはダミーのPrismaクライアントを返す
+// Build-time dummy client to avoid data collection crashes when DATABASE_URL is unset.
 function createPrismaClient() {
-  // ビルド時にはPrismaClientを初期化しない（DATABASE_URLがダミーの場合）
-  if (process.env.DATABASE_URL?.includes('dummy')) {
-    // ダミーのプロキシを返す（ビルド時のエラーを回避）
-    return new Proxy({}, {
-      get() {
-        throw new Error('Prisma client is not available during build time');
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl || databaseUrl.includes("dummy")) {
+    return new Proxy(
+      {},
+      {
+        get() {
+          throw new Error("Prisma client is not available during build time");
+        }
       }
-    }) as unknown as PrismaClient;
+    ) as PrismaClient;
   }
 
   return new PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"]
   });
 }
 
-// Production環境では常に新しいクライアントを作成（環境変数の変更を反映）
-export const prisma = createPrismaClient();
+export const prisma = globalForPrisma.prisma ?? createPrismaClient();
 
-// Development環境でのみキャッシュを使用
-// if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.prisma = prisma;
+}

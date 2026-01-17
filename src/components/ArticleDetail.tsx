@@ -5,6 +5,7 @@ import { MarkdownView } from "@/components/MarkdownView";
 import { MarkdownToc } from "@/components/MarkdownToc";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import Link from "next/link";
+import Image from "next/image";
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
 
 type Entity = any;
@@ -385,10 +386,13 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
          <div className="drawer-content p-4">
           {/* Main Image */}
           {mainImage && (
-            <div className="infobox-image">
-              <img
+            <div className="infobox-image relative w-full aspect-square bg-bg rounded-md overflow-hidden border border-border">
+              <Image
                 src={`/api/assets/file/${mainImage.id}`}
                 alt={entity.title}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 300px"
               />
             </div>
           )}

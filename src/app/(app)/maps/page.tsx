@@ -212,7 +212,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
             {/* Map Breadcrumb & Child Navigation */}
             <div className="map-navigation-bar">
               <div className="map-breadcrumb">
-                <span className="breadcrumb-label">📍 Location:</span>
+                <span className="breadcrumb-label">Location:</span>
                 {breadcrumbs.map((crumb, idx) => (
                   <span key={crumb.id} className="breadcrumb-item">
                     {idx > 0 && <span className="breadcrumb-separator">→</span>}
@@ -229,7 +229,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
               {/* Child Maps Quick Access */}
               {childMaps.length > 0 && (
                 <div className="child-maps-nav">
-                  <span className="child-maps-label">🔍 Zoom into:</span>
+                  <span className="child-maps-label">Zoom into:</span>
                   {childMaps.map((child) => (
                     <Link
                       key={child.id}
@@ -256,7 +256,6 @@ export default async function MapsPage({ searchParams }: PageProps) {
           </div>
         ) : (
           <div className="empty-state-centered">
-            <div className="hero-icon">Map</div>
             <h2>No Maps Found</h2>
             <p className="muted">Create your first map or import one from Wikipedia to get started.</p>
           </div>
@@ -283,9 +282,9 @@ export default async function MapsPage({ searchParams }: PageProps) {
         <div className="drawer-content scroll-content">
           {tab === "entities" && activeMap && (
             <div className="p-4">
-              <h4 className="text-xs muted mb-4">DRAG TO MAP</h4>
+              <h4 className="text-xs muted mb-4 uppercase tracking-wider">Drag to Map</h4>
               <p className="text-sm mb-4 muted">
-                Drag entities below onto the map to create location pins.
+                Drag entities onto the map to create location pins.
               </p>
 
               <div className="entity-list">

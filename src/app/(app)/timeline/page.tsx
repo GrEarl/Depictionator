@@ -141,7 +141,7 @@ export default async function TimelinePage({ searchParams }: PageProps) {
                      <div key={e.id} className="list-row">
                         <div>
                           <strong>{e.title}</strong>
-                          <div className="muted text-xs">{e.worldStart || 'No date'} ﾂｷ {e.eventType}</div>
+                          <div className="muted text-[10px] uppercase tracking-wider">{e.worldStart || 'No date'} • {e.eventType}</div>
                         </div>
                         <Link href={`/timeline?editEvent=${e.id}`} className="link-button">Edit</Link>
                      </div>

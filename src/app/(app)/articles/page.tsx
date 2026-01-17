@@ -78,25 +78,24 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
       <main className="pane-center">
         <div className="empty-dashboard">
           <div className="hero-section">
-            <div className="hero-icon" style={{ fontSize: 48, marginBottom: 16 }}>📚</div>
-            <h1>Knowledge Base</h1>
-            <p className="muted">Select an article from the list to view details, or create a new entry.</p>
+            <h1 className="text-4xl font-extrabold tracking-tight">Knowledge Base</h1>
+            <p className="muted mt-2">Select an article from the list to view details, or create a new entry.</p>
           </div>
           
           <div className="dashboard-grid">
              <section className="dashboard-section">
-                <h4>✨ Recently Updated</h4>
+                <h4 className="text-[10px] font-bold uppercase text-muted tracking-widest mb-4">Recently Updated</h4>
                 <div className="recent-list">
                   {entities.slice(0, 5).map(e => (
-                    <Link key={e.id} href={`/articles/${e.id}`} className="recent-item">
-                       <div style={{fontWeight: 600}}>{e.title}</div>
-                       <div style={{fontSize: 11}} className="muted">{e.type} • {new Date(e.updatedAt).toLocaleDateString()}</div>
+                    <Link key={e.id} href={`/articles/${e.id}`} className="recent-item group">
+                       <div className="font-semibold text-ink group-hover:text-accent transition-colors">{e.title}</div>
+                       <div className="text-[10px] muted uppercase tracking-tighter">{e.type} • {new Date(e.updatedAt).toLocaleDateString()}</div>
                     </Link>
                   ))}
                 </div>
              </section>
              <section className="dashboard-section">
-                <h4>🔍 Quick Filters</h4>
+                <h4 className="text-[10px] font-bold uppercase text-muted tracking-widest mb-4">Quick Filters</h4>
                 <FilterSummary />
                 <div className="mt-4">
                   <Link href="/articles" className="btn-secondary text-xs">Reset Filters</Link>
@@ -109,7 +108,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
       {/* Pane 3: Right / Creation & Import Drawer */}
       <aside className="pane-right-drawer">
          <div className="pane-header">
-            <h3>Tools</h3>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-muted">Tools</h3>
          </div>
          <div className="drawer-content">
             <details className="action-details" open>

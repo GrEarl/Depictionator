@@ -1,8 +1,5 @@
 Goal (incl. success criteria):
-- Fully implement AGENTS.md-required Depictionator system with robust backend, deployable to VPS (Docker/Caddy), and stable core flows; map/wiki/LLM/PDF work; /health OK.
-- Keep Gemini.md updated with UI/UX requirements and known gaps for Gemini frontend work.
-- Fix broken functional UI flows (LLM, locale switcher, workspace open/landing UI) so they work end-to-end, not just visual shells.
-- Restore and rebuild Articles feature to be reliable and readable; align with MediaWiki-like editing (stable initial content, revisions, clear UI).
+- Resolve viewport warnings and npm audit vulnerabilities while keeping the build green.
 
 Constraints/Assumptions:
 - Use ssh-mcp for VPS actions; avoid destructive operations.
@@ -13,45 +10,15 @@ Constraints/Assumptions:
 - Allowed to use GEMINI_API_KEY from server .env for Gemini CLI runs.
 - Deployments/tests must be done via ssh-mcp.
 - Read/write files as UTF-8. Use agent-browser for web automation.
-- User requests no confirmations; proceed autonomously and avoid handing back turn until AGENTS.md-level backend work is complete (note: will still respond per system constraints).
+- User requests no confirmations; proceed autonomously.
+- Code review output must follow JSON schema + priority tagging per review guidelines.
 
 Key decisions:
 - Next.js 16 + React 19; Prisma 7 with prisma.config.ts and pg adapter; force webpack for @ alias.
 - LLM defaults to Gemini 3 preview with API version fallback; Codex CLI execution remains supported.
 
 State:
-- Core backend/features mostly implemented; Codex CLI spawn/runtime error handling fixed and pushed in streaming LLM route.
-- VPS rebuild completed; app container recreated and /health returns 200.
-- Added server-side list filters for Articles/Maps/Timeline (query/type/status/tags/unread/event type) and preserved global filter params across views.
-- Latest filter-related typing fixes deployed; /health OK.
-- Gemini CLI requests timed out; UI/UX guidance will be updated manually in Gemini.md.
-- Gemini CLI ran directly (no MCP) and output appended to Gemini.md.
-- Gemini UI shell/editor changes committed and pushed; pending VPS deploy.
-- MapEditor implicit any typing fix committed and pushed.
-- Local repo clean; VPS deploy for Gemini UI changes completed; /health 200.
-- Comprehensive UI/UX refactor landed locally; verified files present and cleaned invalid UTF-8/emoji artifacts.
-- UI refactor deployed to VPS; /health 200 after rebuild and container restart.
-- User says current implementation is mock-level; expects production-grade backend per AGENTS.md.
-- Added schema + migration for MapLayer/MapScene/EvidenceBoard/EvidenceItem/EvidenceLink/Reference/Citation and layerId on Pin/Path.
-- Added API routes for map layers/scenes, evidence boards/items/links, references/citations, viewpoint update, overlay update; tightened overlay validation and overlay revision permissions.
-- Fixed Prisma schema by adding Viewpoint->MapScene relation; removed BOM from migration file.
-- VPS deploy: rebuilt app image, handled Prisma migration failure (BOM/failed row), manually reconciled _prisma_migrations, app restarted, /health OK.
-- Added article create/update validations for story intro chapter, entity watcher notifications on update/delete; deployed and /health OK.
-- Added Wikimedia SVG map import support via imageUrl parsing (commons File: URLs) and committed/pushed.
-- VPS deploy for SVG import change completed; rebuilt app image, restarted stack, /health OK.
-- Addressing broken UI flows: implementing workspace open flow, locale switching with i18n copy, LLM panel error handling, and missing CSS classes.
-- Fixed i18n typing (UiCopy) and option typing in app layout; VPS redeploy completed; /health OK.
-- Gemini CLI run (using server .env key) reviewed locale/LLM/workspace flows; suggestions matched current implementation (no new code changes).
-- Investigating Wiki map image import "Page not found" for Commons File URLs.
-- Wiki page import fix deployed; VPS disk cleanup (docker prune) performed to resolve out-of-space build failures; /health OK after redeploy.
-- User reports Articles feature broken: initial content wiped, UI unreadable; needs MediaWiki-level rebuild.
-- Article create now auto-approves initial revision and sets baseRevisionId (committed).
-- Revisions create route auto-approves base edits, sets parent revision, updates baseRevisionId, notifies watchers, and fixes overlay redirect (committed).
-- Gemini CLI updated ArticleDetail/MarkdownEditor/globals.css for read/edit/history/compare UX and typography; fixed garbled text and overlay status (committed).
-- MarkdownEditor now includes hidden input in preview mode to prevent bodyMd loss on submit.
-- Article fixes committed and pushed; VPS rebuild via docker-compose completed (timeout during build but services up); /health 200.
-- 2026-01-16: User reported bad gateway; app container had exited. Resolved by docker-compose down/up --build; services up; /health 200.
-- 2026-01-16: User reports all import features and dialogs are broken/insufficient; needs full fix.
+- Continuing from prior Depictionator work; current task is to apply requested warnings/vulnerability fixes.
 
 Done:
 - Read updated AGENTS.md with UTF-8 output; reviewed AGENTS_old.md for prior guidance.
@@ -116,51 +83,52 @@ Done:
 - Article read view typography improved (line length, headings, lists, blockquotes, code).
 - Deployed article fixes to VPS; services running and /health 200.
 - Bad gateway incident resolved by full docker-compose restart; app/proxy/db running; /health 200.
+- Reviewed git status/diffs for current local changes; identified compile-breaking placeholders/imports in MapEditor/ArticleDetail/AIAssistantClient and missing Tailwind typography dependency.
+- Restored MapEditor imports/types and createIcon helper; removed duplicate saveCardsToDatabase declaration.
+- Moved ReactMarkdown/remarkGfm to module scope in AIAssistantClient and cleaned corrupted strings.
+- Moved next/image import to module scope in ArticleDetail and removed stray JSX imports.
+- Added @tailwindcss/typography dependency and ran npm install to update package-lock.json.
+- Restored Japanese strings in AIAssistantClient with UTF-8 content.
+- Updated all dependencies/devDependencies to latest with npm-check-updates and installed them.
+- Fixed build-breaking imports and missing client directives across components.
+- Updated Tailwind v4 PostCSS setup and globals.css to use @import "tailwindcss" + @config.
+- Implemented LlmPanel submit handler and restored Wiki import panel logic/state.
+- Added Prisma driver adapter (PrismaPg) to Prisma client and fixed UTF-8 in prisma.ts.
+- npm run build now completes successfully (with Next metadata viewport warnings).
+- Moved viewport config to exported viewport in app layout to clear Next warnings.
+- Ran npm audit fix --force; vulnerabilities now 0.
+- Aligned Prisma to 6.19.2 (client + CLI) and removed adapter usage; regenerated Prisma client.
+- npm run build succeeds after Prisma regeneration.
 
 Now:
-- Audit import flows (Wiki article/map/image, assets) and import dialogs; fix backend + frontend and redeploy.
+- Report the fixes and the Prisma version alignment required by npm audit fix.
 
 Next:
-- Use Gemini CLI for import dialog/frontend fixes; adjust API routes as needed; redeploy via ssh-mcp.
+- If desired, re-upgrade Prisma to 7.x later with compatible security update.
 
 Open questions (UNCONFIRMED if needed):
-- Which import entries are failing (Wiki article import, map import, image import, file upload) is UNCONFIRMED; will verify in UI and logs.
+- None.
 
 Working set (files/ids/commands):
+- CONTINUITY.md
+- src/components/MapEditor.tsx
+- src/components/AIAssistantClient.tsx
+- src/components/ArticleDetail.tsx
 - package.json
 - package-lock.json
-- prisma/schema.prisma
-- prisma/migrations/20260115123000_board_layers_refs/migration.sql
-- prisma.config.ts
-- src/app/api/llm/execute/route.ts
-- /root/build_llm_fix.log (VPS)
-- tmux session: build_llm_fix
-- src/components/MapEditor.tsx
-- src/app/(app)/maps/page.tsx
-- src/components/MarkdownToc.tsx
-- src/components/WikiArticleImportPanel.tsx
-- src/components/WikiMapImportPanel.tsx
-- src/lib/markdown.ts
-- README.md
-- Gemini.md
-- /root/build_ui_refactor2.log (VPS)
-- tmux session: build_ui_refactor2
-- src/lib/wiki.ts
-- src/app/api/wiki/import/map/route.ts
-- /root/build_svg.log (VPS)
-- tmux session: build_svg
-- src/lib/i18n.ts
-- src/app/layout.tsx
-- src/app/(app)/layout.tsx
-- src/components/Sidebar.tsx
-- src/components/GlobalFilters.tsx
-- src/components/LocaleSwitcher.tsx
-- src/components/LlmPanel.tsx
-- src/app/(app)/page.tsx
-- src/app/(app)/workspaces/[slug]/page.tsx
-- src/app/api/workspaces/open/route.ts
+- postcss.config.js
 - src/app/globals.css
-- src/app/api/articles/create/route.ts
-- src/app/api/revisions/create/route.ts
-- src/components/ArticleDetail.tsx
-- src/components/MarkdownEditor.tsx
+- src/components/LlmPanel.tsx
+- src/components/AIEditAssistant.tsx
+- src/components/PerspectiveAnalysisPanel.tsx
+- src/components/WikiArticleImportPanel.tsx
+- src/components/MapEditor.tsx
+- src/components/EvidenceBoardCanvas.tsx
+- src/lib/prisma.ts
+- src/app/layout.tsx
+- npm run build
+- npx npm-check-updates -u
+- npm install
+- npm audit
+- npm audit fix --force
+- npx prisma generate

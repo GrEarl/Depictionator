@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+﻿import { prisma } from "@/lib/prisma";
 import { getCurrentSession, requireUser } from "@/lib/auth";
 import { LlmContext } from "@/components/LlmContext";
 import { getLocaleFromCookies } from "@/lib/locale";
@@ -79,89 +79,116 @@ export default async function DashboardPage() {
 
       {/* World Overview */}
       {workspaceId && (
-        <section className="panel world-overview">
-          <h2>🌍 {session?.workspace?.name} - World Overview</h2>
+        <section className="panel world-overview space-y-8">
+          <h2 className="text-2xl font-bold tracking-tight mb-6">{session?.workspace?.name} Overview</h2>
 
-          <div className="overview-grid">
-            {/* Entity Stats */}
-            <div className="overview-card">
-              <h3>📚 Entities</h3>
-              <div className="stat-large">{entities.length}</div>
-              <div className="stat-breakdown">
-                {Object.entries(entityCounts).slice(0, 5).map(([type, count]) => (
-                  <div key={type} className="stat-row">
-                    <span className={`entity-type-badge type-${type}`}>{type}</span>
-                    <span className="stat-count">{count}</span>
+          {entities.length === 0 && maps.length === 0 ? (
+            <div className="bg-panel border border-dashed border-border rounded-xl p-12 text-center animate-in fade-in zoom-in duration-500">
+              <div className="max-w-md mx-auto space-y-6">
+                <div className="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-8 h-8">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-ink">Welcome to Depictionator</h3>
+                <p className="text-muted leading-relaxed">
+                  Start building your world by creating your first entity or importing a map.
+                  The journey begins with a single point of data.
+                </p>
+                <div className="flex gap-4 justify-center pt-4">
+                  <Link href="/articles?action=new" className="action-btn">
+                    Create First Entity
+                  </Link>
+                  <Link href="/maps" className="btn-secondary px-6 py-3 rounded-lg font-bold flex items-center gap-2">
+                    Open Atlas
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="overview-grid">
+                {/* Entity Stats */}
+                <div className="overview-card">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted">Entities</h3>
+                  <div className="stat-large">{entities.length}</div>
+                  <div className="stat-breakdown">
+                    {Object.entries(entityCounts).slice(0, 5).map(([type, count]) => (
+                      <div key={type} className="stat-row">
+                        <span className={`entity-type-badge type-${type}`}>{type}</span>
+                        <span className="stat-count">{count}</span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <Link href="/articles" className="card-action-link">View all →</Link>
-            </div>
+                  <Link href="/articles" className="card-action-link">View all Articles</Link>
+                </div>
 
-            {/* Maps */}
-            <div className="overview-card">
-              <h3>🗺️ Maps</h3>
-              <div className="stat-large">{maps.length}</div>
-              <div className="recent-list">
-                {maps.slice(0, 3).map((map) => (
-                  <Link key={map.id} href={`/maps?map=${map.id}`} className="recent-item">
-                    {map.title}
+                {/* Maps */}
+                <div className="overview-card">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted">Maps</h3>
+                  <div className="stat-large">{maps.length}</div>
+                  <div className="recent-list">
+                    {maps.slice(0, 3).map((map) => (
+                      <Link key={map.id} href={`/maps?map=${map.id}`} className="recent-item">
+                        {map.title}
+                      </Link>
+                    ))}
+                  </div>
+                  <Link href="/maps" className="card-action-link">Open Atlas</Link>
+                </div>
+
+                {/* Evidence Boards */}
+                <div className="overview-card">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted">Evidence Boards</h3>
+                  <div className="stat-large">{evidenceBoards.length}</div>
+                  <div className="recent-list">
+                    {evidenceBoards.slice(0, 3).map((board) => (
+                      <Link key={board.id} href={`/boards?board=${board.id}`} className="recent-item">
+                        {board.name}
+                      </Link>
+                    ))}
+                  </div>
+                  <Link href="/boards" className="card-action-link">Open Boards</Link>
+                </div>
+
+                {/* Recent Updates */}
+                <div className="overview-card">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted">Recent Activity</h3>
+                  <div className="recent-list">
+                    {recentArticles.slice(0, 5).map((rev) => (
+                      <Link
+                        key={rev.id}
+                        href={`/articles/${rev.article?.entityId}`}
+                        className="recent-item"
+                      >
+                        {rev.article?.entity?.title || "Article"}
+                      </Link>
+                    ))}
+                  </div>
+                  <Link href="/articles" className="card-action-link">View all Activity</Link>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="quick-actions">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-4">Quick Actions</h3>
+                <div className="action-buttons">
+                  <Link href="/articles?action=new" className="action-btn">
+                    New Entity
                   </Link>
-                ))}
-              </div>
-              <Link href="/maps" className="card-action-link">Open Maps →</Link>
-            </div>
-
-            {/* Evidence Boards */}
-            <div className="overview-card">
-              <h3>🔍 Boards</h3>
-              <div className="stat-large">{evidenceBoards.length}</div>
-              <div className="recent-list">
-                {evidenceBoards.slice(0, 3).map((board) => (
-                  <Link key={board.id} href={`/boards?board=${board.id}`} className="recent-item">
-                    {board.name}
+                  <Link href="/maps" className="action-btn">
+                    Open Maps
                   </Link>
-                ))}
-              </div>
-              <Link href="/boards" className="card-action-link">Open Boards →</Link>
-            </div>
-
-            {/* Recent Updates */}
-            <div className="overview-card">
-              <h3>⏰ Recent Updates</h3>
-              <div className="recent-list">
-                {recentArticles.slice(0, 5).map((rev) => (
-                  <Link
-                    key={rev.id}
-                    href={`/articles/${rev.article?.entityId}`}
-                    className="recent-item"
-                  >
-                    {rev.article?.entity?.title || "Article"}
+                  <Link href="/boards" className="action-btn">
+                    Evidence Board
                   </Link>
-                ))}
+                  <Link href="/timeline" className="action-btn">
+                    Timeline
+                  </Link>
+                </div>
               </div>
-              <Link href="/articles" className="card-action-link">View all →</Link>
-            </div>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="quick-actions">
-            <h3>⚡ Quick Actions</h3>
-            <div className="action-buttons">
-              <Link href="/articles?action=new" className="action-btn">
-                + New Entity
-              </Link>
-              <Link href="/maps" className="action-btn">
-                🗺️ Open Maps
-              </Link>
-              <Link href="/boards" className="action-btn">
-                🔍 Evidence Board
-              </Link>
-              <Link href="/timeline" className="action-btn">
-                📅 Timeline
-              </Link>
-            </div>
-          </div>
+            </>
+          )}
         </section>
       )}
 

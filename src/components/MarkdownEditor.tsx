@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { MarkdownView } from "@/components/MarkdownView";
+import { cn } from "@/lib/utils";
 
 type MarkdownEditorProps = {
   name: string;
@@ -26,64 +27,66 @@ export function MarkdownEditor({
   }, [defaultValue]);
 
   return (
-    <div className="markdown-editor-container">
-      <div className="editor-toolbar" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', alignItems: 'center' }}>
-        <label style={{ fontWeight: 600, fontSize: '14px' }}>{label}</label>
-        <div className="view-toggles" style={{ display: 'flex', gap: '4px', background: '#eee', padding: '2px', borderRadius: '6px' }}>
-          <button 
-            type="button"
-            onClick={() => setMode("write")}
-            className={`toggle-btn ${mode === 'write' ? 'active' : ''}`}
-            style={{ border: 'none', background: mode === 'write' ? 'white' : 'transparent', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', boxShadow: mode === 'write' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}
-          >
-            Write
-          </button>
-          <button 
-            type="button"
-            onClick={() => setMode("split")}
-            className={`toggle-btn ${mode === 'split' ? 'active' : ''}`}
-            style={{ border: 'none', background: mode === 'split' ? 'white' : 'transparent', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', boxShadow: mode === 'split' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}
-          >
-            Split
-          </button>
-          <button 
-            type="button"
-            onClick={() => setMode("preview")}
-            className={`toggle-btn ${mode === 'preview' ? 'active' : ''}`}
-            style={{ border: 'none', background: mode === 'preview' ? 'white' : 'transparent', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', boxShadow: mode === 'preview' ? '0 1px 2px rgba(0,0,0,0.1)' : 'none' }}
-          >
-            Preview
-          </button>
+    <div className="flex flex-col gap-3 group">
+      <div className="flex items-center justify-between">
+        <label className="text-xs font-bold uppercase tracking-widest text-muted group-focus-within:text-accent transition-colors">
+          {label}
+        </label>
+        
+        <div className="flex items-center p-1 bg-bg border border-border rounded-lg shadow-sm">
+          {(["write", "split", "preview"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={cn(
+                "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                mode === m 
+                  ? "bg-panel text-ink shadow-sm border border-border/50" 
+                  : "text-muted hover:text-ink hover:bg-black/5 dark:hover:bg-white/5"
+              )}
+            >
+              {m}
+            </button>
+          ))}
         </div>
       </div>
 
-      <div className={`markdown-editor mode-${mode}`} style={{ display: 'grid', gap: '16px', gridTemplateColumns: mode === 'split' ? '1fr 1fr' : '1fr' }}>
-        
-        {mode === 'preview' && (
-          <input type="hidden" name={name} value={value} />
-        )}
+      <div className={cn(
+        "grid gap-4 transition-all duration-300 ease-in-out",
+        mode === "split" ? "grid-cols-2" : "grid-cols-1"
+      )}>
+        {/* Hidden input for form submission */}
+        <input type="hidden" name={name} value={value} />
 
-        {(mode === 'write' || mode === 'split') && (
-          <div className="markdown-editor-input">
+        {(mode === "write" || mode === "split") && (
+          <div className="relative">
             <textarea
-              name={name}
+              name={mode === 'write' ? name : undefined} // Avoid duplicate name attributes if split
               rows={rows}
               value={value}
               placeholder={placeholder}
               onChange={(event) => setValue(event.target.value)}
-              style={{ width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontFamily: 'monospace', fontSize: '14px', lineHeight: '1.5', resize: 'vertical' }}
+              className="w-full h-full p-4 rounded-xl bg-panel border border-border text-sm font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm placeholder:text-muted/50"
             />
-            <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px', textAlign: 'right' }}>
-              Markdown supported
+            <div className="absolute bottom-3 right-4 text-[10px] text-muted opacity-50 pointer-events-none font-medium">
+              Markdown Supported
             </div>
           </div>
         )}
 
-        {(mode === 'preview' || mode === 'split') && (
-          <div className="panel markdown-preview" style={{ padding: '24px', overflowY: 'auto', maxHeight: mode === 'split' ? '800px' : 'none', background: '#fafafa' }}>
-            {mode === 'preview' && <div className="muted" style={{ fontSize: "12px", marginBottom: "16px", textTransform: "uppercase", fontWeight: "bold" }}>Preview</div>}
-            <div className="read-view" style={{ fontSize: '14px' }}>
-              <MarkdownView value={value || "_(empty)_" } />
+        {(mode === "preview" || mode === "split") && (
+          <div className={cn(
+            "rounded-xl border border-border/50 bg-bg/50 p-6 overflow-y-auto",
+            mode === "split" ? "max-h-[600px]" : "min-h-[300px]"
+          )}>
+            {mode === "preview" && (
+              <div className="text-[10px] font-bold uppercase text-muted tracking-widest mb-4 border-b border-border pb-2">
+                Preview Mode
+              </div>
+            )}
+            <div className="prose dark:prose-invert prose-sm max-w-none">
+              <MarkdownView value={value || "*(No content)*"} />
             </div>
           </div>
         )}

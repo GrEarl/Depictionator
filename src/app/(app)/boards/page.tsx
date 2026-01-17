@@ -118,7 +118,6 @@ export default async function BoardsPage({ searchParams }: PageProps) {
           />
         ) : (
           <div className="empty-state-centered">
-            <div className="hero-icon">B</div>
             <h2>No Evidence Boards</h2>
             <p className="muted">
               Create your first board to collect and connect evidence, references, and ideas.

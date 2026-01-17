@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -24,54 +25,74 @@ export function Sidebar({
   labels: SidebarLabels;
 }) {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const navItems = [
-    { href: "/", label: labels.dashboard, icon: "🏠" },
-    { href: "/ai", label: "AI Assistant", icon: "🤖" },
-    { href: "/articles", label: labels.articles, icon: "📝" },
-    { href: "/maps", label: labels.maps, icon: "🗺️" },
-    { href: "/boards", label: "Boards", icon: "📋" },
-    { href: "/timeline", label: labels.timeline, icon: "⏱️" },
-    { href: "/reviews", label: labels.reviews, icon: "✅" },
-    { href: "/settings", label: labels.settings, icon: "⚙️" }
+    { href: "/", label: labels.dashboard },
+    { href: "/ai", label: "AI Assistant" },
+    { href: "/articles", label: labels.articles },
+    { href: "/maps", label: labels.maps },
+    { href: "/boards", label: "Boards" },
+    { href: "/timeline", label: labels.timeline },
+    { href: "/reviews", label: labels.reviews },
+    { href: "/settings", label: labels.settings }
   ];
 
   return (
-    <aside className="app-sidebar">
-      <div className="sidebar-header">
-        <Link href="/" className="brand-link">
-          Depictionator
-        </Link>
-        <div className="workspace-badge">{workspaceName ?? labels.workspaceFallback}</div>
-      </div>
+    <>
+      <button 
+        className="lg:hidden fixed top-3 left-4 z-50 p-2 bg-panel border border-border rounded-md shadow-sm"
+        onClick={() => setMobileOpen(!mobileOpen)}
+        aria-label="Toggle navigation"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-ink">
+          <path d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
 
-      <nav className="sidebar-nav">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`nav-item ${isActive ? "active" : ""}`}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      {mobileOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
 
-      <div className="sidebar-footer">
-        <div className="user-info">
-          <div className="user-avatar">{userName?.[0]?.toUpperCase() ?? "U"}</div>
-          <div className="user-name">{userName ?? "User"}</div>
+      <aside className={`app-sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
+        <div className="sidebar-header">
+          <Link href="/" className="brand-link">
+            Depictionator
+          </Link>
+          <div className="workspace-badge">{workspaceName ?? labels.workspaceFallback}</div>
         </div>
-        <form action="/api/auth/logout" method="post" className="logout-form">
-          <button type="submit" className="logout-button" title="Logout">
-            &times;
-          </button>
-        </form>
-      </div>
-    </aside>
+
+        <nav className="sidebar-nav">
+          {navItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={`nav-item ${isActive ? "active" : ""}`}
+              >
+                <span className="nav-label">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="user-info">
+            <div className="user-avatar">{userName?.[0]?.toUpperCase() ?? "U"}</div>
+            <div className="user-name">{userName ?? "User"}</div>
+          </div>
+          <form action="/api/auth/logout" method="post" className="logout-form">
+            <button type="submit" className="logout-button" title="Logout">
+              &times;
+            </button>
+          </form>
+        </div>
+      </aside>
+    </>
   );
 }

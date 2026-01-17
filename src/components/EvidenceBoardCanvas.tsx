@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, type MouseEvent, type DragEvent } from "react";
 
 type BoardItem = {
@@ -45,6 +46,7 @@ type Props = {
 };
 
 export function EvidenceBoardCanvas({ board, workspaceId, entities, references }: Props) {
+  const router = useRouter();
   const canvasRef = useRef<HTMLDivElement>(null);
   const [items, setItems] = useState<BoardItem[]>(board.items);
   const [links] = useState<BoardLink[]>(board.links);
@@ -120,9 +122,9 @@ export function EvidenceBoardCanvas({ board, workspaceId, entities, references }
 
     const response = await fetch("/api/evidence-items/create", { method: "POST", body: form });
     if (response.ok) {
-      window.location.reload();
+      router.refresh();
     }
-  }, [workspaceId, board.id]);
+  }, [workspaceId, board.id, router]);
 
   const handleDragOver = useCallback((e: DragEvent) => {
     e.preventDefault();
@@ -150,24 +152,24 @@ export function EvidenceBoardCanvas({ board, workspaceId, entities, references }
 
     await fetch("/api/evidence-links/create", { method: "POST", body: form });
     setConnectingFrom(null);
-    window.location.reload();
-  }, [connectingFrom, workspaceId, board.id]);
+    router.refresh();
+  }, [connectingFrom, workspaceId, board.id, router]);
 
   // Get card display info
   const getCardDisplay = (item: BoardItem) => {
     if (item.entity) {
-      return { title: item.entity.title, subtitle: item.entity.type, color: "#eef1f7" };
+      return { title: item.entity.title, subtitle: item.entity.type, className: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800" };
     }
     if (item.reference) {
-      return { title: item.reference.title, subtitle: "Reference", color: "#f0f8e8" };
+      return { title: item.reference.title, subtitle: "Reference", className: "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800" };
     }
     if (item.type === "note") {
-      return { title: item.title || "Note", subtitle: item.content?.slice(0, 50), color: "#fffbeb" };
+      return { title: item.title || "Note", subtitle: item.content?.slice(0, 50), className: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800" };
     }
     if (item.type === "url") {
-      return { title: item.title || item.url || "Link", subtitle: item.url, color: "#f0f0ff" };
+      return { title: item.title || item.url || "Link", subtitle: item.url, className: "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800" };
     }
-    return { title: item.title || "Item", subtitle: item.type, color: "#f5f5f5" };
+    return { title: item.title || "Item", subtitle: item.type, className: "bg-panel border-border" };
   };
 
   // Calculate link line positions
@@ -229,25 +231,27 @@ export function EvidenceBoardCanvas({ board, workspaceId, entities, references }
         return (
           <div
             key={item.id}
-            className={`board-card ${isSelected ? "selected" : ""} ${isConnecting ? "connecting" : ""}`}
+            className={`board-card border shadow-sm transition-all hover:shadow-md ${display.className} ${isSelected ? "ring-2 ring-accent border-accent shadow-lg" : ""} ${isConnecting ? "ring-2 ring-amber-500 animate-pulse" : ""}`}
             style={{
               left: item.x,
               top: item.y,
-              backgroundColor: display.color,
               zIndex: item.zIndex || 1
             }}
             onMouseDown={(e) => handleCardMouseDown(e, item)}
             onClick={() => connectingFrom ? completeConnection(item.id) : setSelectedId(item.id)}
           >
-            <div className="card-title">{display.title}</div>
-            {display.subtitle && <div className="card-subtitle">{display.subtitle}</div>}
+            <div className="card-title font-bold text-sm text-ink mb-1">{display.title}</div>
+            {display.subtitle && <div className="card-subtitle text-[10px] uppercase font-semibold text-muted opacity-80">{display.subtitle}</div>}
             <div className="card-actions">
               <button
-                className="card-action-btn"
+                className="card-action-btn w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-border shadow-sm flex items-center justify-center hover:bg-accent hover:text-white transition-colors"
                 title="Connect to another card"
                 onClick={(e) => { e.stopPropagation(); startConnection(item.id); }}
               >
-                +
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                </svg>
               </button>
             </div>
           </div>

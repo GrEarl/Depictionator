@@ -1,8 +1,18 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useRef, useState, useMemo, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useRouter } from "next/navigation";
 import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+
+import { Button } from "@/components/ui/Button";
+
+import { useToast, ToastContainer } from "@/components/ui/Toast";
+
+import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
+
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
+
+
 
 type MarkerStyle = {
   id: string;
@@ -36,6 +46,7 @@ type MapPayload = {
     worldTo?: string | null;
     storyFromChapterId?: string | null;
     storyToChapterId?: string | null;
+    layerId?: string | null;
   }[];
   paths: {
     id: string;
@@ -43,9 +54,17 @@ type MapPayload = {
     arrowStyle: string;
     strokeColor?: string | null;
     strokeWidth?: number | null;
+    markerStyleId?: string | null;
     markerStyle?: { color: string } | null;
-    viewpointId?: string | null;
     truthFlag?: string | null;
+    viewpointId?: string | null;
+    worldFrom?: string | null;
+    worldTo?: string | null;
+    storyFromChapterId?: string | null;
+    storyToChapterId?: string | null;
+    relatedEventId?: string | null;
+    relatedEntityIds?: string | null;
+    layerId?: string | null;
   }[];
   events?: {
     id: string;
@@ -56,14 +75,31 @@ type MapPayload = {
   }[];
 };
 
+type EraOption = {
+  id: string;
+  name: string;
+  sortKey?: number | string | null;
+};
+
+type ChapterOption = {
+  id: string;
+  name: string;
+  orderIndex: number;
+};
+
+type ViewpointOption = {
+  id: string;
+  name: string;
+};
+
 type MapEditorProps = {
   map: MapPayload | null;
   workspaceId: string;
   markerStyles: MarkerStyle[];
   locationTypes: string[];
-  eras: { id: string; name: string; worldStart?: string | null; worldEnd?: string | null; sortKey: number }[];
-  chapters: { id: string; name: string; orderIndex: number }[];
-  viewpoints: { id: string; name: string }[];
+  eras: EraOption[];
+  chapters: ChapterOption[];
+  viewpoints: ViewpointOption[];
 };
 
 type PinDraft = {
@@ -109,20 +145,91 @@ function createIcon(L: any, shape: string, color: string) {
   });
 }
 
+
+
 export function MapEditor({
+
   map,
+
   workspaceId,
+
   markerStyles,
+
   locationTypes,
+
   eras,
+
   chapters,
+
   viewpoints
+
 }: MapEditorProps) {
+
+  const router = useRouter();
+
   const containerRef = useRef<HTMLDivElement | null>(null);
+
   const mapRef = useRef<LeafletMap | null>(null);
+
   const { eraId, chapterId, viewpointId, mode: globalMode } = useGlobalFilters();
+
+  const { toasts, addToast, removeToast } = useToast();
+
   
+
   const [mode, setMode] = useState<"select" | "pin" | "path" | "card">("select");
+
+  const [isSaving, setIsSaving] = useState(false); // Loading state
+
+
+
+  // Keyboard Navigation (Pan)
+
+  useEffect(() => {
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+
+      if (!mapRef.current) return;
+
+      const panAmount = 50;
+
+      // Only handle if not in input
+
+      const target = e.target as HTMLElement;
+
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
+
+
+      switch (e.key) {
+
+        case "ArrowUp": mapRef.current.panBy([0, -panAmount]); break;
+
+        case "ArrowDown": mapRef.current.panBy([0, panAmount]); break;
+
+        case "ArrowLeft": mapRef.current.panBy([-panAmount, 0]); break;
+
+        case "ArrowRight": mapRef.current.panBy([panAmount, 0]); break;
+
+      }
+
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+
+  }, []);
+
+
+
+  // ... (rest of state and effects)
+
+
+
+  // ... (rest of functions)
+
+
   const [showImage, setShowImage] = useState(true);
   const [showPins, setShowPins] = useState(true);
   const [showPaths, setShowPaths] = useState(true);
@@ -216,6 +323,43 @@ export function MapEditor({
     label?: string;
   }>>([]);
 
+  // Save cards to DB
+  const saveCardsToDatabase = useCallback(async () => {
+    if (!map?.id) return;
+    setIsSaving(true);
+
+    try {
+      const res = await fetch('/api/map-cards/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          workspaceId,
+          mapId: map.id,
+          cards: mapCards,
+          connections: cardConnections
+        })
+      });
+
+      if (res.ok) {
+        addToast('Cards saved successfully.', 'success');
+      } else {
+        addToast('Failed to save cards.', 'error');
+      }
+    } catch (error) {
+      console.error('Failed to save cards:', error);
+      addToast('Error saving cards.', 'error');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [map?.id, workspaceId, mapCards, cardConnections, addToast]);
+
+  // Keyboard Shortcuts
+  useKeyboardShortcut("v", () => setMode("select"));
+  useKeyboardShortcut("p", () => setMode("pin"));
+  useKeyboardShortcut("l", () => setMode("path")); // 'l' for Line/Path
+  useKeyboardShortcut("c", () => setMode("card"));
+  useKeyboardShortcut("s", () => saveCardsToDatabase(), { ctrl: true });
+
   // Connection mode state
   const [connectingFromCardId, setConnectingFromCardId] = useState<string | null>(null);
 
@@ -248,33 +392,6 @@ export function MapEditor({
 
     loadCardsFromDB();
   }, [map?.id]);
-
-  // Save cards to DB
-  const saveCardsToDatabase = useCallback(async () => {
-    if (!map?.id) return;
-
-    try {
-      const res = await fetch('/api/map-cards/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          workspaceId,
-          mapId: map.id,
-          cards: mapCards,
-          connections: cardConnections
-        })
-      });
-
-      if (res.ok) {
-        alert('Cards saved successfully! ✅');
-      } else {
-        alert('Failed to save cards');
-      }
-    } catch (error) {
-      console.error('Failed to save cards:', error);
-      alert('Error saving cards');
-    }
-  }, [map?.id, workspaceId, mapCards, cardConnections]);
 
   // Handle card drag
   const handleCardMouseDown = useCallback((e: React.MouseEvent, card: typeof mapCards[0]) => {
@@ -321,7 +438,7 @@ export function MapEditor({
   // Auto-arrange events in timeline order
   const autoArrangeEvents = useCallback(() => {
     if (!map?.events || map.events.length === 0) {
-      alert('No events found on this map');
+      addToast('No events found on this map.', 'info');
       return;
     }
 
@@ -607,11 +724,11 @@ export function MapEditor({
             } else {
               const errorData = await response.text();
               console.error("Failed to create pin:", errorData);
-              alert(`Failed to create pin: ${response.statusText}`);
+              addToast(`Failed to create pin: ${response.statusText}`, "error");
             }
           } catch (error) {
             console.error("Error creating pin from entity drop:", error);
-            alert("Failed to create pin. Please try again.");
+            addToast("Failed to create pin. Please try again.", "error");
           }
         }
       };
@@ -637,7 +754,23 @@ export function MapEditor({
 
   // --- API Actions ---
 
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
+
+  const validatePinForm = () => {
+    const newErrors: Record<string, boolean> = {};
+    if (!pinDraft.label.trim()) newErrors.label = true;
+    if (pinDraft.x === null) newErrors.x = true;
+    if (pinDraft.y === null) newErrors.y = true;
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   async function submitPin() {
+    if (!validatePinForm()) {
+      addToast("Please fill in all required fields.", "error");
+      return;
+    }
     if (!map || pinDraft.x === null || pinDraft.y === null) return;
     try {
       const form = new FormData();
@@ -651,19 +784,14 @@ export function MapEditor({
         throw new Error(`Failed to create pin: ${response.statusText}`);
       }
       
-      // Trigger map re-render by changing a key dependency
+      // Trigger map refresh without full reload
       setSelectedPinId("");
       setPinDraft(createPinDraft());
       setMode("select");
-      
-      // Force re-fetch by updating URL search params
-      const url = new URL(window.location.href);
-      url.searchParams.set('_refresh', Date.now().toString());
-      window.history.replaceState({}, '', url);
-      window.location.reload(); // Keep for now, will optimize later
+      router.refresh();
     } catch (error) {
       console.error("Error creating pin:", error);
-      alert("Failed to create pin. Please try again.");
+      addToast("Failed to create pin. Please try again.", "error");
     }
   }
 
@@ -685,7 +813,7 @@ export function MapEditor({
       }
     } catch (error) {
       console.error("Error updating pin position:", error);
-      alert("Failed to update pin position. Please try again.");
+      addToast("Failed to update pin position. Please try again.", "error");
     }
   }
 
@@ -704,13 +832,10 @@ export function MapEditor({
       }
       
       // Trigger map re-render
-      const url = new URL(window.location.href);
-      url.searchParams.set('_refresh', Date.now().toString());
-      window.history.replaceState({}, '', url);
-      window.location.reload(); // Keep for now
+      router.refresh();
     } catch (error) {
       console.error("Error updating pin:", error);
-      alert("Failed to update pin. Please try again.");
+      addToast("Failed to update pin. Please try again.", "error");
     }
   }
 
@@ -732,14 +857,10 @@ export function MapEditor({
       // Clear path points and trigger re-render
       setPathPoints([]);
       setMode("select");
-      
-      const url = new URL(window.location.href);
-      url.searchParams.set('_refresh', Date.now().toString());
-      window.history.replaceState({}, '', url);
-      window.location.reload(); // Keep for now
+      router.refresh();
     } catch (error) {
       console.error("Error creating path:", error);
-      alert("Failed to create path. Please try again.");
+      addToast("Failed to create path. Please try again.", "error");
     }
   }
 
@@ -750,99 +871,173 @@ export function MapEditor({
     // There is no /api/pins/delete in list, maybe use update? 
     // Wait, the file structure showed `api/marker-styles/delete` but not `pins/delete`.
     // I'll skip delete for now or assume it's missing.
-    alert("Delete not implemented yet (check API)");
+    addToast("Delete not implemented yet (check API)", "info");
   }
 
   // --- Render Helpers ---
 
   const renderPinForm = () => (
-    <div className="inspector-form">
-      <label>
-        Label
+    <div className="inspector-form space-y-4">
+      <div className="space-y-1.5">
+        <label className="text-xs font-bold uppercase text-muted tracking-wider">Label</label>
         <input
+          className={`w-full bg-bg border rounded-lg px-3 py-2 text-sm outline-none transition-all ${
+            errors.label ? "border-red-500 ring-1 ring-red-500" : "border-border focus:ring-2 focus:ring-accent"
+          }`}
           value={pinDraft.label}
-          onChange={(e) => setPinDraft({ ...pinDraft, label: e.target.value })}
-          placeholder="New Pin"
+          onChange={(e) => {
+            setPinDraft({ ...pinDraft, label: e.target.value });
+            if (errors.label) setErrors({ ...errors, label: false });
+          }}
+          placeholder="Enter location name..."
         />
-      </label>
-      <div className="coord-row">
-        <label>X <input value={pinDraft.x ?? ""} readOnly /></label>
-        <label>Y <input value={pinDraft.y ?? ""} readOnly /></label>
       </div>
-      <label>
-        Style
-        <select
-          value={pinDraft.markerStyleId}
-          onChange={(e) => setPinDraft({ ...pinDraft, markerStyleId: e.target.value })}
-        >
-          <option value="">Default</option>
-          {markerStyles.filter(s => s.target !== 'path').map(s => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Type
-        <select
-          value={pinDraft.locationType}
-          onChange={(e) => setPinDraft({ ...pinDraft, locationType: e.target.value })}
-        >
-          {locationTypes.map(t => <option key={t} value={t}>{t}</option>)}
-        </select>
-      </label>
       
-      <div className="inspector-advanced" style={{ display: 'grid', gap: 12, borderTop: '1px solid #eee', paddingTop: 12, marginTop: 8 }}>
-         <label>
-           Truth
-           <select value={pinDraft.truthFlag} onChange={e => setPinDraft({...pinDraft, truthFlag: e.target.value})}>
-             <option value="canonical">Canon</option>
-             <option value="rumor">Rumor</option>
-             <option value="belief">Belief</option>
-           </select>
-         </label>
-
-         <label>
-           Viewpoint
-           <select value={pinDraft.viewpointId} onChange={e => setPinDraft({...pinDraft, viewpointId: e.target.value})}>
-             <option value="">(None - Global)</option>
-             {viewpoints.map(vp => (
-               <option key={vp.id} value={vp.id}>{vp.name}</option>
-             ))}
-           </select>
-         </label>
-
-         <div className="coord-row">
-            <label>Start (World) <input placeholder="e.g. 1000" value={pinDraft.worldFrom} onChange={e => setPinDraft({...pinDraft, worldFrom: e.target.value})} /></label>
-            <label>End <input placeholder="e.g. 1200" value={pinDraft.worldTo} onChange={e => setPinDraft({...pinDraft, worldTo: e.target.value})} /></label>
-         </div>
-
-         <div className="coord-row">
-            <label>
-              From Chapter
-              <select value={pinDraft.storyFromChapterId} onChange={e => setPinDraft({...pinDraft, storyFromChapterId: e.target.value})}>
-                <option value="">(Start)</option>
-                {chapters.map(c => <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>)}
-              </select>
-            </label>
-            <label>
-              To Chapter
-              <select value={pinDraft.storyToChapterId} onChange={e => setPinDraft({...pinDraft, storyToChapterId: e.target.value})}>
-                <option value="">(End)</option>
-                {chapters.map(c => <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>)}
-              </select>
-            </label>
-         </div>
-         
-         <label>Entity ID <input value={pinDraft.entityId} onChange={e => setPinDraft({...pinDraft, entityId: e.target.value})} placeholder="Linked Entity ID" /></label>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold uppercase text-muted tracking-wider">Coordinate X</label>
+          <input className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm opacity-60 cursor-not-allowed" value={pinDraft.x ?? ""} readOnly />
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold uppercase text-muted tracking-wider">Coordinate Y</label>
+          <input className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm opacity-60 cursor-not-allowed" value={pinDraft.y ?? ""} readOnly />
+        </div>
       </div>
 
-      <div className="inspector-actions">
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold uppercase text-muted tracking-wider">Style</label>
+          <select
+            className="w-full bg-bg border border-border rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
+            value={pinDraft.markerStyleId}
+            onChange={(e) => setPinDraft({ ...pinDraft, markerStyleId: e.target.value })}
+          >
+            <option value="">Default</option>
+            {markerStyles.filter(s => s.target !== 'path').map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-xs font-bold uppercase text-muted tracking-wider">Type</label>
+          <select
+            className="w-full bg-bg border border-border rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-accent capitalize"
+            value={pinDraft.locationType}
+            onChange={(e) => setPinDraft({ ...pinDraft, locationType: e.target.value })}
+          >
+            {locationTypes.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+        </div>
+      </div>
+      
+      <div className="border-t border-border pt-4 mt-2">
+        <details className="group">
+          <summary className="text-[10px] font-bold uppercase text-muted mb-3 cursor-pointer flex items-center gap-2">
+            Advanced Settings
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-2.5 h-2.5 transition-transform group-open:rotate-180">
+              <path d="M19 9l-7 7-7-7" />
+            </svg>
+          </summary>
+          
+          <div className="space-y-4 pb-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted tracking-wider">Truth Status</label>
+                <select 
+                  className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+                  value={pinDraft.truthFlag} 
+                  onChange={e => setPinDraft({...pinDraft, truthFlag: e.target.value})}
+                >
+                  <option value="canonical">Canonical</option>
+                  <option value="rumor">Rumor</option>
+                  <option value="belief">Belief</option>
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted tracking-wider">Viewpoint</label>
+                <select 
+                  className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+                  value={pinDraft.viewpointId} 
+                  onChange={e => setPinDraft({...pinDraft, viewpointId: e.target.value})}
+                >
+                  <option value="">Global / Canon</option>
+                  {viewpoints.map(vp => (
+                    <option key={vp.id} value={vp.id}>{vp.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted tracking-wider">Start (World Time)</label>
+                <input 
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+                  placeholder="e.g. 1000" 
+                  value={pinDraft.worldFrom} 
+                  onChange={e => setPinDraft({...pinDraft, worldFrom: e.target.value})} 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted tracking-wider">End (World Time)</label>
+                <input 
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+                  placeholder="e.g. 1200" 
+                  value={pinDraft.worldTo} 
+                  onChange={e => setPinDraft({...pinDraft, worldTo: e.target.value})} 
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted tracking-wider">From Chapter</label>
+                <select 
+                  className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+                  value={pinDraft.storyFromChapterId} 
+                  onChange={e => setPinDraft({...pinDraft, storyFromChapterId: e.target.value})}
+                >
+                  <option value="">Start</option>
+                  {chapters.map(c => <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-muted tracking-wider">To Chapter</label>
+                <select 
+                  className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+                  value={pinDraft.storyToChapterId} 
+                  onChange={e => setPinDraft({...pinDraft, storyToChapterId: e.target.value})}
+                >
+                  <option value="">End</option>
+                  {chapters.map(c => <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>)}
+                </select>
+              </div>
+            </div>
+            
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase text-muted tracking-wider">Linked Entity ID</label>
+              <input 
+                className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent font-mono"
+                value={pinDraft.entityId} 
+                onChange={e => setPinDraft({...pinDraft, entityId: e.target.value})} 
+                placeholder="UUID or Slug" 
+              />
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div className="flex gap-2 pt-2 border-t border-border mt-4">
         {mode === "pin" ? (
-          <button onClick={submitPin} disabled={pinDraft.x === null} className="btn-save">Create Pin</button>
+          <Button onClick={submitPin} disabled={pinDraft.x === null} className="flex-1">Create Pin</Button>
         ) : (
           <>
-            <button onClick={submitPinUpdate} className="btn-save">Update</button>
-            <button onClick={deletePin} className="btn-danger">Delete</button>
+            <Button onClick={submitPinUpdate} className="flex-1">Save Changes</Button>
+            <Button variant="danger" size="icon" onClick={deletePin} title="Delete Pin">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+              </svg>
+            </Button>
           </>
         )}
       </div>
@@ -850,110 +1045,161 @@ export function MapEditor({
   );
 
   return (
-    <div className="map-viewer-container">
+    <div className="map-viewer-container bg-bg">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       {/* Floating Toolbar */}
-      <div className="map-toolbar">
-        <button 
-          className={`tool-btn ${mode === "select" ? "active" : ""}`}
+      <div className="map-toolbar bg-panel border border-border shadow-lg">
+        <Button 
+          variant={mode === "select" ? "primary" : "ghost"}
+          size="icon"
           onClick={() => { setMode("select"); setSelectedPinId(""); }}
           title="Select / Move"
         >
-          <span>↖️</span>
-        </button>
-        <button 
-          className={`tool-btn ${mode === "pin" ? "active" : ""}`}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+            <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+            <path d="M13 13l6 6" />
+          </svg>
+        </Button>
+        <Button 
+          variant={mode === "pin" ? "primary" : "ghost"}
+          size="icon"
           onClick={() => { setMode("pin"); setSelectedPinId(""); }}
           title="Place Pin"
         >
-          <span>📍</span>
-        </button>
-        <button
-          className={`tool-btn ${mode === "path" ? "active" : ""}`}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+        </Button>
+        <Button
+          variant={mode === "path" ? "primary" : "ghost"}
+          size="icon"
           onClick={() => { setMode("path"); setSelectedPinId(""); }}
           title="Draw Path"
         >
-          <span>〰️</span>
-        </button>
-        <button
-          className={`tool-btn ${mode === "card" ? "active" : ""}`}
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+            <path d="M22 12c-4.5 0-4.5-8-9-8s-4.5 8-9 8" />
+            <path d="M13 4L22 12" />
+          </svg>
+        </Button>
+        <Button
+          variant={mode === "card" ? "primary" : "ghost"}
+          size="icon"
           onClick={() => { setMode("card"); setSelectedPinId(""); }}
           title="Place Evidence Card"
         >
-          <span>📋</span>
-        </button>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <path d="M7 7h10M7 12h10M7 17h10" />
+          </svg>
+        </Button>
         <div className="toolbar-divider" />
-        <button
-          className={`tool-btn ${showLayerPanel ? "active" : ""}`}
+        <Button
+          variant={showLayerPanel ? "primary" : "ghost"}
+          size="icon"
           onClick={() => setShowLayerPanel(!showLayerPanel)}
           title="Layers & Filters"
         >
-          <span>📚</span>
-        </button>
-        <button
-          className="tool-btn"
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+          </svg>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={autoArrangeEvents}
           title="Auto-arrange events"
         >
-          <span>⏱️</span>
-        </button>
-        <button
-          className="tool-btn"
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 6v6l4 2" />
+          </svg>
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={saveCardsToDatabase}
-          title="Save cards"
+          disabled={isSaving}
+          title="Save cards (Ctrl+S)"
         >
-          <span>💾</span>
-        </button>
+          {isSaving ? (
+            <svg className="animate-spin h-5 w-5 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+          )}
+        </Button>
       </div>
 
       {/* Layers Panel */}
       {showLayerPanel && (
-        <div className="map-inspector" style={{ left: 16, right: 'auto', top: 80, width: 220 }}>
-          <div className="inspector-header">
-             <strong>Layers & Filters</strong>
-             <button className="close-btn" onClick={() => setShowLayerPanel(false)}>×</button>
+        <div className="map-inspector bg-panel border border-border shadow-xl rounded-xl animate-in slide-in-from-left-4 duration-200" style={{ left: 16, right: 'auto', top: 80, width: 260 }}>
+          <div className="inspector-header border-b border-border pb-3 mb-3">
+             <strong className="text-ink">Layers & Filters</strong>
+             <button className="close-btn hover:text-ink transition-colors" onClick={() => setShowLayerPanel(false)}>
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                 <path d="M18 6L6 18M6 6l12 12" />
+               </svg>
+             </button>
           </div>
-          <div className="inspector-form">
-            <label className="checkbox-label">
-              <input type="checkbox" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
-              Show Image
-            </label>
-            <label className="checkbox-label">
-              <input type="checkbox" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
-              Show Pins
-            </label>
-            <label className="checkbox-label">
-              <input type="checkbox" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
-              Show Paths
-            </label>
+          <div className="inspector-form space-y-4">
+            <div className="space-y-2">
+              <label className="checkbox-label text-sm text-ink cursor-pointer flex items-center gap-2">
+                <input type="checkbox" className="w-4 h-4 rounded border-border text-accent focus:ring-accent" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
+                Map Image
+              </label>
+              <label className="checkbox-label text-sm text-ink cursor-pointer flex items-center gap-2">
+                <input type="checkbox" className="w-4 h-4 rounded border-border text-accent focus:ring-accent" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
+                Location Pins
+              </label>
+              <label className="checkbox-label text-sm text-ink cursor-pointer flex items-center gap-2">
+                <input type="checkbox" className="w-4 h-4 rounded border-border text-accent focus:ring-accent" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
+                Path Lines
+              </label>
+            </div>
             
-            <div className="toolbar-divider" style={{ width: '100%', height: 1, margin: '8px 0' }} />
-            
-            <details open>
-              <summary className="text-xs font-bold uppercase text-muted mb-2 cursor-pointer">Location Types</summary>
-              <div className="list-sm" style={{ maxHeight: 300, overflowY: 'auto' }}>
-                {locationTypes.map(type => (
-                  <label key={type} className="list-row-sm cursor-pointer">
-                    <span style={{ textTransform: 'capitalize' }}>{type}</span>
-                    <input 
-                      type="checkbox" 
-                      checked={!hiddenLocationTypes.has(type)} 
-                      onChange={() => toggleLocationType(type)} 
-                    />
-                  </label>
-                ))}
-              </div>
-            </details>
+            <div className="border-t border-border pt-4">
+              <details open className="group">
+                <summary className="text-[10px] font-bold uppercase text-muted mb-3 cursor-pointer flex items-center justify-between group-open:mb-4">
+                  Location Types
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 transition-transform group-open:rotate-180">
+                    <path d="M19 9l-7 7-7-7" />
+                  </svg>
+                </summary>
+                <div className="grid gap-1 max-h-60 overflow-y-auto pr-1">
+                  {locationTypes.map(type => (
+                    <label key={type} className="flex items-center justify-between p-2 rounded-md hover:bg-bg transition-colors cursor-pointer text-sm">
+                      <span className="capitalize text-ink">{type}</span>
+                      <input 
+                        type="checkbox" 
+                        className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
+                        checked={!hiddenLocationTypes.has(type)} 
+                        onChange={() => toggleLocationType(type)} 
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
+            </div>
           </div>
         </div>
       )}
 
       {/* Floating Inspector */}
       {(selectedPinId || (mode === "pin" && pinDraft.x !== null)) && (
-        <div className="map-inspector">
-          <div className="inspector-header">
-            <strong>{selectedPinId ? "Edit Pin" : "New Pin"}</strong>
-            <button className="close-btn" onClick={() => { setSelectedPinId(""); setPinDraft(createPinDraft()); }}>
-              Close
+        <div className="map-inspector bg-panel border border-border shadow-xl rounded-xl animate-in slide-in-from-right-4 duration-200 w-full max-w-[320px] right-0 md:right-4 top-auto bottom-0 md:top-4 md:bottom-auto rounded-b-none md:rounded-b-xl border-b-0 md:border-b">
+          <div className="inspector-header border-b border-border pb-3 mb-4">
+            <strong className="text-ink">{selectedPinId ? "Pin Details" : "New Location Pin"}</strong>
+            <button className="close-btn hover:text-ink transition-colors" onClick={() => { setSelectedPinId(""); setPinDraft(createPinDraft()); }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
             </button>
           </div>
           {renderPinForm()}
@@ -962,20 +1208,37 @@ export function MapEditor({
 
       {/* Path Inspector */}
       {mode === "path" && (
-        <div className="map-inspector">
-           <div className="inspector-header"><strong>New Path</strong></div>
-           <div className="inspector-form">
-             <div className="muted">{pathPoints.length} points</div>
-             <label>
-               Style
-               <select value={pathDraft.arrowStyle} onChange={e => setPathDraft({...pathDraft, arrowStyle: e.target.value})}>
-                 <option value="arrow">Arrow</option>
-                 <option value="dashed">Dashed</option>
+        <div className="map-inspector bg-panel border border-border shadow-xl rounded-xl animate-in slide-in-from-right-4 duration-200 w-full max-w-[280px] right-0 md:right-4 top-auto bottom-0 md:top-4 md:bottom-auto rounded-b-none md:rounded-b-xl border-b-0 md:border-b">
+           <div className="inspector-header border-b border-border pb-3 mb-4">
+             <strong className="text-ink">Draw Path</strong>
+             <button className="close-btn hover:text-ink transition-colors" onClick={() => { setMode("select"); setPathPoints([]); }}>
+               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                 <path d="M18 6L6 18M6 6l12 12" />
+               </svg>
+             </button>
+           </div>
+           <div className="inspector-form space-y-4">
+             <div className="flex items-center justify-between text-xs font-medium bg-bg p-2 rounded-lg border border-border">
+               <span className="text-muted">Selected Points:</span>
+               <span className="text-accent font-bold">{pathPoints.length}</span>
+             </div>
+             <div className="space-y-1.5">
+               <label className="text-xs font-bold uppercase text-muted tracking-wider">Line Style</label>
+               <select 
+                 className="w-full bg-bg border border-border rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
+                 value={pathDraft.arrowStyle} 
+                 onChange={e => setPathDraft({...pathDraft, arrowStyle: e.target.value})}
+               >
+                 <option value="arrow">Solid with Arrow</option>
+                 <option value="dashed">Dashed Line</option>
+                 <option value="dotted">Dotted Line</option>
                </select>
-             </label>
-             <div className="inspector-actions">
-               <button onClick={submitPath} disabled={pathPoints.length < 2} className="btn-save">Create Path</button>
-               <button onClick={() => setPathPoints([])} className="btn-secondary">Clear</button>
+             </div>
+             <div className="flex gap-2 pt-2 border-t border-border mt-4">
+               <Button onClick={submitPath} disabled={pathPoints.length < 2} className="flex-1">Create Path</Button>
+               <Button variant="outline" onClick={() => setPathPoints([])} className="px-3">
+                 Clear
+               </Button>
              </div>
            </div>
         </div>
@@ -1049,10 +1312,32 @@ export function MapEditor({
           >
             <div className={`card-header type-${card.type}`}>
               <span className="card-icon">
-                {card.type === 'entity' && '👤'}
-                {card.type === 'article' && '📄'}
-                {card.type === 'event' && '⚡'}
-                {card.type === 'note' && '📝'}
+                {card.type === 'entity' && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                    <circle cx="12" cy="7" r="4" />
+                  </svg>
+                )}
+                {card.type === 'article' && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                )}
+                {card.type === 'event' && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                  </svg>
+                )}
+                {card.type === 'note' && (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                    <path d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z" />
+                  </svg>
+                )}
               </span>
               <span className="card-title-text">{card.title}</span>
               <button
@@ -1063,7 +1348,10 @@ export function MapEditor({
                 }}
                 title="Connect to another card"
               >
-                🔗
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                </svg>
               </button>
             </div>
             {card.content && (

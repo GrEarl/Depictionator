@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useWorkspace } from '@/contexts/WorkspaceContext';
+import { Button } from "@/components/ui/Button";
 
 interface PerspectiveInfo {
   id: string;
@@ -133,47 +134,45 @@ export default function PerspectiveAnalysisPanel({ entityId, perspectiveId }: Pr
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            🎭 視点分析
-          </h2>
-          <p className="text-sm muted mt-1">
-            陣営・キャラクターごとに異なる認識や情報差を可視化
-          </p>
-        </div>
+    <div className="p-6 space-y-8">
+      <div>
+        <h2 className="text-xl font-bold tracking-tight text-ink">
+          Perspective Analysis
+        </h2>
+        <p className="text-sm muted mt-1 uppercase tracking-wider font-semibold">
+          Analyze conflicting beliefs and information gaps
+        </p>
       </div>
 
       {/* Selection Panel */}
-      <div className="grid md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium mb-2">対象エンティティ</label>
+      <div className="grid md:grid-cols-2 gap-6 bg-panel p-6 rounded-xl border border-border">
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Target Entity</label>
           <select
             value={selectedEntity}
             onChange={(e) => setSelectedEntity(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800"
+            className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent"
           >
-            <option value="">-- エンティティを選択 --</option>
+            <option value="">-- Select Entity --</option>
             {entities.map(entity => (
               <option key={entity.id} value={entity.id}>
-                [{entity.type}] {entity.title}
+                [{entity.type.toUpperCase()}] {entity.title}
               </option>
             ))}
           </select>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-2">視点（陣営/キャラクター）</label>
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Viewpoint Source</label>
           <select
             value={selectedPerspective}
             onChange={(e) => setSelectedPerspective(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg dark:bg-slate-800"
+            className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent"
           >
-            <option value="">-- 視点を選択 --</option>
+            <option value="">-- Select Viewpoint --</option>
             {perspectives.map(perspective => (
               <option key={perspective.id} value={perspective.id}>
-                [{perspective.type}] {perspective.name}
+                [{perspective.type.toUpperCase()}] {perspective.name}
               </option>
             ))}
           </select>
@@ -181,153 +180,153 @@ export default function PerspectiveAnalysisPanel({ entityId, perspectiveId }: Pr
       </div>
 
       {/* Action Buttons */}
-      <div className="flex gap-3">
-        <button
+      <div className="flex gap-4">
+        <Button
           onClick={analyzePerspective}
           disabled={!selectedEntity || !selectedPerspective || isLoading}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="flex-1 gap-2"
         >
-          {isLoading ? '分析中...' : '視点分析を実行'}
-          {!isLoading && '🔍'}
-        </button>
+          {isLoading ? 'Analyzing...' : 'Run Perspective Analysis'}
+        </Button>
 
-        <button
+        <Button
           onClick={compareAllPerspectives}
           disabled={!selectedEntity || isLoading}
-          className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          variant="secondary"
+          className="flex-1 gap-2"
         >
-          {isLoading ? '比較中...' : '全視点を比較'}
-          {!isLoading && '📊'}
-        </button>
+          {isLoading ? 'Comparing...' : 'Compare All Perspectives'}
+        </Button>
       </div>
 
       {/* Analysis Results */}
       {analysis && (
-        <div className="space-y-6">
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-6 rounded-lg border">
-            <h3 className="text-xl font-bold mb-2">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="bg-accent/5 p-8 rounded-xl border border-accent/20">
+            <h3 className="text-2xl font-bold text-ink mb-1">
               {analysis.entityTitle}
             </h3>
-            <p className="text-sm muted">
-              エンティティタイプ: {analysis.entityType}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-accent">
+              Type: {analysis.entityType}
             </p>
           </div>
 
           {/* Perspective Cards */}
-          <div className="space-y-4">
+          <div className="space-y-6">
             {analysis.perspectives.map((pov, idx) => (
               <div
                 key={idx}
-                className="border rounded-lg p-6 bg-white dark:bg-slate-800 shadow-sm"
+                className="border border-border rounded-xl p-8 bg-panel shadow-sm hover:shadow-md transition-shadow"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-bold flex items-center gap-2">
+                <div className="flex items-center justify-between mb-8 border-b border-border pb-4">
+                  <h4 className="text-xl font-bold text-ink flex items-center gap-3">
                     <span
-                      className="w-4 h-4 rounded-full"
+                      className="w-3 h-3 rounded-full"
                       style={{
                         backgroundColor: perspectives.find(p => p.id === pov.perspectiveId)?.color || '#999'
                       }}
                     ></span>
                     {pov.perspectiveName}
                   </h4>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    pov.knowledgeLevel === 'full' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100' :
-                    pov.knowledgeLevel === 'partial' ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100' :
-                    pov.knowledgeLevel === 'minimal' ? 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-100' :
-                    pov.knowledgeLevel === 'false' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100' :
-                    'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-100'
+                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest ${
+                    pov.knowledgeLevel === 'full' ? 'bg-emerald-100 text-emerald-800' :
+                    pov.knowledgeLevel === 'partial' ? 'bg-amber-100 text-amber-800' :
+                    pov.knowledgeLevel === 'minimal' ? 'bg-orange-100 text-orange-800' :
+                    pov.knowledgeLevel === 'false' ? 'bg-red-100 text-red-800' :
+                    'bg-bg text-muted border border-border'
                   }`}>
-                    {pov.knowledgeLevel}
+                    {pov.knowledgeLevel} Knowledge
                   </span>
                 </div>
 
-                {/* Beliefs */}
-                {pov.beliefs.length > 0 && (
-                  <div className="mb-4">
-                    <h5 className="font-semibold mb-2 flex items-center gap-2">
-                      💭 認識・信念
-                    </h5>
-                    <div className="space-y-2">
-                      {pov.beliefs.map((belief, bIdx) => (
-                        <div
-                          key={bIdx}
-                          className={`p-3 rounded border-l-4 ${
-                            belief.isTrue
-                              ? 'bg-green-50 border-green-500 dark:bg-green-900/20'
-                              : 'bg-red-50 border-red-500 dark:bg-red-900/20'
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="flex-1">{belief.statement}</p>
-                            <span className={`text-xs px-2 py-1 rounded ${
-                              belief.reliability === 'confirmed' ? 'bg-green-200 dark:bg-green-800' :
-                              belief.reliability === 'rumor' ? 'bg-yellow-200 dark:bg-yellow-800' :
-                              belief.reliability === 'propaganda' ? 'bg-orange-200 dark:bg-orange-800' :
-                              'bg-red-200 dark:bg-red-800'
-                            }`}>
-                              {belief.reliability}
-                            </span>
+                <div className="grid lg:grid-cols-2 gap-8">
+                  {/* Beliefs */}
+                  {pov.beliefs.length > 0 && (
+                    <div className="space-y-4">
+                      <h5 className="text-[10px] font-bold uppercase tracking-widest text-muted">Perceptions & Beliefs</h5>
+                      <div className="space-y-3">
+                        {pov.beliefs.map((belief, bIdx) => (
+                          <div
+                            key={bIdx}
+                            className={`p-4 rounded-lg border-l-4 shadow-sm bg-bg/50 ${
+                              belief.isTrue
+                                ? 'border-emerald-500'
+                                : 'border-red-500'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-4">
+                              <p className="text-sm font-medium leading-relaxed text-ink">{belief.statement}</p>
+                              <span className={`text-[9px] font-bold uppercase tracking-tighter px-1.5 py-0.5 rounded border ${
+                                belief.reliability === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                                belief.reliability === 'rumor' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                                'bg-red-50 text-red-700 border-red-200'
+                              }`}>
+                                {belief.reliability}
+                              </span>
+                            </div>
+                            {belief.notes && (
+                              <p className="text-xs muted mt-3 italic leading-relaxed opacity-80">{belief.notes}</p>
+                            )}
                           </div>
-                          {belief.notes && (
-                            <p className="text-sm muted mt-2">{belief.notes}</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Motivations */}
-                {pov.motivations.length > 0 && (
-                  <div className="mb-4">
-                    <h5 className="font-semibold mb-2 flex items-center gap-2">
-                      🎯 動機・目的
-                    </h5>
-                    <ul className="list-disc list-inside space-y-1">
-                      {pov.motivations.map((motivation, mIdx) => (
-                        <li key={mIdx}>{motivation}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* Relationships */}
-                {pov.relationships.length > 0 && (
-                  <div className="mb-4">
-                    <h5 className="font-semibold mb-2 flex items-center gap-2">
-                      🔗 関係性
-                    </h5>
-                    <div className="space-y-2">
-                      {pov.relationships.map((rel, rIdx) => (
-                        <div key={rIdx} className="flex items-center gap-3 p-2 bg-slate-50 dark:bg-slate-900 rounded">
-                          <span className={`w-2 h-2 rounded-full ${
-                            rel.sentiment === 'positive' ? 'bg-green-500' :
-                            rel.sentiment === 'negative' ? 'bg-red-500' :
-                            'bg-gray-500'
-                          }`}></span>
-                          <span className="font-medium text-sm">{rel.relationshipType}:</span>
-                          <span className="flex-1">{rel.description}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Hidden Information */}
-                {pov.hiddenFrom.length > 0 && (
-                  <div>
-                    <h5 className="font-semibold mb-2 flex items-center gap-2">
-                      🚫 知らない情報
-                    </h5>
-                    <div className="bg-gray-100 dark:bg-gray-900 p-3 rounded">
-                      <ul className="list-disc list-inside space-y-1 text-sm">
-                        {pov.hiddenFrom.map((hidden, hIdx) => (
-                          <li key={hIdx} className="opacity-70">{hidden}</li>
                         ))}
-                      </ul>
+                      </div>
                     </div>
+                  )}
+
+                  <div className="space-y-8">
+                    {/* Motivations */}
+                    {pov.motivations.length > 0 && (
+                      <div className="space-y-4">
+                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-muted">Motivations & Objectives</h5>
+                        <ul className="space-y-2">
+                          {pov.motivations.map((motivation, mIdx) => (
+                            <li key={mIdx} className="text-sm text-ink flex items-start gap-2">
+                              <span className="text-accent mt-1">•</span>
+                              {motivation}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Relationships */}
+                    {pov.relationships.length > 0 && (
+                      <div className="space-y-4">
+                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-muted">Inter-entity Dynamics</h5>
+                        <div className="space-y-2">
+                          {pov.relationships.map((rel, rIdx) => (
+                            <div key={rIdx} className="flex items-center gap-3 p-3 bg-bg rounded-lg border border-border/50">
+                              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                rel.sentiment === 'positive' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' :
+                                rel.sentiment === 'negative' ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' :
+                                'bg-muted opacity-40'
+                              }`}></span>
+                              <span className="font-bold text-[10px] uppercase text-muted tracking-tight w-24 shrink-0">{rel.relationshipType}</span>
+                              <span className="text-sm text-ink">{rel.description}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Hidden Information */}
+                    {pov.hiddenFrom.length > 0 && (
+                      <div className="space-y-4">
+                        <h5 className="text-[10px] font-bold uppercase tracking-widest text-muted">Information Gaps</h5>
+                        <div className="bg-bg/80 p-4 rounded-lg border border-dashed border-border">
+                          <ul className="space-y-2">
+                            {pov.hiddenFrom.map((hidden, hIdx) => (
+                              <li key={hIdx} className="text-sm text-muted italic flex items-start gap-2">
+                                <span className="opacity-40 mt-1">?</span>
+                                {hidden}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             ))}
           </div>
