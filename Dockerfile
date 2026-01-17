@@ -35,20 +35,15 @@ RUN apk add --no-cache \
     && ln -sf /usr/lib/chromium/chromium /usr/bin/chromium-browser \
     && ln -sf /usr/lib/chromium/chromium /usr/bin/chromium
 
-# Standaloneモードの出力をコピー
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+# 通常ビルドの成果物をコピー
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/prisma ./prisma
-# Prisma関連の依存関係をすべてコピー
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/valibot ./node_modules/valibot
-# prisma.config.tsはコピーしない（standaloneではprisma/configモジュールがない）
 COPY scripts/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
 EXPOSE 3000
 ENTRYPOINT ["/app/docker-entrypoint.sh"]
-CMD ["node", "server.js"]
+CMD ["npm", "start"]
