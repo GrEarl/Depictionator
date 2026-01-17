@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
       }),
       prisma.event.findMany({
         where: { workspaceId, softDeletedAt: null },
-        select: { id: true, title: true, description: true },
+        select: { id: true, title: true, summaryMd: true },
         take: 20
       })
     ]);
