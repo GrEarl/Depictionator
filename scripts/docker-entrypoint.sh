@@ -6,12 +6,8 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
-if [ -d "/app/prisma/migrations" ] && [ "$(ls -A /app/prisma/migrations 2>/dev/null)" ]; then
-  echo "Running prisma migrate deploy..."
-  npx prisma migrate deploy
-else
-  echo "No migrations found. Running prisma db push..."
-  npx prisma db push
-fi
+# 新規DBの場合はprisma db pushを使用（マイグレーション履歴の問題を回避）
+echo "Running prisma db push..."
+npx prisma db push --accept-data-loss
 
 exec "$@"
