@@ -83,23 +83,23 @@ export default async function DashboardPage() {
           <h2 className="text-2xl font-bold tracking-tight mb-6">{session?.workspace?.name} Overview</h2>
 
           {entities.length === 0 && maps.length === 0 ? (
-            <div className="bg-panel border border-dashed border-border rounded-xl p-12 text-center animate-in fade-in zoom-in duration-500">
-              <div className="max-w-md mx-auto space-y-6">
-                <div className="w-16 h-16 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-8 h-8">
+            <div className="panel-game p-16 text-center animate-fade-in">
+              <div className="max-w-2xl mx-auto space-y-8">
+                <div className="w-24 h-24 bg-gradient-accent rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-12 h-12 text-white">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                   </svg>
                 </div>
-                <h3 className="text-xl font-bold text-ink">Welcome to Depictionator</h3>
-                <p className="text-muted leading-relaxed">
-                  Start building your world by creating your first entity or importing a map.
-                  The journey begins with a single point of data.
+                <h3 className="text-4xl font-black text-ink uppercase tracking-tight">Begin Your Legend</h3>
+                <p className="text-ink-secondary text-lg leading-relaxed font-semibold">
+                  Every epic world starts with a single character, a single location.<br />
+                  The canvas awaits your vision.
                 </p>
-                <div className="flex gap-4 justify-center pt-4">
-                  <Link href="/articles?action=new" className="action-btn">
-                    Create First Entity
+                <div className="flex gap-6 justify-center pt-8">
+                  <Link href="/articles?action=new" className="action-btn text-lg px-10 py-5">
+                    ▶ Create First Entity
                   </Link>
-                  <Link href="/maps" className="btn-secondary px-6 py-3 rounded-lg font-bold flex items-center gap-2">
+                  <Link href="/maps" className="px-10 py-5 bg-bg-elevated border-2 border-accent text-accent hover:bg-accent/10 font-bold uppercase tracking-wide transition-all glow-on-hover">
                     Open Atlas
                   </Link>
                 </div>
@@ -107,10 +107,10 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <>
-              <div className="overview-grid">
+              <div className="overview-grid stagger-children">
                 {/* Entity Stats */}
-                <div className="overview-card">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted">Entities</h3>
+                <div className="overview-card animate-slide-in">
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">Entities</h3>
                   <div className="stat-large">{entities.length}</div>
                   <div className="stat-breakdown">
                     {Object.entries(entityCounts).slice(0, 5).map(([type, count]) => (
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
 
                 {/* Maps */}
                 <div className="overview-card">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted">Maps</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">Maps</h3>
                   <div className="stat-large">{maps.length}</div>
                   <div className="recent-list">
                     {maps.slice(0, 3).map((map) => (
@@ -139,7 +139,7 @@ export default async function DashboardPage() {
 
                 {/* Evidence Boards */}
                 <div className="overview-card">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted">Evidence Boards</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">Evidence Boards</h3>
                   <div className="stat-large">{evidenceBoards.length}</div>
                   <div className="recent-list">
                     {evidenceBoards.slice(0, 3).map((board) => (
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
 
                 {/* Recent Updates */}
                 <div className="overview-card">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted">Recent Activity</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">Recent Activity</h3>
                   <div className="recent-list">
                     {recentArticles.slice(0, 5).map((rev) => (
                       <Link
