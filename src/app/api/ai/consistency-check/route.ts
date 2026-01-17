@@ -100,7 +100,7 @@ ${events.sort((a, b) => {
 ## Relationships
 ${relationships.map(r => `
 - Entity ${r.fromEntityId} → ${r.relationType} → Entity ${r.toEntityId}
-  ${r.summaryMd || ''}
+  ${r.description || ''}
 `).join('\n')}
 `;
 

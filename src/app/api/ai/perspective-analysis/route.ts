@@ -90,7 +90,7 @@ ${relatedEntities.map(e => `- ${e.title} (${e.type})`).join('\n')}
 
 ## Relationships
 ${relationships.map(r =>
-  `- ${r.fromEntityId === entityId ? 'This entity' : 'Other'} → ${r.relationType} → ${r.toEntityId === entityId ? 'This entity' : 'Other'}: ${r.summaryMd || ''}`
+  `- ${r.fromEntityId === entityId ? 'This entity' : 'Other'} → ${r.relationType} → ${r.toEntityId === entityId ? 'This entity' : 'Other'}: ${r.description || ''}`
 ).join('\n')}
 
 ## Related Events
