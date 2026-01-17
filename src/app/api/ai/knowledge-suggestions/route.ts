@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Build context
-    let contextEntities, contextArticles, contextEvents;
+    let contextEntities: any[], contextArticles: any[], contextEvents: any[];
 
     if (focusEntityId) {
       // Focus on specific entity and related content
