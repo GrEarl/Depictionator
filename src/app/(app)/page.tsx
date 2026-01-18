@@ -231,14 +231,17 @@ export default async function DashboardPage() {
 
       <section className="panel">
         <h2>{copy.dashboard.create}</h2>
+        <p className="text-muted text-sm mb-4">Create a new workspace to organize your worldbuilding project.</p>
         <form action="/api/workspaces/create" method="post" className="form-grid">
           <label>
             {copy.dashboard.name}
-            <input name="name" required />
+            <input name="name" required placeholder="e.g., Chronicles of Aetheria" />
+            <span className="text-xs text-muted mt-1 block">A descriptive name for your project</span>
           </label>
           <label>
             {copy.dashboard.slug}
-            <input name="slug" placeholder="optional" />
+            <input name="slug" placeholder="e.g., aetheria (optional, auto-generated if empty)" />
+            <span className="text-xs text-muted mt-1 block">URL-friendly identifier. Leave blank to auto-generate from name.</span>
           </label>
           <button type="submit">{copy.dashboard.createAction}</button>
         </form>
@@ -246,10 +249,12 @@ export default async function DashboardPage() {
 
       <section className="panel">
         <h2>{copy.dashboard.join}</h2>
+        <p className="text-muted text-sm mb-4">Join an existing workspace using its unique identifier.</p>
         <form action="/api/workspaces/join" method="post" className="form-grid">
           <label>
             {copy.dashboard.workspaceSlug}
-            <input name="slug" required />
+            <input name="slug" required placeholder="e.g., aetheria" />
+            <span className="text-xs text-muted mt-1 block">Ask the workspace owner for the project slug</span>
           </label>
           <button type="submit">{copy.dashboard.joinAction}</button>
         </form>

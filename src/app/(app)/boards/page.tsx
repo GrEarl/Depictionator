@@ -145,10 +145,12 @@ export default async function BoardsPage({ searchParams }: PageProps) {
                 <form action="/api/evidence-boards/create" method="post" className="form-grid p-4">
                   <input type="hidden" name="workspaceId" value={workspace.id} />
                   <label>
-                    Name <input name="name" required placeholder="Investigation Board" />
+                    Name <input name="name" required placeholder="e.g., Character Relationships" />
+                    <span className="text-xs text-muted mt-1 block">A descriptive name for this evidence board</span>
                   </label>
                   <label>
-                    Description <textarea name="description" rows={2} placeholder="Optional description..." />
+                    Description <textarea name="description" rows={2} placeholder="What will you organize on this board?" />
+                    <span className="text-xs text-muted mt-1 block">Optional description to help you remember the board's purpose</span>
                   </label>
                   <button type="submit" className="btn-primary">Create Board</button>
                 </form>
@@ -226,10 +228,10 @@ export default async function BoardsPage({ searchParams }: PageProps) {
                   <input type="hidden" name="x" value="100" />
                   <input type="hidden" name="y" value="100" />
                   <label>
-                    Title <input name="title" placeholder="Note title" />
+                    Title <input name="title" placeholder="e.g., Plot Twist Idea" />
                   </label>
                   <label>
-                    Content <textarea name="content" rows={3} placeholder="Your note..." />
+                    Content <textarea name="content" rows={3} placeholder="Write your note here..." />
                   </label>
                   <button type="submit" className="btn-primary">Add Note</button>
                 </form>
@@ -244,10 +246,10 @@ export default async function BoardsPage({ searchParams }: PageProps) {
                   <input type="hidden" name="x" value="200" />
                   <input type="hidden" name="y" value="100" />
                   <label>
-                    Title <input name="title" placeholder="Link title" />
+                    Title <input name="title" placeholder="e.g., Reference Article" />
                   </label>
                   <label>
-                    URL <input name="url" type="url" placeholder="https://..." />
+                    URL <input name="url" type="url" placeholder="https://example.com/article" />
                   </label>
                   <button type="submit" className="btn-primary">Add Link</button>
                 </form>

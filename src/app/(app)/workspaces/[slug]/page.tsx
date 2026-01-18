@@ -12,7 +12,7 @@ export default async function WorkspacePage({ params }: PageProps) {
   const copy = getUiCopy(locale);
 
   return (
-    <div className="panel">
+    <div className="panel max-w-2xl mx-auto mt-12 p-8">
       <LlmContext
         value={{
           type: "workspace",
@@ -21,27 +21,19 @@ export default async function WorkspacePage({ params }: PageProps) {
           role: membership.role
         }}
       />
-      <h2>{membership.workspace.name}</h2>
-      <p className="muted">
-        {copy.workspace.role}: {membership.role}
-      </p>
-      <h3>{copy.workspace.quickLinks}</h3>
-      <div className="link-grid">
-        {[
-          { href: "/articles", label: copy.nav.articles },
-          { href: "/maps", label: copy.nav.maps },
-          { href: "/timeline", label: copy.nav.timeline },
-          { href: "/reviews", label: copy.nav.reviews },
-          { href: "/settings", label: copy.nav.settings }
-        ].map((item) => (
-          <form key={item.href} action="/api/workspaces/open" method="post">
-            <input type="hidden" name="slug" value={membership.workspace.slug} />
-            <input type="hidden" name="redirectTo" value={item.href} />
-            <button type="submit" className="link-card">
-              {item.label}
-            </button>
-          </form>
-        ))}
+      <div className="text-center space-y-6">
+        <div className="w-20 h-20 bg-gradient-accent rounded-full flex items-center justify-center mx-auto mb-6">
+          <span className="text-4xl font-black text-white">{membership.workspace.name[0].toUpperCase()}</span>
+        </div>
+        <h2 className="text-3xl font-black uppercase tracking-tight">{membership.workspace.name}</h2>
+        <p className="text-ink-secondary text-lg">
+          {copy.workspace.role}: <span className="text-accent font-bold">{membership.role.toUpperCase()}</span>
+        </p>
+        <div className="pt-4">
+          <p className="text-muted text-sm">
+            Use the sidebar navigation to access different sections of this workspace.
+          </p>
+        </div>
       </div>
     </div>
   );

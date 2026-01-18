@@ -331,18 +331,20 @@ export default async function MapsPage({ searchParams }: PageProps) {
                 <form action="/api/maps/create" method="post" className="form-grid p-4">
                   <input type="hidden" name="workspaceId" value={workspace.id} />
                   <label>
-                    Title <input name="title" required />
+                    Title <input name="title" required placeholder="e.g., World Map, Kingdom of Eloria" />
+                    <span className="text-xs text-muted mt-1 block">A descriptive name for this map</span>
                   </label>
                   <label>
                     Parent Map
                     <select name="parentMapId">
-                      <option value="">None</option>
+                      <option value="">None (Top-level map)</option>
                       {maps.map((m) => (
                         <option key={m.id} value={m.id}>
                           {m.title}
                         </option>
                       ))}
                     </select>
+                    <span className="text-xs text-muted mt-1 block">Optional: Make this a sub-map of another map</span>
                   </label>
                   <button type="submit" className="btn-primary">Create Map</button>
                 </form>
@@ -374,18 +376,21 @@ export default async function MapsPage({ searchParams }: PageProps) {
               <form action="/api/marker-styles/create" method="post" className="form-grid mb-6">
                 <input type="hidden" name="workspaceId" value={workspace.id} />
                 <label>
-                  Name <input name="name" required />
+                  Name <input name="name" required placeholder="e.g., Capital City, Danger Zone" />
+                  <span className="text-xs text-muted mt-1 block">A name to identify this style</span>
                 </label>
                 <label>
                   Target
                   <select name="target">
-                    <option value="location">Location</option>
-                    <option value="event">Event</option>
-                    <option value="path">Path</option>
+                    <option value="location">Location (pins)</option>
+                    <option value="event">Event (historical markers)</option>
+                    <option value="path">Path (routes and borders)</option>
                   </select>
+                  <span className="text-xs text-muted mt-1 block">What will use this style?</span>
                 </label>
                 <label>
                   Shape <select name="shape">{SHAPES.map((s) => <option key={s} value={s}>{s}</option>)}</select>
+                  <span className="text-xs text-muted mt-1 block">Visual shape of the marker</span>
                 </label>
                 <label>
                   Color <input name="color" type="color" defaultValue="#1f4b99" />
