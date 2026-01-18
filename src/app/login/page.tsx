@@ -1,6 +1,16 @@
 ﻿import Link from "next/link";
 
-export default function LoginPage() {
+type LoginPageProps = {
+  searchParams?: { next?: string };
+};
+
+export default function LoginPage({ searchParams }: LoginPageProps) {
+  const next =
+    typeof searchParams?.next === "string" &&
+    searchParams.next.startsWith("/") &&
+    !searchParams.next.startsWith("//")
+      ? searchParams.next
+      : "";
   return (
     <main className="min-h-screen flex items-center justify-center bg-bg relative overflow-hidden">
       {/* Background decoration */}
@@ -17,6 +27,7 @@ export default function LoginPage() {
           </div>
 
           <form action="/api/auth/login" method="post" className="space-y-6">
+            {next && <input type="hidden" name="next" value={next} />}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-muted">Email</label>
               <input 
@@ -61,4 +72,5 @@ export default function LoginPage() {
     </main>
   );
 }
+
 

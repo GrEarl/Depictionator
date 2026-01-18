@@ -1,6 +1,16 @@
 ﻿import Link from "next/link";
 
-export default function RegisterPage() {
+type RegisterPageProps = {
+  searchParams?: { next?: string };
+};
+
+export default function RegisterPage({ searchParams }: RegisterPageProps) {
+  const next =
+    typeof searchParams?.next === "string" &&
+    searchParams.next.startsWith("/") &&
+    !searchParams.next.startsWith("//")
+      ? searchParams.next
+      : "";
   return (
     <main className="min-h-screen flex items-center justify-center bg-bg relative overflow-hidden">
       {/* Background decoration */}
@@ -17,6 +27,7 @@ export default function RegisterPage() {
           </div>
 
           <form action="/api/auth/register" method="post" className="space-y-5">
+            {next && <input type="hidden" name="next" value={next} />}
             <div className="space-y-2">
               <label className="text-xs font-bold uppercase tracking-widest text-muted">Display Name</label>
               <input 
@@ -67,3 +78,4 @@ export default function RegisterPage() {
     </main>
   );
 }
+

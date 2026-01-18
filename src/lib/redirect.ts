@@ -10,3 +10,12 @@ export function toRedirectUrl(request: Request, target: string): URL {
 
   return new URL(target, request.url);
 }
+
+export function sanitizeRedirectPath(value: FormDataEntryValue | null): string | null {
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (!trimmed.startsWith("/")) return null;
+  if (trimmed.startsWith("//")) return null;
+  return trimmed;
+}
