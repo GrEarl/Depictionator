@@ -17,6 +17,19 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const workspace = await getActiveWorkspace(user.id);
   const resolvedSearchParams = await searchParams;
   const tab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "members";
+  const rawNotice = typeof resolvedSearchParams.notice === "string" ? resolvedSearchParams.notice : null;
+  const rawError = typeof resolvedSearchParams.error === "string" ? resolvedSearchParams.error : null;
+  const noticeText = rawNotice === "member-added" ? "Member added successfully." : null;
+  const errorText =
+    rawError === "invalid-email"
+      ? "Enter a valid email address."
+      : rawError === "user-not-found"
+      ? "User not found. Ask them to sign up or use the invite link."
+      : rawError === "not-authorized"
+      ? "Admin role required to add members."
+      : rawError === "workspace-not-found"
+      ? "Workspace not found."
+      : null;
 
   const [viewpoints, assets, members] = workspace
     ? await Promise.all([
@@ -136,6 +149,18 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <div className="flex-1 overflow-y-auto p-8 max-w-4xl space-y-8">
           {tab === "members" && (
             <div className="space-y-8">
+              {(noticeText || errorText) && (
+                <div
+                  className={cn(
+                    "rounded-xl border px-4 py-3 text-sm font-semibold",
+                    noticeText
+                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                      : "bg-red-500/10 text-red-400 border-red-500/30"
+                  )}
+                >
+                  {noticeText || errorText}
+                </div>
+              )}
               <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
                 <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Invite Link</h4>
                 <p className="text-sm text-muted mb-4">Share this link to invite collaborators to your workspace. New members will join with viewer permissions.</p>
@@ -151,6 +176,42 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                     label="Copy Link"
                   />
                 </div>
+              </section>
+
+              <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Add Member by Email</h4>
+                <p className="text-sm text-muted mb-4">Add an existing user directly. If they do not have an account, share the invite link above.</p>
+                <form action="/api/workspaces/members/add" method="post" className="space-y-4">
+                  <input type="hidden" name="workspaceId" value={workspace.id} />
+                  <div className="grid gap-3 sm:grid-cols-[1fr_160px]">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted">User Email</label>
+                      <input
+                        type="email"
+                        name="email"
+                        required
+                        placeholder="member@example.com"
+                        className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold uppercase tracking-widest text-muted">Role</label>
+                      <select
+                        name="role"
+                        defaultValue="viewer"
+                        className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent text-sm"
+                      >
+                        <option value="viewer">Viewer</option>
+                        <option value="editor">Editor</option>
+                        <option value="reviewer">Reviewer</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </div>
+                  </div>
+                  <button type="submit" className="px-4 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-hover transition-colors">
+                    Add Member
+                  </button>
+                </form>
               </section>
 
               <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">

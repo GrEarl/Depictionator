@@ -71,12 +71,15 @@ export default async function JoinPage({ params }: JoinPageProps) {
             {maps.length > 0 && (
               <div className="grid md:grid-cols-2 gap-4">
                 {maps.map((map) => {
-                  const imageUrl = map.imageAssetId
-                    ? `/api/public/workspaces/${workspace.slug}/assets/${map.imageAssetId}`
-                    : null;
+                  const canPreviewImages = Boolean(membership);
+                  const imageUrl =
+                    canPreviewImages && map.imageAssetId
+                      ? `/api/assets/file/${map.imageAssetId}`
+                      : null;
+                  const lockedPreview = Boolean(map.imageAssetId) && !canPreviewImages;
                   return (
                     <div key={map.id} className="bg-bg border border-border rounded-xl overflow-hidden">
-                      <div className="aspect-[4/3] bg-slate-900/40 flex items-center justify-center">
+                      <div className="aspect-[4/3] bg-slate-900/40 flex items-center justify-center relative">
                         {imageUrl ? (
                           <img
                             src={imageUrl}
@@ -86,6 +89,11 @@ export default async function JoinPage({ params }: JoinPageProps) {
                           />
                         ) : (
                           <span className="text-xs text-muted">No image</span>
+                        )}
+                        {lockedPreview && (
+                          <div className="absolute inset-0 bg-slate-950/60 text-white text-xs font-semibold flex items-center justify-center">
+                            Sign in to preview
+                          </div>
                         )}
                       </div>
                       <div className="p-3">
