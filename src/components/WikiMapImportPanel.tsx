@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 
 type WikiPage = {
   pageId: number;
@@ -25,6 +25,13 @@ export function WikiMapImportPanel({ workspaceId }: WikiMapImportPanelProps) {
   const [mapTitle, setMapTitle] = useState("");
   const [bounds, setBounds] = useState("");
   const [parentMapId, setParentMapId] = useState("");
+  const [assetImporting, setAssetImporting] = useState(false);
+  const [mapImporting, setMapImporting] = useState(false);
+  const [assetMessage, setAssetMessage] = useState("");
+  const [mapMessage, setMapMessage] = useState("");
+  const [assetError, setAssetError] = useState("");
+  const [mapError, setMapError] = useState("");
+  const [importedMapId, setImportedMapId] = useState<string | null>(null);
 
   async function fetchImages() {
     if (!pageTitle.trim()) return;
@@ -55,6 +62,65 @@ export function WikiMapImportPanel({ workspaceId }: WikiMapImportPanelProps) {
       setError(String(err));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAssetImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAssetImporting(true);
+    setAssetMessage("");
+    setAssetError("");
+    try {
+      const form = new FormData(event.currentTarget);
+      const res = await fetch(event.currentTarget.action, { method: "POST", body: form });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = text;
+        try {
+          const json = JSON.parse(text) as { error?: string };
+          message = json.error ?? message;
+        } catch {}
+        setAssetError(message || "Import failed.");
+        return;
+      }
+      const data = (await res.json()) as { asset?: { id: string } };
+      setAssetMessage(`Image imported${data.asset?.id ? ` (asset ${data.asset.id})` : ""}.`);
+    } catch (err) {
+      setAssetError(String(err));
+    } finally {
+      setAssetImporting(false);
+    }
+  }
+
+  async function handleMapImport(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setMapImporting(true);
+    setMapMessage("");
+    setMapError("");
+    setImportedMapId(null);
+    try {
+      const form = new FormData(event.currentTarget);
+      const res = await fetch(event.currentTarget.action, { method: "POST", body: form });
+      if (!res.ok) {
+        const text = await res.text();
+        let message = text;
+        try {
+          const json = JSON.parse(text) as { error?: string };
+          message = json.error ?? message;
+        } catch {}
+        setMapError(message || "Import failed.");
+        return;
+      }
+      const data = (await res.json()) as { map?: { id: string; title: string } };
+      const title = data.map?.title || "Map";
+      setMapMessage(`${title} imported.`);
+      if (data.map?.id) {
+        setImportedMapId(data.map.id);
+      }
+    } catch (err) {
+      setMapError(String(err));
+    } finally {
+      setMapImporting(false);
     }
   }
 
@@ -90,7 +156,7 @@ export function WikiMapImportPanel({ workspaceId }: WikiMapImportPanelProps) {
         </div>
       )}
 
-      <form action="/api/wiki/import/asset" method="post" className="form-grid">
+      <form action="/api/wiki/import/asset" method="post" className="form-grid" onSubmit={handleAssetImport}>
         <input type="hidden" name="workspaceId" value={workspaceId} />
         <label>
           Image title
@@ -100,10 +166,20 @@ export function WikiMapImportPanel({ workspaceId }: WikiMapImportPanelProps) {
           Language
           <input name="lang" value={lang} onChange={(event) => setLang(event.target.value)} />
         </label>
-        <button type="submit">Import image asset</button>
+        <button type="submit" disabled={assetImporting}>
+          {assetImporting ? "Importing..." : "Import image asset"}
+        </button>
+        {assetMessage && <div className="muted">{assetMessage}</div>}
+        {assetError && <div className="muted">Error: {assetError}</div>}
       </form>
 
-      <form action="/api/wiki/import/map" method="post" className="form-grid" style={{ marginTop: "12px" }}>
+      <form
+        action="/api/wiki/import/map"
+        method="post"
+        className="form-grid"
+        style={{ marginTop: "12px" }}
+        onSubmit={handleMapImport}
+      >
         <input type="hidden" name="workspaceId" value={workspaceId} />
         <label>
           Map title
@@ -125,7 +201,20 @@ export function WikiMapImportPanel({ workspaceId }: WikiMapImportPanelProps) {
           Language
           <input name="lang" value={lang} onChange={(event) => setLang(event.target.value)} />
         </label>
-        <button type="submit">Import map</button>
+        <button type="submit" disabled={mapImporting}>
+          {mapImporting ? "Importing..." : "Import map"}
+        </button>
+        {mapMessage && (
+          <div className="muted">
+            {mapMessage}{" "}
+            {importedMapId && (
+              <a href={`/maps?map=${importedMapId}`} className="underline">
+                Open map
+              </a>
+            )}
+          </div>
+        )}
+        {mapError && <div className="muted">Error: {mapError}</div>}
       </form>
     </section>
   );

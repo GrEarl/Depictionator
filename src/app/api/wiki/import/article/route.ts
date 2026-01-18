@@ -33,14 +33,30 @@ function truncateText(value: string, limit: number): string {
   return value.slice(0, limit) + "\n\n[truncated]";
 }
 
+function pickSourceContent(page: WikiPage): string {
+  const extract = (page.extract ?? "").trim();
+  if (extract) return extract;
+  return (page.wikitext ?? "").trim();
+}
+
 function buildSynthesisPrompt(targetLang: string, sources: WikiSource[]): string {
-  const header = `You are a careful technical writer. Create an internal wiki article in ${targetLang}. Use only the provided sources. Keep a neutral tone and do not invent facts. If sources conflict, note the conflict. Output Markdown with headings and a short summary at the top. End with a "Sources" section listing each source URL with its language code.`;
+  const header = [
+    `You are a careful technical writer.`,
+    `Create a concise internal wiki article in ${targetLang}.`,
+    `Use only the provided sources. Do not invent facts.`,
+    `If sources conflict, note the conflict clearly.`,
+    `Output Markdown only.`,
+    `Structure:`,
+    `- Summary section with 3-6 bullet points.`,
+    `- 2-6 sections with ## headings.`,
+    `- End with a "Sources" section listing each source as "- [lang] URL".`
+  ].join("\n");
   const sourceList = sources
     .map((source) => `- [${source.lang}] ${source.page.title}: ${source.page.url}`)
     .join("\n");
   const bodies = sources
     .map((source) => {
-      const extract = source.page.extract || source.page.wikitext || "";
+      const extract = pickSourceContent(source.page);
       const clipped = truncateText(extract, 4000);
       return `SOURCE [${source.lang}] ${source.page.title}\nURL: ${source.page.url}\nCONTENT:\n${clipped}`;
     })
@@ -92,10 +108,10 @@ export async function POST(request: Request) {
   const fallbackUsed = pageLang !== preferredLang;
 
   let sources: WikiSource[] = [{ lang: pageLang, page }];
-  let bodyMd = page.extract || page.wikitext || "";
+  let bodyMd = "";
   let usedLlm = false;
 
-  if (fallbackUsed && useLlm) {
+  if (useLlm) {
     if (aggregateLangs) {
       const links = await fetchWikiLangLinks(pageLang, page.pageId);
       const limit = Number.isFinite(DEFAULT_LANG_LIMIT) ? DEFAULT_LANG_LIMIT : 10;
@@ -119,11 +135,17 @@ export async function POST(request: Request) {
         codexAuthBase64
       });
       usedLlm = true;
+      if (!bodyMd.trim()) {
+        bodyMd = pickSourceContent(page);
+        usedLlm = false;
+      }
     } catch (error) {
       return apiError(`LLM synthesis failed: ${(error as Error).message}`, 502);
     }
-  } else if (fallbackUsed && !useLlm && String(process.env.WIKI_IMPORT_REQUIRE_LLM ?? "true") === "true") {
+  } else if (fallbackUsed && String(process.env.WIKI_IMPORT_REQUIRE_LLM ?? "true") === "true") {
     return apiError("LLM is required to synthesize non-target language sources", 400);
+  } else {
+    bodyMd = pickSourceContent(page);
   }
 
   const type = (Object.values(EntityType) as string[]).includes(typeValue)
@@ -157,7 +179,7 @@ export async function POST(request: Request) {
       articleId: article.entityId,
       bodyMd,
       changeSummary: usedLlm
-        ? `Synthesized from Wikipedia (${sources.length} languages)`
+        ? `Summarized from Wikipedia (${sources.length} languages)`
         : `Imported from Wikipedia (${page.url})`,
       createdById: session.userId,
       status: publish ? "approved" : "draft",
