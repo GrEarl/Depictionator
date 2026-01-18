@@ -140,36 +140,49 @@ export default async function BoardsPage({ searchParams }: PageProps) {
         <div className="drawer-content scroll-content">
           {tab === "manage" && (
             <>
-              <details className="action-details" open>
-                <summary>Create New Board</summary>
-                <form action="/api/evidence-boards/create" method="post" className="form-grid p-4">
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <label>
-                    Name <input name="name" required placeholder="e.g., Character Relationships" />
-                    <span className="text-xs text-muted mt-1 block">A descriptive name for this evidence board</span>
-                  </label>
-                  <label>
-                    Description <textarea name="description" rows={2} placeholder="What will you organize on this board?" />
-                    <span className="text-xs text-muted mt-1 block">Optional description to help you remember the board's purpose</span>
-                  </label>
-                  <button type="submit" className="btn-primary">Create Board</button>
-                </form>
-              </details>
+              <div className="p-4 space-y-4">
+                <Link href="/boards/new" className="btn-primary w-full justify-center">
+                  ボードを作成
+                </Link>
+                <Link href="/boards/import" className="btn-secondary w-full justify-center">
+                  ボードをインポート
+                </Link>
+                <p className="text-xs text-muted">
+                  作成/インポートは専用ページで進めるようにしました。
+                </p>
+              </div>
 
               {activeBoard && (
                 <details className="action-details">
-                  <summary>Board Settings</summary>
+                  <summary>ボード設定</summary>
                   <form action="/api/evidence-boards/update" method="post" className="form-grid p-4">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
                     <input type="hidden" name="boardId" value={activeBoard.id} />
                     <label>
-                      Name <input name="name" defaultValue={activeBoard.name} />
+                      名前 <input name="name" defaultValue={activeBoard.name} />
                     </label>
                     <label>
-                      Description <textarea name="description" rows={2} defaultValue={activeBoard.description || ""} />
+                      説明 <textarea name="description" rows={2} defaultValue={activeBoard.description || ""} />
                     </label>
-                    <button type="submit" className="btn-secondary">Update</button>
+                    <button type="submit" className="btn-secondary">更新</button>
                   </form>
+                </details>
+              )}
+
+              {activeBoard && (
+                <details className="action-details">
+                  <summary>エクスポート</summary>
+                  <div className="p-4 space-y-3">
+                    <p className="text-xs text-muted">
+                      現在のボードをJSONとしてダウンロードします。
+                    </p>
+                    <a
+                      className="btn-secondary w-full justify-center"
+                      href={`/api/evidence-boards/export?workspaceId=${workspace.id}&boardId=${activeBoard.id}`}
+                    >
+                      JSONをダウンロード
+                    </a>
+                  </div>
                 </details>
               )}
             </>

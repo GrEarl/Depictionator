@@ -2,7 +2,6 @@
 import { prisma } from "@/lib/prisma";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
-import { WikiMapImportPanel } from "@/components/WikiMapImportPanel";
 import { MapEditorClient } from "@/components/MapEditorClient";
 import Link from "next/link";
 
@@ -35,7 +34,8 @@ export default async function MapsPage({ searchParams }: PageProps) {
   const resolvedSearchParams = await searchParams;
 
   const selectedMapId = typeof resolvedSearchParams.map === "string" ? resolvedSearchParams.map : undefined;
-  const tab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "manage";
+  const requestedTab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "manage";
+  const tab = ["entities", "manage", "styles"].includes(requestedTab) ? requestedTab : "manage";
   const query = typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q : "";
   const eraFilter = String(resolvedSearchParams.era ?? "all");
   const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
@@ -291,9 +291,6 @@ export default async function MapsPage({ searchParams }: PageProps) {
           <Link href={buildUrl({ tab: "styles" })} className={`tab-link ${tab === "styles" ? "active" : ""}`}>
             Styles
           </Link>
-          <Link href={buildUrl({ tab: "wiki" })} className={`tab-link ${tab === "wiki" ? "active" : ""}`}>
-            Wiki
-          </Link>
         </div>
 
         <div className="drawer-content scroll-content">
@@ -329,6 +326,18 @@ export default async function MapsPage({ searchParams }: PageProps) {
 
           {tab === "manage" && (
             <>
+              <div className="p-4 space-y-4">
+                <Link href="/maps/new" className="btn-primary w-full justify-center">
+                  地図を作成
+                </Link>
+                <Link href="/maps/import" className="btn-secondary w-full justify-center">
+                  Wikipediaからインポート
+                </Link>
+                <p className="text-xs text-muted">
+                  作成/インポートは専用ページで進めるようにしました。
+                </p>
+              </div>
+
               {activeMap && (
                 <details className="action-details" open>
                   <summary>Map Settings</summary>
@@ -355,29 +364,6 @@ export default async function MapsPage({ searchParams }: PageProps) {
                 </details>
               )}
 
-              <details className="action-details" open={!activeMap}>
-                <summary>Create New Map</summary>
-                <form action="/api/maps/create" method="post" className="form-grid p-4">
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <label>
-                    Title <input name="title" required placeholder="e.g., World Map, Kingdom of Eloria" />
-                    <span className="text-xs text-muted mt-1 block">A descriptive name for this map</span>
-                  </label>
-                  <label>
-                    Parent Map
-                    <select name="parentMapId">
-                      <option value="">None (Top-level map)</option>
-                      {maps.map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.title}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="text-xs text-muted mt-1 block">Optional: Make this a sub-map of another map</span>
-                  </label>
-                  <button type="submit" className="btn-primary">Create Map</button>
-                </form>
-              </details>
               {archivedMaps.length > 0 && (
                 <details className="action-details">
                   <summary>Archived ({archivedMaps.length})</summary>
@@ -442,11 +428,6 @@ export default async function MapsPage({ searchParams }: PageProps) {
             </div>
           )}
 
-          {tab === "wiki" && (
-            <div className="p-4">
-              <WikiMapImportPanel workspaceId={workspace.id} />
-            </div>
-          )}
         </div>
       </aside>
     </div>

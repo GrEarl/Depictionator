@@ -3,15 +3,9 @@ import { FilterSummary } from "@/components/FilterSummary";
 import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
-import { MarkdownEditor } from "@/components/MarkdownEditor";
-import { WikiArticleImportPanel } from "@/components/WikiArticleImportPanel";
 import { ArticleList } from "@/components/ArticleList";
 import { getFilteredEntities } from "@/lib/data/articles";
-import { EntityStatus, EntityType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-
-const ENTITY_TYPES = Object.values(EntityType);
-const ENTITY_STATUSES = Object.values(EntityStatus);
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 type PageProps = { searchParams: Promise<SearchParams> };
@@ -111,36 +105,17 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
             <h3 className="text-sm font-bold uppercase tracking-widest text-muted">Tools</h3>
          </div>
          <div className="drawer-content">
-            <details className="action-details" open>
-               <summary>Create New Article</summary>
-               <form action="/api/articles/create" method="post" className="form-grid p-4">
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <label>
-                    Type
-                    <select name="type">{ENTITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select>
-                    <span className="text-xs text-muted mt-1 block">What kind of entity is this?</span>
-                  </label>
-                  <label>
-                    Title
-                    <input name="title" required placeholder="e.g., The Great War, Lord Varian" />
-                    <span className="text-xs text-muted mt-1 block">A descriptive name for this entity</span>
-                  </label>
-                  <label>
-                    Tags
-                    <input name="tags" placeholder="e.g., lore, history, major-character" />
-                    <span className="text-xs text-muted mt-1 block">Separate multiple tags with commas (e.g., "lore, magic")</span>
-                  </label>
-                  <MarkdownEditor name="bodyMd" label="Initial Content" rows={6} defaultMode="write" />
-                  <button type="submit" className="btn-primary">Create Article</button>
-               </form>
-            </details>
-            
-            <details className="action-details">
-               <summary>Wiki Import</summary>
-               <div className="p-4">
-                 <WikiArticleImportPanel workspaceId={workspace.id} entityTypes={ENTITY_TYPES} />
-               </div>
-            </details>
+            <div className="p-4 space-y-4">
+              <Link href="/articles/new" className="btn-primary w-full justify-center">
+                記事を作成
+              </Link>
+              <Link href="/articles/import" className="btn-secondary w-full justify-center">
+                Wikipediaからインポート
+              </Link>
+              <p className="text-xs text-muted">
+                作成/インポートは専用ページで進めるようにしました。
+              </p>
+            </div>
 
             {archivedEntities.length > 0 && (
               <details className="action-details">

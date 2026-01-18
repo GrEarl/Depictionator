@@ -54,12 +54,11 @@ export default function LoginPage() {
           </div>
         </div>
         
-        <p className="text-center text-[10px] text-mutedmt-8 opacity-50 mt-8">
+        <p className="text-center text-[10px] text-muted mt-8 opacity-50">
           &copy; 2026 Depictionator. Worldbuilding for professionals.
         </p>
       </div>
     </main>
   );
 }
-
 
