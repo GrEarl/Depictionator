@@ -115,9 +115,21 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
                <summary>Create New Article</summary>
                <form action="/api/articles/create" method="post" className="form-grid p-4">
                   <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <label>Type <select name="type">{ENTITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
-                  <label>Title <input name="title" required placeholder="e.g. The Great War" /></label>
-                  <label>Tags <input name="tags" placeholder="lore, history..." /></label>
+                  <label>
+                    Type
+                    <select name="type">{ENTITY_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select>
+                    <span className="text-xs text-muted mt-1 block">What kind of entity is this?</span>
+                  </label>
+                  <label>
+                    Title
+                    <input name="title" required placeholder="e.g., The Great War, Lord Varian" />
+                    <span className="text-xs text-muted mt-1 block">A descriptive name for this entity</span>
+                  </label>
+                  <label>
+                    Tags
+                    <input name="tags" placeholder="e.g., lore, history, major-character" />
+                    <span className="text-xs text-muted mt-1 block">Comma-separated tags for categorization</span>
+                  </label>
                   <MarkdownEditor name="bodyMd" label="Initial Content" rows={6} />
                   <button type="submit" className="btn-primary">Create Article</button>
                </form>

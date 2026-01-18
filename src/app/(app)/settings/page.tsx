@@ -15,9 +15,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
   const resolvedSearchParams = await searchParams;
-  const tab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "viewpoints";
+  const tab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "members";
 
-  const [viewpoints, assets] = workspace
+  const [viewpoints, assets, members] = workspace
     ? await Promise.all([
         prisma.viewpoint.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
@@ -26,16 +26,32 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         prisma.asset.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
           orderBy: { createdAt: "desc" }
+        }),
+        prisma.workspaceMember.findMany({
+          where: { workspaceId: workspace.id },
+          include: { user: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: "asc" }
         })
       ])
-    : [[], []];
+    : [[], [], []];
 
   if (!workspace) return <div className="p-8 text-center text-muted">Select a workspace.</div>;
 
   const tabs = [
-    { 
-      id: "viewpoints", 
-      label: "Viewpoints", 
+    {
+      id: "members",
+      label: "Team & Access",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+          <circle cx="9" cy="7" r="4" />
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      )
+    },
+    {
+      id: "viewpoints",
+      label: "Viewpoints",
       icon: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
           <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
@@ -117,6 +133,77 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <h2 className="text-xl font-bold text-ink tracking-tight">{tabs.find((t) => t.id === tab)?.label}</h2>
         </div>
         <div className="flex-1 overflow-y-auto p-8 max-w-4xl space-y-8">
+          {tab === "members" && (
+            <div className="space-y-8">
+              <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Invite Link</h4>
+                <p className="text-sm text-muted mb-4">Share this link to invite collaborators to your workspace. New members will join with viewer permissions.</p>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${typeof window !== 'undefined' ? window.location.origin : 'https://internal.copiqta.com'}/join/${workspace.slug}`}
+                    className="flex-1 px-3 py-2 bg-bg border border-border rounded-lg outline-none font-mono text-xs select-all"
+                  />
+                  <button
+                    onClick={() => navigator.clipboard.writeText(`${typeof window !== 'undefined' ? window.location.origin : 'https://internal.copiqta.com'}/join/${workspace.slug}`)}
+                    className="px-4 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-hover transition-colors"
+                  >
+                    Copy Link
+                  </button>
+                </div>
+              </section>
+
+              <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Team Members ({members.length})</h4>
+                <div className="space-y-2">
+                  {members.map((member) => (
+                    <div key={member.id} className="flex items-center justify-between p-3 bg-bg rounded-lg border border-border">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center text-white font-black text-sm">
+                          {member.user.name?.[0]?.toUpperCase() || member.user.email[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="font-medium text-sm">{member.user.name || member.user.email}</div>
+                          {member.user.name && <div className="text-xs text-muted">{member.user.email}</div>}
+                        </div>
+                        <span className={`text-xs uppercase border px-2 py-0.5 rounded ${
+                          member.role === 'owner' ? 'border-accent text-accent' :
+                          member.role === 'admin' ? 'border-accent-secondary text-accent-secondary' :
+                          'border-border text-muted'
+                        }`}>
+                          {member.role}
+                        </span>
+                      </div>
+                      {member.role !== 'owner' && member.userId !== user.id && (
+                        <select
+                          defaultValue={member.role}
+                          className="px-2 py-1 bg-bg border border-border rounded text-xs"
+                          onChange={(e) => {
+                            const form = document.createElement('form');
+                            form.method = 'post';
+                            form.action = '/api/members/update-role';
+                            form.innerHTML = `
+                              <input type="hidden" name="workspaceId" value="${workspace.id}" />
+                              <input type="hidden" name="memberId" value="${member.id}" />
+                              <input type="hidden" name="role" value="${e.target.value}" />
+                            `;
+                            document.body.appendChild(form);
+                            form.submit();
+                          }}
+                        >
+                          <option value="viewer">Viewer</option>
+                          <option value="editor">Editor</option>
+                          <option value="admin">Admin</option>
+                        </select>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
+          )}
+
           {tab === "viewpoints" && (
             <div className="space-y-8">
               <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
@@ -126,7 +213,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold uppercase text-muted">Name</label>
-                      <input name="name" required className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+                      <input name="name" required placeholder="e.g., Player Character" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+                      <span className="text-xs text-muted">Unique name for this perspective</span>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold uppercase text-muted">Type</label>
@@ -135,11 +223,13 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                           <option key={t} value={t}>{t}</option>
                         ))}
                       </select>
+                      <span className="text-xs text-muted">Category of perspective</span>
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase text-muted">Description</label>
-                    <textarea name="description" rows={2} className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+                    <textarea name="description" rows={2} placeholder="What information is known/unknown from this viewpoint?" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+                    <span className="text-xs text-muted">Optional notes about this perspective's knowledge</span>
                   </div>
                   <div className="pt-2">
                     <button type="submit" className="px-4 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-hover transition-colors">Add Viewpoint</button>
@@ -178,15 +268,18 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase text-muted">File</label>
                     <input type="file" name="file" required className="block w-full text-sm text-muted file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-accent/10 file:text-accent hover:file:bg-accent/20 cursor-pointer" />
+                    <span className="text-xs text-muted">Images, PDFs, or reference documents</span>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold uppercase text-muted">Author</label>
-                      <input name="author" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+                      <input name="author" placeholder="e.g., Your Name" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+                      <span className="text-xs text-muted">Optional: Creator name</span>
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-bold uppercase text-muted">Attribution</label>
-                      <input name="attributionText" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+                      <input name="attributionText" placeholder="e.g., CC-BY 4.0" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
+                      <span className="text-xs text-muted">Optional: License info</span>
                     </div>
                   </div>
                   <div className="pt-2">
@@ -217,23 +310,26 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             <div className="space-y-8">
               <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
                 <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Print Set Builder</h4>
-                <p className="text-sm text-muted mb-6">Select the entities and maps you want to bundle into a PDF document.</p>
+                <p className="text-sm text-muted mb-6">Select the entities and maps you want to bundle into a PDF document for printing or sharing.</p>
                 <form action="/api/pdf/build" method="post" className="max-w-md space-y-4">
                   <input type="hidden" name="workspaceId" value={workspace.id} />
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase text-muted">Entity IDs (comma)</label>
-                    <input name="entityIds" placeholder="id1, id2..." className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent font-mono text-xs" />
+                    <label className="text-xs font-bold uppercase text-muted">Entity IDs (comma-separated)</label>
+                    <input name="entityIds" placeholder="e.g., abc123, def456, ghi789" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent font-mono text-xs" />
+                    <span className="text-xs text-muted">Copy IDs from article URLs</span>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase text-muted">Map IDs (comma)</label>
-                    <input name="mapIds" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent font-mono text-xs" />
+                    <label className="text-xs font-bold uppercase text-muted">Map IDs (comma-separated)</label>
+                    <input name="mapIds" placeholder="e.g., map001, map002" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent font-mono text-xs" />
+                    <span className="text-xs text-muted">Optional: Include map snapshots</span>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase text-muted">Include Credits</label>
                     <select name="includeCredits" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent">
-                      <option value="true">Yes</option>
+                      <option value="true">Yes (Recommended)</option>
                       <option value="false">No</option>
                     </select>
+                    <span className="text-xs text-muted">Append attribution page for external sources</span>
                   </div>
                   <div className="pt-2">
                     <button type="submit" className="px-4 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-hover transition-colors">Generate Bundle PDF</button>

@@ -163,12 +163,36 @@ export default async function TimelinePage({ searchParams }: PageProps) {
                <summary>Create Event</summary>
                <form action="/api/events/create" method="post" className="form-grid p-2">
                   <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <label>Timeline <select name="timelineId" required>{timelines.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
-                  <label>Title <input name="title" required /></label>
-                  <label>Type <select name="eventType">{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select></label>
-                  <label>World Start <input name="worldStart" placeholder="Era/Year" /></label>
-                  <label>Chapter <select name="storyChapterId"><option value="">--</option>{chapters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-                  <label>Order <input name="storyOrder" type="number" defaultValue={0} /></label>
+                  <label>
+                    Timeline
+                    <select name="timelineId" required>{timelines.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select>
+                    <span className="text-xs text-muted mt-1 block">Which timeline does this event belong to?</span>
+                  </label>
+                  <label>
+                    Title
+                    <input name="title" required placeholder="e.g., Battle of Crimson Plains" />
+                    <span className="text-xs text-muted mt-1 block">A descriptive name for this event</span>
+                  </label>
+                  <label>
+                    Type
+                    <select name="eventType">{EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}</select>
+                    <span className="text-xs text-muted mt-1 block">Category of event</span>
+                  </label>
+                  <label>
+                    World Start
+                    <input name="worldStart" placeholder="e.g., Year 1254, Early Bronze Age" />
+                    <span className="text-xs text-muted mt-1 block">When this event occurred in world history</span>
+                  </label>
+                  <label>
+                    Chapter
+                    <select name="storyChapterId"><option value="">-- None --</option>{chapters.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select>
+                    <span className="text-xs text-muted mt-1 block">Optional: Link to a story chapter</span>
+                  </label>
+                  <label>
+                    Order
+                    <input name="storyOrder" type="number" defaultValue={0} />
+                    <span className="text-xs text-muted mt-1 block">Display order within timeline (0 = first)</span>
+                  </label>
                   <button type="submit" className="btn-primary">Add Event</button>
                </form>
             </details>
@@ -178,13 +202,25 @@ export default async function TimelinePage({ searchParams }: PageProps) {
                <div className="p-2">
                  <form action="/api/timelines/create" method="post" className="form-grid mb-4">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <label>New Timeline Name <input name="name" required /></label>
+                    <label>
+                      New Timeline Name
+                      <input name="name" required placeholder="e.g., Main Story Events" />
+                      <span className="text-xs text-muted mt-1 block">Create a new timeline to organize events</span>
+                    </label>
                     <button type="submit" className="btn-secondary">Create Timeline</button>
                  </form>
                  <form action="/api/eras/create" method="post" className="form-grid">
                     <input type="hidden" name="workspaceId" value={workspace.id} />
-                    <label>New Era Name <input name="name" required /></label>
-                    <label>Sort Key <input name="sortKey" type="number" defaultValue={eras.length} /></label>
+                    <label>
+                      New Era Name
+                      <input name="name" required placeholder="e.g., Age of Heroes" />
+                      <span className="text-xs text-muted mt-1 block">Create a historical period</span>
+                    </label>
+                    <label>
+                      Sort Key
+                      <input name="sortKey" type="number" defaultValue={eras.length} />
+                      <span className="text-xs text-muted mt-1 block">Lower numbers appear first</span>
+                    </label>
                     <button type="submit" className="btn-secondary">Create Era</button>
                  </form>
                </div>

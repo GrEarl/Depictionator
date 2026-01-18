@@ -3,6 +3,7 @@ import { getCurrentSession, requireUser } from "@/lib/auth";
 import { LlmContext } from "@/components/LlmContext";
 import { getLocaleFromCookies } from "@/lib/locale";
 import { getUiCopy } from "@/lib/i18n";
+import { OnboardingModal } from "@/components/OnboardingModal";
 import Link from "next/link";
 
 type MembershipSummary = {
@@ -68,6 +69,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="dashboard">
+      <OnboardingModal hasMemberships={memberships.length > 0} />
       <LlmContext
         value={{
           type: "dashboard",
