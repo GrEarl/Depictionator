@@ -22,6 +22,7 @@ export async function POST(request: Request) {
   const y = parseOptionalFloat(form.get("y"));
   const label = String(form.get("label") ?? "").trim();
   const entityId = String(form.get("entityId") ?? "").trim();
+  const entityQuery = String(form.get("entityQuery") ?? "").trim();
   const locationValue = String(form.get("locationType") ?? "other")
     .trim()
     .toLowerCase();
@@ -73,9 +74,34 @@ export async function POST(request: Request) {
     resolvedLayerId = layer.id;
   }
 
-  if (entityId) {
+  let resolvedEntityId = entityId;
+  if (!resolvedEntityId && entityQuery) {
+    const matches = await prisma.entity.findMany({
+      where: {
+        workspaceId,
+        softDeletedAt: null,
+        OR: [
+          { title: { equals: entityQuery, mode: "insensitive" } },
+          { title: { contains: entityQuery, mode: "insensitive" } },
+          { aliases: { has: entityQuery } }
+        ]
+      },
+      select: { id: true, title: true },
+      orderBy: { updatedAt: "desc" },
+      take: 6
+    });
+    if (matches.length === 0) {
+      return apiError(`Entity not found for "${entityQuery}"`, 404);
+    }
+    if (matches.length > 1) {
+      const names = matches.map((m) => m.title).join(", ");
+      return apiError(`Multiple entities match: ${names}. Please refine.`, 409);
+    }
+    resolvedEntityId = matches[0].id;
+  }
+  if (resolvedEntityId) {
     const entity = await prisma.entity.findFirst({
-      where: { id: entityId, workspaceId, softDeletedAt: null }
+      where: { id: resolvedEntityId, workspaceId, softDeletedAt: null }
     });
     if (!entity) {
       return apiError("Entity not found", 404);
@@ -124,7 +150,7 @@ export async function POST(request: Request) {
       mapId,
       x,
       y,
-      entityId: entityId || null,
+      entityId: resolvedEntityId || null,
       label: label || null,
       locationType,
       truthFlag,
@@ -168,5 +194,4 @@ export async function POST(request: Request) {
 
   return NextResponse.redirect(toRedirectUrl(request, "/maps"));
 }
-
 

@@ -43,13 +43,13 @@ export function OnboardingModal({ hasMemberships }: { hasMemberships: boolean })
             </label>
 
             <label className="block">
-              <span className="text-xs font-bold uppercase tracking-widest text-muted mb-2 block">Unique ID (Optional)</span>
+              <span className="text-xs font-bold uppercase tracking-widest text-muted mb-2 block">Custom URL (Optional)</span>
               <input
                 name="slug"
                 placeholder="e.g., aetheria (leave blank to auto-generate)"
                 className="w-full px-4 py-3 bg-bg-elevated border border-border text-ink font-semibold rounded-sm outline-none transition-all focus:border-accent focus:ring-2 focus:ring-accent/20"
               />
-              <span className="text-xs text-muted mt-1 block">URL-friendly identifier. Auto-generated if empty.</span>
+              <span className="text-xs text-muted mt-1 block">Short link for your workspace. Auto-generated if empty.</span>
             </label>
 
             <div className="flex gap-4 pt-4">

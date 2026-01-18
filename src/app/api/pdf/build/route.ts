@@ -65,6 +65,9 @@ export async function POST(request: Request) {
     .split(",")
     .map((value) => value.trim())
     .filter(Boolean);
+  const entityQuery = String(form.get("entityQuery") ?? "").trim();
+  const mapQuery = String(form.get("mapQuery") ?? "").trim();
+  const timelineQuery = String(form.get("timelineQuery") ?? "").trim();
   const includeCredits = String(form.get("includeCredits") ?? "false") === "true";
 
   if (!workspaceId) {
@@ -80,9 +83,103 @@ export async function POST(request: Request) {
   const sections: string[] = [];
   const revisionIds: string[] = [];
 
-  if (entityIds.length > 0) {
+  const parseTerms = (value: string) =>
+    value
+      .split(",")
+      .map((term) => term.trim())
+      .filter(Boolean);
+
+  const entityIdsResolved = new Set(entityIds);
+  const mapIdsResolved = new Set(mapIds);
+  const timelineIdsResolved = new Set(timelineIds);
+
+  const unresolvedEntities: string[] = [];
+  const unresolvedMaps: string[] = [];
+  const unresolvedTimelines: string[] = [];
+
+  const entityTerms = parseTerms(entityQuery);
+  if (entityTerms.length > 0) {
+    for (const term of entityTerms) {
+      const matches = await prisma.entity.findMany({
+        where: {
+          workspaceId,
+          softDeletedAt: null,
+          OR: [
+            { title: { equals: term, mode: "insensitive" } },
+            { title: { contains: term, mode: "insensitive" } },
+            { aliases: { has: term } }
+          ]
+        },
+        select: { id: true }
+      });
+      if (matches.length === 0) {
+        unresolvedEntities.push(term);
+      } else {
+        matches.forEach((m) => entityIdsResolved.add(m.id));
+      }
+    }
+  }
+
+  const mapTerms = parseTerms(mapQuery);
+  if (mapTerms.length > 0) {
+    for (const term of mapTerms) {
+      const matches = await prisma.map.findMany({
+        where: {
+          workspaceId,
+          softDeletedAt: null,
+          OR: [
+            { title: { equals: term, mode: "insensitive" } },
+            { title: { contains: term, mode: "insensitive" } }
+          ]
+        },
+        select: { id: true }
+      });
+      if (matches.length === 0) {
+        unresolvedMaps.push(term);
+      } else {
+        matches.forEach((m) => mapIdsResolved.add(m.id));
+      }
+    }
+  }
+
+  const timelineTerms = parseTerms(timelineQuery);
+  if (timelineTerms.length > 0) {
+    for (const term of timelineTerms) {
+      const matches = await prisma.timeline.findMany({
+        where: {
+          workspaceId,
+          softDeletedAt: null,
+          OR: [
+            { name: { equals: term, mode: "insensitive" } },
+            { name: { contains: term, mode: "insensitive" } }
+          ]
+        },
+        select: { id: true }
+      });
+      if (matches.length === 0) {
+        unresolvedTimelines.push(term);
+      } else {
+        matches.forEach((t) => timelineIdsResolved.add(t.id));
+      }
+    }
+  }
+
+  if (unresolvedEntities.length > 0 || unresolvedMaps.length > 0 || unresolvedTimelines.length > 0) {
+    const parts = [
+      unresolvedEntities.length > 0 ? `Entities not found: ${unresolvedEntities.join(", ")}` : null,
+      unresolvedMaps.length > 0 ? `Maps not found: ${unresolvedMaps.join(", ")}` : null,
+      unresolvedTimelines.length > 0 ? `Timelines not found: ${unresolvedTimelines.join(", ")}` : null
+    ].filter(Boolean);
+    return apiError(parts.join(" | "), 400);
+  }
+
+  const finalEntityIds = Array.from(entityIdsResolved);
+  const finalMapIds = Array.from(mapIdsResolved);
+  const finalTimelineIds = Array.from(timelineIdsResolved);
+
+  if (finalEntityIds.length > 0) {
     const entities: EntitySummary[] = await prisma.entity.findMany({
-      where: { workspaceId, id: { in: entityIds } },
+      where: { workspaceId, id: { in: finalEntityIds } },
       include: { article: { include: { baseRevision: true } } }
     });
     entities.forEach((entity) => {
@@ -98,9 +195,9 @@ export async function POST(request: Request) {
     sections.push(`<section><h2>Articles</h2>${items || "<p>No articles.</p>"}</section>`);
   }
 
-  if (mapIds.length > 0) {
+  if (finalMapIds.length > 0) {
     const maps: MapSummary[] = await prisma.map.findMany({
-      where: { workspaceId, id: { in: mapIds } },
+      where: { workspaceId, id: { in: finalMapIds } },
       include: { imageAsset: true }
     });
     const items = await Promise.all(
@@ -127,9 +224,9 @@ export async function POST(request: Request) {
     sections.push(`<section><h2>Maps</h2>${items.join("")}</section>`);
   }
 
-  if (timelineIds.length > 0) {
+  if (finalTimelineIds.length > 0) {
     const timelines: TimelineSummary[] = await prisma.timeline.findMany({
-      where: { workspaceId, id: { in: timelineIds } },
+      where: { workspaceId, id: { in: finalTimelineIds } },
       include: { events: { orderBy: { createdAt: "desc" } } }
     });
     const items = timelines
@@ -155,7 +252,7 @@ export async function POST(request: Request) {
         workspaceId,
         OR: [
           { targetType: "article_revision", targetId: { in: revisionIds } },
-          { targetType: "map", targetId: { in: mapIds } }
+          { targetType: "map", targetId: { in: finalMapIds } }
         ]
       },
       orderBy: { createdAt: "desc" }
@@ -202,7 +299,6 @@ export async function POST(request: Request) {
     }
   });
 }
-
 
 
 

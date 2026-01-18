@@ -47,7 +47,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
         prisma.map.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
           include: {
-            pins: { where: { softDeletedAt: null }, include: { markerStyle: true } },
+            pins: { where: { softDeletedAt: null }, include: { markerStyle: true, entity: { select: { id: true, title: true } } } },
             paths: { where: { softDeletedAt: null }, include: { markerStyle: true } }
           },
           orderBy: { createdAt: "desc" }
@@ -90,18 +90,6 @@ export default async function MapsPage({ searchParams }: PageProps) {
   const mapQuery = query.trim().toLowerCase();
   const visibleMaps = mapQuery ? maps.filter((m) => m.title.toLowerCase().includes(mapQuery)) : maps;
   const activeMap = maps.find((m) => m.id === selectedMapId) || maps[0];
-
-  // ... (breadcrumbs code) ...
-
-  // (inside return statement, tab === "manage" block)
-  // Reconstructing the whole return for context match isn't ideal due to length.
-  // I will target the specific block for replacement if possible, or replace the whole Manage tab content.
-  // The tool requires context. I will replace the fetch part first, then the UI part in a second call or combined if I can match enough context.
-  // Actually, I can do it in one go if I replace the top part (fetching) and the bottom part (UI) is too far apart.
-  // I will do two replacements. 
-  // Wait, the tool only supports multiple replacements if `old_string` matches multiple times or I provide a massive block.
-  // I'll do the Fetch update first.
-
 
   // Build breadcrumb trail (parent hierarchy)
   const breadcrumbs: { id: string; title: string }[] = [];
@@ -146,10 +134,14 @@ export default async function MapsPage({ searchParams }: PageProps) {
         title: activeMap.title,
         bounds: activeMap.bounds as any,
         imageUrl: activeMap.imageAssetId ? `/api/assets/file/${activeMap.imageAssetId}` : null,
-        pins: activeMap.pins.map((p) => ({
-          ...p,
-          markerStyle: p.markerStyle ? { shape: p.markerStyle.shape, color: p.markerStyle.color } : null
-        })),
+        pins: activeMap.pins.map((p) => {
+          const { entity, markerStyle, ...rest } = p as typeof p & { entity?: { title?: string } | null };
+          return {
+            ...rest,
+            entityTitle: entity?.title ?? null,
+            markerStyle: markerStyle ? { shape: markerStyle.shape, color: markerStyle.color } : null
+          };
+        }),
         paths: activeMap.paths.map((p) => {
           // Parse polyline if it's a JSON string
           let polyline = p.polyline;
@@ -266,6 +258,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
               workspaceId={workspace.id}
               markerStyles={markerStyles as any}
               locationTypes={LOCATION_TYPES}
+              entities={entities as any}
               eras={eras as any}
               chapters={chapters as any}
               viewpoints={viewpoints as any}

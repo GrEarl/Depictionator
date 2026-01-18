@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownView } from "@/components/MarkdownView";
 import { cn } from "@/lib/utils";
+import { wikiTextToMarkdown } from "@/lib/wikitext";
 
 type MarkdownEditorProps = {
   name: string;
@@ -11,6 +12,8 @@ type MarkdownEditorProps = {
   rows?: number;
   placeholder?: string;
   defaultMode?: "split" | "write" | "preview";
+  defaultSyntax?: "markdown" | "wikitext";
+  showToolbar?: boolean;
 };
 
 export function MarkdownEditor({
@@ -19,14 +22,101 @@ export function MarkdownEditor({
   defaultValue = "",
   rows = 15,
   placeholder,
-  defaultMode = "split"
+  defaultMode = "split",
+  defaultSyntax = "markdown",
+  showToolbar = true
 }: MarkdownEditorProps) {
   const [value, setValue] = useState(defaultValue);
   const [mode, setMode] = useState<"split" | "write" | "preview">(defaultMode);
+  const [syntax, setSyntax] = useState<"markdown" | "wikitext">(defaultSyntax);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
     setValue(defaultValue);
   }, [defaultValue]);
+
+  const normalizedValue = useMemo(() => {
+    if (syntax !== "wikitext") return value;
+    return wikiTextToMarkdown(value).markdown;
+  }, [syntax, value]);
+
+  const previewValue = normalizedValue;
+
+  const withSelection = (updater: (args: { start: number; end: number; selected: string }) => { next: string; cursorStart: number; cursorEnd: number }) => {
+    const target = textareaRef.current;
+    const start = target?.selectionStart ?? value.length;
+    const end = target?.selectionEnd ?? value.length;
+    const selected = value.slice(start, end);
+    const { next, cursorStart, cursorEnd } = updater({ start, end, selected });
+    setValue(next);
+    requestAnimationFrame(() => {
+      if (!target) return;
+      target.focus();
+      target.setSelectionRange(cursorStart, cursorEnd);
+    });
+  };
+
+  const wrapSelection = (prefix: string, suffix: string, placeholderText: string) => {
+    withSelection(({ start, end, selected }) => {
+      const inner = selected || placeholderText;
+      const next = value.slice(0, start) + prefix + inner + suffix + value.slice(end);
+      const cursorStart = start + prefix.length;
+      const cursorEnd = cursorStart + inner.length;
+      return { next, cursorStart, cursorEnd };
+    });
+  };
+
+  const insertText = (text: string) => {
+    withSelection(({ start, end }) => {
+      const next = value.slice(0, start) + text + value.slice(end);
+      const cursor = start + text.length;
+      return { next, cursorStart: cursor, cursorEnd: cursor };
+    });
+  };
+
+  const handleHeading = () => {
+    const heading = window.prompt("Heading text", "Heading");
+    if (!heading) return;
+    if (syntax === "wikitext") {
+      insertText(`\n== ${heading} ==\n\n`);
+    } else {
+      insertText(`\n## ${heading}\n\n`);
+    }
+  };
+
+  const handleExternalLink = () => {
+    const url = window.prompt("URL", "https://");
+    if (!url) return;
+    const text = window.prompt("Display text", url) || url;
+    if (syntax === "wikitext") {
+      insertText(`[${url} ${text}]`);
+    } else {
+      insertText(`[${text}](${url})`);
+    }
+  };
+
+  const handleArticleLink = () => {
+    const title = window.prompt("Article title", "");
+    if (!title) return;
+    if (syntax === "wikitext") {
+      insertText(`[[${title}]]`);
+    } else {
+      insertText(`[${title}](/articles?q=${encodeURIComponent(title)})`);
+    }
+  };
+
+  const handleImageInsert = () => {
+    const source = window.prompt("Image URL or file name (e.g., File:example.jpg)", "");
+    if (!source) return;
+    const caption = window.prompt("Caption / alt text", "") || "Image";
+    const isUrl = /^https?:\/\//i.test(source.trim());
+    if (syntax === "wikitext" && !isUrl) {
+      const normalized = source.startsWith("File:") ? source : `File:${source}`;
+      insertText(`[[${normalized}|thumb|${caption}]]`);
+    } else {
+      insertText(`![${caption}](${source})`);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-3 group">
@@ -54,17 +144,48 @@ export function MarkdownEditor({
         </div>
       </div>
 
+      {showToolbar && (
+        <div className="editor-toolbar">
+          <div className="editor-toolbar-group">
+            <button type="button" onClick={handleHeading}>H2</button>
+            <button type="button" onClick={() => wrapSelection(syntax === "wikitext" ? "'''" : "**", syntax === "wikitext" ? "'''" : "**", "bold text")}>Bold</button>
+            <button type="button" onClick={() => wrapSelection(syntax === "wikitext" ? "''" : "*", syntax === "wikitext" ? "''" : "*", "italic text")}>Italic</button>
+          </div>
+          <div className="editor-toolbar-group">
+            <button type="button" onClick={handleExternalLink}>Link</button>
+            <button type="button" onClick={handleArticleLink}>Article</button>
+            <button type="button" onClick={handleImageInsert}>Image</button>
+          </div>
+          <div className="editor-toolbar-group">
+            <button type="button" onClick={() => insertText(syntax === "wikitext" ? "\n* Item\n* Item\n" : "\n- Item\n- Item\n")}>List</button>
+            <button type="button" onClick={() => insertText(syntax === "wikitext" ? "\n> Quote\n" : "\n> Quote\n")}>Quote</button>
+          </div>
+          <div className="editor-toolbar-group editor-syntax-toggle">
+            {(["markdown", "wikitext"] as const).map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={cn("editor-toggle", syntax === s && "active")}
+                onClick={() => setSyntax(s)}
+              >
+                {s === "markdown" ? "Markdown" : "Wiki"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className={cn(
         "grid gap-4 transition-all duration-300 ease-in-out",
         mode === "split" ? "grid-cols-2" : "grid-cols-1"
       )}>
         {/* Hidden input for form submission */}
-        <input type="hidden" name={name} value={value} />
+        <input type="hidden" name={name} value={normalizedValue} />
 
         {(mode === "write" || mode === "split") && (
           <div className="relative">
             <textarea
-              name={mode === 'write' ? name : undefined} // Avoid duplicate name attributes if split
+              ref={textareaRef}
               rows={rows}
               value={value}
               placeholder={placeholder}
@@ -72,7 +193,7 @@ export function MarkdownEditor({
               className="w-full h-full p-4 rounded-xl bg-panel border border-border text-sm font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm placeholder:text-muted/50"
             />
             <div className="absolute bottom-3 right-4 text-[10px] text-muted opacity-50 pointer-events-none font-medium">
-              Markdown Supported
+              {syntax === "wikitext" ? "Wiki Syntax Enabled" : "Markdown Enabled"}
             </div>
           </div>
         )}
@@ -88,7 +209,7 @@ export function MarkdownEditor({
               </div>
             )}
             <div className="prose dark:prose-invert prose-sm max-w-none">
-              <MarkdownView value={value || "*(No content)*"} />
+              <MarkdownView value={previewValue || "*(No content)*"} />
             </div>
           </div>
         )}

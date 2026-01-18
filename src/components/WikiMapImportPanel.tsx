@@ -24,7 +24,7 @@ export function WikiMapImportPanel({ workspaceId }: WikiMapImportPanelProps) {
   const [imageTitle, setImageTitle] = useState("");
   const [mapTitle, setMapTitle] = useState("");
   const [bounds, setBounds] = useState("");
-  const [parentMapId, setParentMapId] = useState("");
+  const [parentMapQuery, setParentMapQuery] = useState("");
   const [assetImporting, setAssetImporting] = useState(false);
   const [mapImporting, setMapImporting] = useState(false);
   const [assetMessage, setAssetMessage] = useState("");
@@ -83,8 +83,8 @@ export function WikiMapImportPanel({ workspaceId }: WikiMapImportPanelProps) {
         setAssetError(message || "Import failed.");
         return;
       }
-      const data = (await res.json()) as { asset?: { id: string } };
-      setAssetMessage(`Image imported${data.asset?.id ? ` (asset ${data.asset.id})` : ""}.`);
+      await res.json();
+      setAssetMessage("Image imported.");
     } catch (err) {
       setAssetError(String(err));
     } finally {
@@ -190,8 +190,13 @@ export function WikiMapImportPanel({ workspaceId }: WikiMapImportPanelProps) {
           <input name="imageTitle" value={imageTitle} onChange={(event) => setImageTitle(event.target.value)} />
         </label>
         <label>
-          Parent map ID (optional)
-          <input name="parentMapId" value={parentMapId} onChange={(event) => setParentMapId(event.target.value)} />
+          Parent map (search, optional)
+          <input
+            name="parentMapQuery"
+            value={parentMapQuery}
+            onChange={(event) => setParentMapQuery(event.target.value)}
+            placeholder="Type a map name..."
+          />
         </label>
         <label>
           Bounds JSON (optional)

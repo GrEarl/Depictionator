@@ -22,7 +22,8 @@ export function ArticleDetail({
   parentEntity,
   childEntities,
   relatedEntities,
-  locations
+  locations,
+  searchQuery
 }: {
   entity: Entity;
   workspaceId: string;
@@ -32,6 +33,7 @@ export function ArticleDetail({
   childEntities?: EntityRef[];
   relatedEntities?: RelatedEntity[];
   locations?: LocationPin[];
+  searchQuery?: string;
 }) {
   const [tab, setTab] = useState<"read" | "edit" | "history" | "relations">("read");
   const { mode, viewpointId, eraId, chapterId } = useGlobalFilters();
@@ -94,6 +96,24 @@ export function ArticleDetail({
       {/* Center Pane: Content */}
       <main className="pane-center">
         <div className="article-header">
+          {typeof searchQuery !== "undefined" && (
+            <form action="/articles" method="get" className="article-search-bar">
+              <div className="article-search-input">
+                <svg className="article-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="11" cy="11" r="8"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input
+                  name="q"
+                  defaultValue={searchQuery}
+                  placeholder="Search articles..."
+                />
+              </div>
+              <button type="submit" className="btn-secondary">
+                Search
+              </button>
+            </form>
+          )}
           <div className="article-title-row">
             <div>
               {parentEntity && (
@@ -321,8 +341,13 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
                   <input type="hidden" name="fromEntityId" value={entity.id} />
 
                   <label>
-                    Related Entity ID
-                    <input name="toEntityId" required placeholder="Entity ID..." />
+                    Related Entity (search)
+                    <input
+                      name="toEntityQuery"
+                      required
+                      placeholder="Type a title or alias..."
+                    />
+                    <span className="text-xs text-muted">Search by name instead of ID.</span>
                   </label>
                   <label>
                     Relation Type

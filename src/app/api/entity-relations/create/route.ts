@@ -7,14 +7,15 @@ export async function POST(req: NextRequest) {
   const form = await req.formData();
   const workspaceId = form.get("workspaceId") as string;
   const fromEntityId = form.get("fromEntityId") as string;
-  const toEntityId = form.get("toEntityId") as string;
+  const toEntityIdRaw = String(form.get("toEntityId") ?? "").trim();
+  const toEntityQuery = String(form.get("toEntityQuery") ?? "").trim();
   const relationType = form.get("relationType") as string;
   const customLabel = form.get("customLabel") as string | null;
   const description = form.get("description") as string | null;
   const worldFrom = form.get("worldFrom") as string | null;
   const worldTo = form.get("worldTo") as string | null;
 
-  if (!workspaceId || !fromEntityId || !toEntityId || !relationType) {
+  if (!workspaceId || !fromEntityId || (!toEntityIdRaw && !toEntityQuery) || !relationType) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -23,10 +24,39 @@ export async function POST(req: NextRequest) {
   // TODO: Properly implement user authentication here
 
   // Verify entities exist and belong to workspace
-  const [fromEntity, toEntity] = await Promise.all([
-    prisma.entity.findFirst({ where: { id: fromEntityId, workspaceId, softDeletedAt: null } }),
-    prisma.entity.findFirst({ where: { id: toEntityId, workspaceId, softDeletedAt: null } })
-  ]);
+  const fromEntity = await prisma.entity.findFirst({
+    where: { id: fromEntityId, workspaceId, softDeletedAt: null }
+  });
+
+  let toEntityId = toEntityIdRaw;
+  if (!toEntityId && toEntityQuery) {
+    const matches = await prisma.entity.findMany({
+      where: {
+        workspaceId,
+        softDeletedAt: null,
+        OR: [
+          { title: { equals: toEntityQuery, mode: "insensitive" } },
+          { title: { contains: toEntityQuery, mode: "insensitive" } },
+          { aliases: { has: toEntityQuery } }
+        ]
+      },
+      select: { id: true, title: true },
+      orderBy: { updatedAt: "desc" },
+      take: 6
+    });
+    if (matches.length === 0) {
+      return NextResponse.json({ error: `No entity matches "${toEntityQuery}".` }, { status: 404 });
+    }
+    if (matches.length > 1) {
+      const names = matches.map((m) => m.title).join(", ");
+      return NextResponse.json({ error: `Multiple matches: ${names}. Please refine.` }, { status: 409 });
+    }
+    toEntityId = matches[0].id;
+  }
+
+  const toEntity = await prisma.entity.findFirst({
+    where: { id: toEntityId, workspaceId, softDeletedAt: null }
+  });
 
   if (!fromEntity || !toEntity) {
     return NextResponse.json({ error: "Entity not found" }, { status: 404 });

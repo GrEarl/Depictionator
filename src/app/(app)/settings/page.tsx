@@ -321,14 +321,22 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                 <form action="/api/pdf/build" method="post" className="max-w-md space-y-4">
                   <input type="hidden" name="workspaceId" value={workspace.id} />
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase text-muted">Entity IDs (comma-separated)</label>
-                    <input name="entityIds" placeholder="e.g., abc123, def456, ghi789" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent font-mono text-xs" />
-                    <span className="text-xs text-muted">Copy IDs from article URLs</span>
+                    <label className="text-xs font-bold uppercase text-muted">Entities (comma-separated)</label>
+                    <input
+                      name="entityQuery"
+                      placeholder="e.g., Alice, Northern Empire, Dragon War"
+                      className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent text-xs"
+                    />
+                    <span className="text-xs text-muted">Search by title or alias (no IDs needed).</span>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase text-muted">Map IDs (comma-separated)</label>
-                    <input name="mapIds" placeholder="e.g., map001, map002" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent font-mono text-xs" />
-                    <span className="text-xs text-muted">Optional: Include map snapshots</span>
+                    <label className="text-xs font-bold uppercase text-muted">Maps (comma-separated)</label>
+                    <input
+                      name="mapQuery"
+                      placeholder="e.g., World Map, Capital District"
+                      className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent text-xs"
+                    />
+                    <span className="text-xs text-muted">Optional: Include map snapshots by name.</span>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold uppercase text-muted">Include Credits</label>

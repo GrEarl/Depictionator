@@ -36,6 +36,7 @@ export async function POST(request: Request) {
   if (y !== null) data.y = y;
   const label = parseOptionalString(form.get("label"));
   if (label !== null) data.label = label;
+  const entityQuery = parseOptionalString(form.get("entityQuery"));
   const entityId = parseOptionalString(form.get("entityId"));
   if (entityId !== null) {
     if (entityId) {
@@ -49,6 +50,29 @@ export async function POST(request: Request) {
     } else {
       data.entityId = null;
     }
+  } else if (entityQuery !== null && entityQuery.trim()) {
+    const matches = await prisma.entity.findMany({
+      where: {
+        workspaceId,
+        softDeletedAt: null,
+        OR: [
+          { title: { equals: entityQuery, mode: "insensitive" } },
+          { title: { contains: entityQuery, mode: "insensitive" } },
+          { aliases: { has: entityQuery } }
+        ]
+      },
+      select: { id: true, title: true },
+      orderBy: { updatedAt: "desc" },
+      take: 6
+    });
+    if (matches.length === 0) {
+      return apiError(`Entity not found for "${entityQuery}"`, 404);
+    }
+    if (matches.length > 1) {
+      const names = matches.map((m) => m.title).join(", ");
+      return apiError(`Multiple entities match: ${names}. Please refine.`, 409);
+    }
+    data.entityId = matches[0].id;
   }
   const locationType = parseOptionalString(form.get("locationType"));
   if (locationType !== null) {
@@ -173,5 +197,3 @@ export async function POST(request: Request) {
 
   return NextResponse.redirect(toRedirectUrl(request, "/maps"));
 }
-
-

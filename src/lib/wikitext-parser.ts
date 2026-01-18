@@ -65,7 +65,7 @@ export function parseWikitext(wikitext: string, options: WikitextParseOptions = 
     }
     const caption = opts[opts.length - 1] || filename;
     return `<figure class="wiki-image">
-      <img src="/api/wiki/image/${encodeURIComponent(filename.trim())}" alt="${caption}" />
+      <img src="/api/wiki/image?file=${encodeURIComponent(filename.trim())}" alt="${caption}" />
       <figcaption>${caption}</figcaption>
     </figure>`;
   });

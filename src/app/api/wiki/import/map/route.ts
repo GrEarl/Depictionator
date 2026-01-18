@@ -22,6 +22,7 @@ export async function POST(request: Request) {
   const imageUrl = String(form.get("imageUrl") ?? "").trim();
   const mapTitle = String(form.get("mapTitle") ?? "").trim();
   const parentMapId = String(form.get("parentMapId") ?? "").trim();
+  const parentMapQuery = String(form.get("parentMapQuery") ?? "").trim();
   const boundsRaw = String(form.get("bounds") ?? "").trim();
 
   if (!workspaceId || (!imageTitle && !imageUrl) || !mapTitle) {
@@ -82,11 +83,36 @@ export async function POST(request: Request) {
     }
   }
 
+  let resolvedParentMapId = parentMapId;
+  if (!resolvedParentMapId && parentMapQuery) {
+    const matches = await prisma.map.findMany({
+      where: {
+        workspaceId,
+        softDeletedAt: null,
+        OR: [
+          { title: { equals: parentMapQuery, mode: "insensitive" } },
+          { title: { contains: parentMapQuery, mode: "insensitive" } }
+        ]
+      },
+      select: { id: true, title: true },
+      orderBy: { updatedAt: "desc" },
+      take: 6
+    });
+    if (matches.length === 0) {
+      return apiError(`No map matches "${parentMapQuery}".`, 404);
+    }
+    if (matches.length > 1) {
+      const names = matches.map((m) => m.title).join(", ");
+      return apiError(`Multiple maps match: ${names}. Please refine.`, 409);
+    }
+    resolvedParentMapId = matches[0].id;
+  }
+
   const map = await prisma.map.create({
     data: {
       workspaceId,
       title: mapTitle,
-      parentMapId: parentMapId || null,
+      parentMapId: resolvedParentMapId || null,
       imageAssetId: asset.id,
       createdById: session.userId,
       updatedById: session.userId,

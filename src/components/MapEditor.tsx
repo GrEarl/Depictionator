@@ -35,6 +35,7 @@ type MapPayload = {
     y: number;
     label?: string | null;
     entityId?: string | null;
+    entityTitle?: string | null;
     locationType?: string | null;
     markerStyleId?: string | null;
     markerShape?: string | null;
@@ -97,6 +98,7 @@ type MapEditorProps = {
   workspaceId: string;
   markerStyles: MarkerStyle[];
   locationTypes: string[];
+  entities?: { id: string; title: string; type: string }[];
   eras: EraOption[];
   chapters: ChapterOption[];
   viewpoints: ViewpointOption[];
@@ -117,6 +119,7 @@ type PinDraft = {
   storyFromChapterId: string;
   storyToChapterId: string;
   entityId: string;
+  entityQuery: string;
 };
 
 type PathDraft = {
@@ -156,6 +159,8 @@ export function MapEditor({
   markerStyles,
 
   locationTypes,
+
+  entities = [],
 
   eras,
 
@@ -509,6 +514,7 @@ export function MapEditor({
     storyFromChapterId: "",
     storyToChapterId: "",
     entityId: "",
+    entityQuery: "",
     ...overrides
   }), [defaultLocationType]);
 
@@ -620,7 +626,8 @@ export function MapEditor({
               worldTo: pin.worldTo ?? "",
               storyFromChapterId: pin.storyFromChapterId ?? "",
               storyToChapterId: pin.storyToChapterId ?? "",
-              entityId: pin.entityId ?? ""
+              entityId: pin.entityId ?? "",
+              entityQuery: pin.entityTitle ?? ""
             }));
           });
           
@@ -766,9 +773,25 @@ export function MapEditor({
     return Object.keys(newErrors).length === 0;
   };
 
+  const safeEntities = Array.isArray(entities) ? entities : [];
+
+  const handleEntityQueryChange = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    const match = safeEntities.find((entity) => entity.title.toLowerCase() === normalized);
+    setPinDraft((prev) => ({
+      ...prev,
+      entityQuery: value,
+      entityId: match ? match.id : ""
+    }));
+  };
+
   async function submitPin() {
     if (!validatePinForm()) {
       addToast("Please fill in all required fields.", "error");
+      return;
+    }
+    if (pinDraft.entityQuery.trim() && !pinDraft.entityId) {
+      addToast("Select a matching entity from the list or clear the field.", "error");
       return;
     }
     if (!map || pinDraft.x === null || pinDraft.y === null) return;
@@ -819,6 +842,10 @@ export function MapEditor({
 
   async function submitPinUpdate() {
     if (!selectedPinId) return;
+    if (pinDraft.entityQuery.trim() && !pinDraft.entityId) {
+      addToast("Select a matching entity from the list or clear the field.", "error");
+      return;
+    }
     try {
       const form = new FormData();
       form.append("workspaceId", workspaceId);
@@ -1015,13 +1042,20 @@ export function MapEditor({
             </div>
             
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold uppercase text-muted tracking-wider">Linked Entity ID</label>
-              <input 
-                className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent font-mono"
-                value={pinDraft.entityId} 
-                onChange={e => setPinDraft({...pinDraft, entityId: e.target.value})} 
-                placeholder="UUID or Slug" 
+              <label className="text-[10px] font-bold uppercase text-muted tracking-wider">Linked Entity (search)</label>
+              <input
+                className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+                value={pinDraft.entityQuery}
+                onChange={(e) => handleEntityQueryChange(e.target.value)}
+                placeholder="Type a name..."
+                list="map-entity-search"
               />
+              <datalist id="map-entity-search">
+                {safeEntities.map((entity) => (
+                  <option key={entity.id} value={entity.title} />
+                ))}
+              </datalist>
+              <span className="text-xs text-muted">Pick from suggestions to link.</span>
             </div>
           </div>
         </details>
