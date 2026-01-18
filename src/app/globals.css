@@ -54,7 +54,10 @@
 
 @layer base {
   body {
-    @apply bg-bg text-ink antialiased;
+    background-color: var(--bg);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
     font-weight: var(--font-body);
     font-feature-settings: "rlig" 1, "calt" 1;
@@ -67,9 +70,27 @@
     text-transform: uppercase;
   }
 
-  h1 { @apply text-4xl md:text-5xl lg:text-6xl; }
-  h2 { @apply text-3xl md:text-4xl; }
-  h3 { @apply text-2xl md:text-3xl; }
+  h1 {
+    font-size: 2.25rem;
+  }
+  h2 {
+    font-size: 1.875rem;
+  }
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  @media (min-width: 768px) {
+    h1 { font-size: 3rem; }
+    h2 { font-size: 2.25rem; }
+    h3 { font-size: 1.875rem; }
+  }
+
+  @media (min-width: 1024px) {
+    h1 { font-size: 3.75rem; }
+    h2 { font-size: 2.25rem; }
+    h3 { font-size: 1.875rem; }
+  }
 }
 
 /* ==== CUSTOM COMPONENTS ==== */
