@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import { WorkspaceRole } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession, requireWorkspaceAccess } from "@/lib/api";
 import { toRedirectUrl } from "@/lib/redirect";
 
-const ALLOWED_ROLES = new Set(["admin", "editor", "reviewer", "viewer"]);
+const ALLOWED_ROLES = new Set<WorkspaceRole>(["admin", "editor", "reviewer", "viewer"]);
 
 function redirectWith(request: Request, query: string) {
   return NextResponse.redirect(toRedirectUrl(request, `/settings?tab=members&${query}`), 303);
@@ -47,7 +48,9 @@ export async function POST(request: Request) {
     return redirectWith(request, "error=user-not-found");
   }
 
-  const role = ALLOWED_ROLES.has(roleInput) ? roleInput : "viewer";
+  const role = ALLOWED_ROLES.has(roleInput as WorkspaceRole)
+    ? (roleInput as WorkspaceRole)
+    : "viewer";
 
   await prisma.workspaceMember.upsert({
     where: {
