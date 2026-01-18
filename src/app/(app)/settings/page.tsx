@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { LlmContext } from "@/components/LlmContext";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { CopyButton } from "@/components/CopyButton";
 
 const VIEWPOINT_TYPES = ["player", "faction", "character", "omniscient"];
 
@@ -142,15 +143,13 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <input
                     type="text"
                     readOnly
-                    value={`${typeof window !== 'undefined' ? window.location.origin : 'https://internal.copiqta.com'}/join/${workspace.slug}`}
+                    defaultValue={`https://internal.copiqta.com/join/${workspace.slug}`}
                     className="flex-1 px-3 py-2 bg-bg border border-border rounded-lg outline-none font-mono text-xs select-all"
                   />
-                  <button
-                    onClick={() => navigator.clipboard.writeText(`${typeof window !== 'undefined' ? window.location.origin : 'https://internal.copiqta.com'}/join/${workspace.slug}`)}
-                    className="px-4 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-hover transition-colors"
-                  >
-                    Copy Link
-                  </button>
+                  <CopyButton
+                    text={`https://internal.copiqta.com/join/${workspace.slug}`}
+                    label="Copy Link"
+                  />
                 </div>
               </section>
 
