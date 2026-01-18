@@ -1,6 +1,7 @@
-@config "../../tailwind.config.js";
-@import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   color-scheme: dark;
