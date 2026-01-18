@@ -47,11 +47,14 @@ module.exports = {
         ring: 'var(--ring)',
       },
       backgroundColor: {
+        'accent/5': 'rgba(255, 0, 51, 0.05)',
         'accent/10': 'rgba(255, 0, 51, 0.1)',
         'accent/30': 'rgba(255, 0, 51, 0.3)',
       },
       borderColor: {
+        'accent/20': 'rgba(255, 0, 51, 0.2)',
         'accent/30': 'rgba(255, 0, 51, 0.3)',
+        'accent/50': 'rgba(255, 0, 51, 0.5)',
       },
       ringColor: {
         'accent/20': 'rgba(255, 0, 51, 0.2)',

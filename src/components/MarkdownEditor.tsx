@@ -10,6 +10,7 @@ type MarkdownEditorProps = {
   defaultValue?: string;
   rows?: number;
   placeholder?: string;
+  defaultMode?: "split" | "write" | "preview";
 };
 
 export function MarkdownEditor({
@@ -17,10 +18,11 @@ export function MarkdownEditor({
   label,
   defaultValue = "",
   rows = 15,
-  placeholder
+  placeholder,
+  defaultMode = "split"
 }: MarkdownEditorProps) {
   const [value, setValue] = useState(defaultValue);
-  const [mode, setMode] = useState<"split" | "write" | "preview">("split");
+  const [mode, setMode] = useState<"split" | "write" | "preview">(defaultMode);
 
   useEffect(() => {
     setValue(defaultValue);

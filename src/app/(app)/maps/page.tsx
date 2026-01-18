@@ -42,7 +42,7 @@ export default async function MapsPage({ searchParams }: PageProps) {
   const viewpointFilter = String(resolvedSearchParams.viewpoint ?? "canon");
   const mode = String(resolvedSearchParams.mode ?? "canon");
 
-  const [maps, markerStyles, archivedMaps, entities, eras, chapters, viewpoints] = workspace
+  const [maps, markerStyles, archivedMaps, entities, eras, chapters, viewpoints, assets] = workspace
     ? await Promise.all([
         prisma.map.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
@@ -76,15 +76,32 @@ export default async function MapsPage({ searchParams }: PageProps) {
         prisma.viewpoint.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
           orderBy: { name: "asc" }
+        }),
+        prisma.asset.findMany({
+          where: { workspaceId: workspace.id, kind: "image", softDeletedAt: null },
+          select: { id: true, storageKey: true },
+          orderBy: { createdAt: "desc" }
         })
       ])
-    : [[], [], [], [], [], [], []];
+    : [[], [], [], [], [], [], [], []];
 
   if (!workspace) return <div className="panel">Select a workspace.</div>;
 
   const mapQuery = query.trim().toLowerCase();
   const visibleMaps = mapQuery ? maps.filter((m) => m.title.toLowerCase().includes(mapQuery)) : maps;
   const activeMap = maps.find((m) => m.id === selectedMapId) || maps[0];
+
+  // ... (breadcrumbs code) ...
+
+  // (inside return statement, tab === "manage" block)
+  // Reconstructing the whole return for context match isn't ideal due to length.
+  // I will target the specific block for replacement if possible, or replace the whole Manage tab content.
+  // The tool requires context. I will replace the fetch part first, then the UI part in a second call or combined if I can match enough context.
+  // Actually, I can do it in one go if I replace the top part (fetching) and the bottom part (UI) is too far apart.
+  // I will do two replacements. 
+  // Wait, the tool only supports multiple replacements if `old_string` matches multiple times or I provide a massive block.
+  // I'll do the Fetch update first.
+
 
   // Build breadcrumb trail (parent hierarchy)
   const breadcrumbs: { id: string; title: string }[] = [];
@@ -312,21 +329,33 @@ export default async function MapsPage({ searchParams }: PageProps) {
 
           {tab === "manage" && (
             <>
-              <details className="action-details" open>
-                <summary>Map Settings</summary>
-                <form action="/api/maps/update" method="post" className="form-grid p-4">
-                  <input type="hidden" name="workspaceId" value={workspace.id} />
-                  <input type="hidden" name="mapId" value={activeMap?.id} />
-                  <label>
-                    Title <input name="title" defaultValue={activeMap?.title} />
-                  </label>
-                  <label>
-                    Image Asset ID <input name="imageAssetId" defaultValue={activeMap?.imageAssetId || ""} />
-                  </label>
-                  <button type="submit" className="btn-secondary">Update Map</button>
-                </form>
-              </details>
-              <details className="action-details">
+              {activeMap && (
+                <details className="action-details" open>
+                  <summary>Map Settings</summary>
+                  <form action="/api/maps/update" method="post" className="form-grid p-4">
+                    <input type="hidden" name="workspaceId" value={workspace.id} />
+                    <input type="hidden" name="mapId" value={activeMap.id} />
+                    <label>
+                      Title <input name="title" defaultValue={activeMap.title} />
+                    </label>
+                    <label>
+                      Background Image
+                      <select name="imageAssetId" defaultValue={activeMap.imageAssetId || ""} className="w-full px-4 py-3 bg-bg-elevated border border-border text-ink font-semibold rounded-sm outline-none">
+                        <option value="">(No Image)</option>
+                        {assets.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.storageKey.split("/").pop()} ({a.id.slice(0, 8)}...)
+                          </option>
+                        ))}
+                      </select>
+                      <span className="text-xs text-muted mt-1 block">Select an imported image</span>
+                    </label>
+                    <button type="submit" className="btn-secondary">Update Map</button>
+                  </form>
+                </details>
+              )}
+
+              <details className="action-details" open={!activeMap}>
                 <summary>Create New Map</summary>
                 <form action="/api/maps/create" method="post" className="form-grid p-4">
                   <input type="hidden" name="workspaceId" value={workspace.id} />

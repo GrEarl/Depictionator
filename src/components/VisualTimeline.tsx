@@ -43,8 +43,14 @@ export function VisualTimeline({ timelines, chapters }: VisualTimelineProps) {
 
           <div className="pl-12 grid gap-6 relative">
             {timeline.events.length === 0 && (
-              <div className="p-8 rounded-2xl border border-dashed border-border bg-bg/50 text-center text-sm italic text-muted">
-                The chronicle is empty for this timeline.
+              <div className="p-12 rounded-2xl border border-dashed border-border bg-bg/50 text-center space-y-4">
+                <div className="text-4xl">📜</div>
+                <h5 className="text-lg font-bold text-ink">The chronicle is empty</h5>
+                <p className="text-sm text-muted max-w-md mx-auto">
+                  This timeline has no recorded events yet. 
+                  <br />
+                  Use the <strong>Create Event</strong> form on the right to add your first historical moment.
+                </p>
               </div>
             )}
             

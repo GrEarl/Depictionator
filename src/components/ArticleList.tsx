@@ -61,7 +61,7 @@ export function ArticleList({ entities, activeId, filters }: ArticleListProps) {
               key={entity.id}
               href={`/articles/${entity.id}`}
               className={cn(
-                "group flex items-center justify-between px-3 py-2 rounded-lg transition-all border border-transparent",
+                "group flex items-center justify-between px-3 py-3 rounded-lg transition-all border border-transparent",
                 activeId === entity.id 
                   ? "bg-accent/10 border-accent/20 shadow-sm" 
                   : "hover:bg-bg hover:border-border"

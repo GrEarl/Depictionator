@@ -157,48 +157,56 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
                 <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Team Members ({members.length})</h4>
                 <div className="space-y-2">
-                  {members.map((member) => (
-                    <div key={member.id} className="flex items-center justify-between p-3 bg-bg rounded-lg border border-border">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center text-white font-black text-sm">
-                          {member.user.name?.[0]?.toUpperCase() || member.user.email[0].toUpperCase()}
+                  {members.map((member) => {
+                    const isOwner = member.userId === workspace.createdById;
+                    return (
+                      <div key={member.id} className="flex items-center justify-between p-3 bg-bg rounded-lg border border-border">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center text-white font-black text-sm">
+                            {member.user.name?.[0]?.toUpperCase() || member.user.email[0].toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-medium text-sm">{member.user.name || member.user.email}</div>
+                            {member.user.name && <div className="text-xs text-muted">{member.user.email}</div>}
+                          </div>
+                          {isOwner ? (
+                            <span className="text-xs uppercase border px-2 py-0.5 rounded border-accent text-accent">
+                              Owner
+                            </span>
+                          ) : (
+                            <span className={`text-xs uppercase border px-2 py-0.5 rounded ${
+                              member.role === 'admin' ? 'border-accent-secondary text-accent-secondary' :
+                              'border-border text-muted'
+                            }`}>
+                              {member.role}
+                            </span>
+                          )}
                         </div>
-                        <div>
-                          <div className="font-medium text-sm">{member.user.name || member.user.email}</div>
-                          {member.user.name && <div className="text-xs text-muted">{member.user.email}</div>}
-                        </div>
-                        <span className={`text-xs uppercase border px-2 py-0.5 rounded ${
-                          member.role === 'owner' ? 'border-accent text-accent' :
-                          member.role === 'admin' ? 'border-accent-secondary text-accent-secondary' :
-                          'border-border text-muted'
-                        }`}>
-                          {member.role}
-                        </span>
+                        {!isOwner && member.userId !== user.id && (
+                          <select
+                            defaultValue={member.role}
+                            className="px-2 py-1 bg-bg border border-border rounded text-xs"
+                            onChange={(e) => {
+                              const form = document.createElement('form');
+                              form.method = 'post';
+                              form.action = '/api/members/update-role';
+                              form.innerHTML = `
+                                <input type="hidden" name="workspaceId" value="${workspace.id}" />
+                                <input type="hidden" name="memberId" value="${member.id}" />
+                                <input type="hidden" name="role" value="${e.target.value}" />
+                              `;
+                              document.body.appendChild(form);
+                              form.submit();
+                            }}
+                          >
+                            <option value="viewer">Viewer</option>
+                            <option value="editor">Editor</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        )}
                       </div>
-                      {member.role !== 'owner' && member.userId !== user.id && (
-                        <select
-                          defaultValue={member.role}
-                          className="px-2 py-1 bg-bg border border-border rounded text-xs"
-                          onChange={(e) => {
-                            const form = document.createElement('form');
-                            form.method = 'post';
-                            form.action = '/api/members/update-role';
-                            form.innerHTML = `
-                              <input type="hidden" name="workspaceId" value="${workspace.id}" />
-                              <input type="hidden" name="memberId" value="${member.id}" />
-                              <input type="hidden" name="role" value="${e.target.value}" />
-                            `;
-                            document.body.appendChild(form);
-                            form.submit();
-                          }}
-                        >
-                          <option value="viewer">Viewer</option>
-                          <option value="editor">Editor</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             </div>

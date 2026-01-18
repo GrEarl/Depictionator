@@ -82,7 +82,7 @@ export default async function DashboardPage() {
       {/* World Overview */}
       {workspaceId && (
         <section className="panel world-overview space-y-8">
-          <h2 className="text-2xl font-bold tracking-tight mb-6">{session?.workspace?.name} Overview</h2>
+          <h2 className="text-2xl font-bold tracking-tight mb-6">{session?.workspace?.name} {copy.dashboard.overview}</h2>
 
           {entities.length === 0 && maps.length === 0 ? (
             <div className="panel-game p-16 text-center animate-fade-in">
@@ -92,17 +92,16 @@ export default async function DashboardPage() {
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                   </svg>
                 </div>
-                <h3 className="text-4xl font-black text-ink uppercase tracking-tight">Begin Your Legend</h3>
-                <p className="text-ink-secondary text-lg leading-relaxed font-semibold">
-                  Every epic world starts with a single character, a single location.<br />
-                  The canvas awaits your vision.
+                <h3 className="text-4xl font-black text-ink uppercase tracking-tight">{copy.dashboard.beginLegend}</h3>
+                <p className="text-ink-secondary text-lg leading-relaxed font-semibold whitespace-pre-wrap">
+                  {copy.dashboard.canvasAwaits}
                 </p>
                 <div className="flex gap-6 justify-center pt-8">
                   <Link href="/articles?action=new" className="action-btn text-lg px-10 py-5">
-                    ▶ Create First Entity
+                    ▶ {copy.dashboard.createFirstEntity}
                   </Link>
                   <Link href="/maps" className="px-10 py-5 bg-bg-elevated border-2 border-accent text-accent hover:bg-accent/10 font-bold uppercase tracking-wide transition-all glow-on-hover">
-                    Open Atlas
+                    {copy.dashboard.openAtlas}
                   </Link>
                 </div>
               </div>
@@ -112,7 +111,7 @@ export default async function DashboardPage() {
               <div className="overview-grid stagger-children">
                 {/* Entity Stats */}
                 <div className="overview-card animate-slide-in">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">Entities</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">{copy.nav.articles}</h3>
                   <div className="stat-large">{entities.length}</div>
                   <div className="stat-breakdown">
                     {Object.entries(entityCounts).slice(0, 5).map(([type, count]) => (
@@ -122,12 +121,12 @@ export default async function DashboardPage() {
                       </div>
                     ))}
                   </div>
-                  <Link href="/articles" className="card-action-link">View all Articles</Link>
+                  <Link href="/articles" className="card-action-link">View all {copy.nav.articles}</Link>
                 </div>
 
                 {/* Maps */}
                 <div className="overview-card">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">Maps</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">{copy.nav.maps}</h3>
                   <div className="stat-large">{maps.length}</div>
                   <div className="recent-list">
                     {maps.slice(0, 3).map((map) => (
@@ -136,12 +135,12 @@ export default async function DashboardPage() {
                       </Link>
                     ))}
                   </div>
-                  <Link href="/maps" className="card-action-link">Open Atlas</Link>
+                  <Link href="/maps" className="card-action-link">{copy.dashboard.openAtlas}</Link>
                 </div>
 
                 {/* Evidence Boards */}
                 <div className="overview-card">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">Evidence Boards</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">{copy.nav.boards}</h3>
                   <div className="stat-large">{evidenceBoards.length}</div>
                   <div className="recent-list">
                     {evidenceBoards.slice(0, 3).map((board) => (
@@ -150,12 +149,12 @@ export default async function DashboardPage() {
                       </Link>
                     ))}
                   </div>
-                  <Link href="/boards" className="card-action-link">Open Boards</Link>
+                  <Link href="/boards" className="card-action-link">{copy.dashboard.openBoards}</Link>
                 </div>
 
                 {/* Recent Updates */}
                 <div className="overview-card">
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">Recent Activity</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">{copy.dashboard.recentActivity}</h3>
                   <div className="recent-list">
                     {recentArticles.slice(0, 5).map((rev) => (
                       <Link
@@ -168,25 +167,6 @@ export default async function DashboardPage() {
                     ))}
                   </div>
                   <Link href="/articles" className="card-action-link">View all Activity</Link>
-                </div>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="quick-actions">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-4">Quick Actions</h3>
-                <div className="action-buttons">
-                  <Link href="/articles?action=new" className="action-btn">
-                    New Entity
-                  </Link>
-                  <Link href="/maps" className="action-btn">
-                    Open Maps
-                  </Link>
-                  <Link href="/boards" className="action-btn">
-                    Evidence Board
-                  </Link>
-                  <Link href="/timeline" className="action-btn">
-                    Timeline
-                  </Link>
                 </div>
               </div>
             </>

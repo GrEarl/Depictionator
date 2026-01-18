@@ -128,9 +128,9 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
                   <label>
                     Tags
                     <input name="tags" placeholder="e.g., lore, history, major-character" />
-                    <span className="text-xs text-muted mt-1 block">Comma-separated tags for categorization</span>
+                    <span className="text-xs text-muted mt-1 block">Separate multiple tags with commas (e.g., "lore, magic")</span>
                   </label>
-                  <MarkdownEditor name="bodyMd" label="Initial Content" rows={6} />
+                  <MarkdownEditor name="bodyMd" label="Initial Content" rows={6} defaultMode="write" />
                   <button type="submit" className="btn-primary">Create Article</button>
                </form>
             </details>

@@ -151,7 +151,11 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
           <div className="empty-state-centered">
             <div className="hero-icon">Inbox</div>
             <h2>Inbox Zero</h2>
-            <p className="muted">You have no pending review requests. Take a break!</p>
+            <p className="muted">
+              You have no pending review requests.
+              <br />
+              When editors submit changes for approval, they will appear here for your review.
+            </p>
           </div>
         )}
       </main>

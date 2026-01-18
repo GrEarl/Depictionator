@@ -13,6 +13,8 @@ type SidebarLabels = {
   settings: string;
   signOut: string;
   workspaceFallback: string;
+  ai: string;
+  boards: string;
 };
 
 export function Sidebar({
@@ -29,10 +31,10 @@ export function Sidebar({
 
   const navItems = [
     { href: "/", label: labels.dashboard },
-    { href: "/ai", label: "AI Assistant" },
+    { href: "/ai", label: labels.ai },
     { href: "/articles", label: labels.articles },
     { href: "/maps", label: labels.maps },
-    { href: "/boards", label: "Boards" },
+    { href: "/boards", label: labels.boards },
     { href: "/timeline", label: labels.timeline },
     { href: "/reviews", label: labels.reviews },
     { href: "/settings", label: labels.settings }

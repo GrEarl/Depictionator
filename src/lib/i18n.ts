@@ -3,8 +3,10 @@ import type { UiLocale } from "@/lib/locale";
 export type UiCopy = {
   nav: {
     dashboard: string;
+    ai: string;
     articles: string;
     maps: string;
+    boards: string;
     timeline: string;
     reviews: string;
     settings: string;
@@ -30,6 +32,14 @@ export type UiCopy = {
     none: string;
     noUnread: string;
     markRead: string;
+    overview: string;
+    beginLegend: string;
+    canvasAwaits: string;
+    createFirstEntity: string;
+    openAtlas: string;
+    openBoards: string;
+    recentActivity: string;
+    quickActions: string;
   };
   locale: {
     label: string;
@@ -54,8 +64,10 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
   en: {
     nav: {
       dashboard: "Dashboard",
+      ai: "AI Assistant",
       articles: "Entities",
       maps: "Atlas",
+      boards: "Boards",
       timeline: "Chronicle",
       reviews: "Approvals",
       settings: "Settings",
@@ -80,7 +92,15 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       workspaceSlug: "Project slug",
       none: "You haven't joined any projects yet.",
       noUnread: "No new activity.",
-      markRead: "Mark as read"
+      markRead: "Mark as read",
+      overview: "Overview",
+      beginLegend: "Begin Your Legend",
+      canvasAwaits: "Every epic world starts with a single character, a single location.\nThe canvas awaits your vision.",
+      createFirstEntity: "Create First Entity",
+      openAtlas: "Open Atlas",
+      openBoards: "Open Boards",
+      recentActivity: "Recent Activity",
+      quickActions: "Quick Actions"
     },
     locale: {
       label: "Language",
@@ -103,8 +123,10 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
   ja: {
     nav: {
       dashboard: "ダッシュボード",
+      ai: "AIアシスタント",
       articles: "設定項目",
       maps: "地図・アトラス",
+      boards: "ボード",
       timeline: "年代記",
       reviews: "承認待ち",
       settings: "システム設定",
@@ -129,7 +151,15 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       workspaceSlug: "プロジェクトIDを入力",
       none: "参加中のプロジェクトはありません。",
       noUnread: "新しい通知はありません。",
-      markRead: "既読にする"
+      markRead: "既読にする",
+      overview: "概況",
+      beginLegend: "伝説を始めよう",
+      canvasAwaits: "壮大な世界も、ひとりのキャラクター、ひとつの場所から始まります。\nキャンバスはあなたの構想を待っています。",
+      createFirstEntity: "最初の項目を作成",
+      openAtlas: "地図を開く",
+      openBoards: "ボードを開く",
+      recentActivity: "最近の活動",
+      quickActions: "クイックアクション"
     },
     locale: {
       label: "表示言語",
