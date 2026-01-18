@@ -35,12 +35,26 @@ module.exports = {
         'bg-elevated': 'var(--bg-elevated)',
         panel: 'var(--panel)',
         'panel-accent': 'var(--panel-accent)',
-        accent: 'var(--accent)',
-        'accent-hover': 'var(--accent-hover)',
-        'accent-secondary': 'var(--accent-secondary)',
-        border: 'var(--border)',
-        'border-accent': 'var(--border-accent)',
+        accent: {
+          DEFAULT: 'var(--accent)',
+          hover: 'var(--accent-hover)',
+          secondary: 'var(--accent-secondary)',
+        },
+        border: {
+          DEFAULT: 'var(--border)',
+          accent: 'var(--border-accent)',
+        },
         ring: 'var(--ring)',
+      },
+      backgroundColor: {
+        'accent/10': 'rgba(255, 0, 51, 0.1)',
+        'accent/30': 'rgba(255, 0, 51, 0.3)',
+      },
+      borderColor: {
+        'accent/30': 'rgba(255, 0, 51, 0.3)',
+      },
+      ringColor: {
+        'accent/20': 'rgba(255, 0, 51, 0.2)',
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
