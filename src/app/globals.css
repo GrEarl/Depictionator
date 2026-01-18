@@ -6,27 +6,28 @@
 :root {
   color-scheme: dark;
 
-  /* Persona-inspired Game UI Palette */
+  /* Persona-inspired Game UI Palette - Enhanced Contrast */
   --ink: #ffffff;
-  --ink-secondary: #e0e0e0;
-  --muted: #a0a0a0;
+  --ink-secondary: #e8e8e8;
+  --muted: #a8a8a8;
 
   --bg: #0a0a0a;
-  --bg-elevated: #141414;
-  --panel: #1a1a1a;
-  --panel-accent: #252525;
+  --bg-elevated: #161616;
+  --panel: #1f1f1f;
+  --panel-accent: #2a2a2a;
 
   /* Vibrant accent - bold red like Persona 5 */
   --accent: #ff0033;
-  --accent-hover: #cc0028;
+  --accent-hover: #dd0028;
   --accent-glow: rgba(255, 0, 51, 0.3);
 
   /* Secondary accent - electric blue */
   --accent-secondary: #00d4ff;
   --accent-secondary-glow: rgba(0, 212, 255, 0.2);
 
-  --border: #333333;
+  --border: #3a3a3a;
   --border-accent: #ff0033;
+  --ring: rgba(255, 0, 51, 0.5);
 
   --shadow: rgba(0, 0, 0, 0.8);
   --radius: 0;
@@ -369,6 +370,7 @@ button[type="submit"] {
     transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 1000;
     box-shadow: 8px 0 24px var(--shadow);
+    height: 100vh;
   }
 
   .app-sidebar.mobile-open {
@@ -382,20 +384,60 @@ button[type="submit"] {
   .action-buttons {
     grid-template-columns: 1fr;
   }
+
+  .app-body {
+    padding: 20px;
+  }
+
+  /* 3-pane layout becomes stacked */
+  .layout-3-pane {
+    display: block;
+  }
+
+  .pane-left,
+  .pane-right-drawer {
+    display: none; /* Hide sidebars on mobile, show via toggle if needed */
+  }
+
+  .pane-center {
+    width: 100%;
+  }
 }
 
 @media (max-width: 768px) {
   .app-body {
-    padding: 16px;
+    padding: 12px;
   }
 
   .stat-large {
-    @apply text-5xl;
+    font-size: 3rem;
   }
 
-  h1 { @apply text-3xl; }
-  h2 { @apply text-2xl; }
-  h3 { @apply text-xl; }
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+
+  /* Make forms more mobile-friendly */
+  input, select, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .form-grid {
+    gap: 1rem;
+  }
+
+  /* Stack grid layouts */
+  .grid.grid-cols-2,
+  .grid.grid-cols-3,
+  .grid.grid-cols-4 {
+    grid-template-columns: 1fr;
+  }
+
+  /* Larger touch targets */
+  button, .btn-primary, .btn-secondary {
+    min-height: 44px;
+    padding: 12px 20px;
+  }
 }
 
 /* ==== ANIMATIONS ==== */
