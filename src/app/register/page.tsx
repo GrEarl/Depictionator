@@ -1,15 +1,22 @@
 ﻿import Link from "next/link";
 
-type RegisterPageProps = {
-  searchParams?: { next?: string };
+type RegisterSearchParams = {
+  next?: string | string[];
 };
 
-export default function RegisterPage({ searchParams }: RegisterPageProps) {
+type RegisterPageProps = {
+  searchParams: Promise<RegisterSearchParams>;
+};
+
+export default async function RegisterPage({ searchParams }: RegisterPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const rawNext = resolvedSearchParams?.next;
+  const nextValue = Array.isArray(rawNext) ? rawNext[0] : rawNext;
   const next =
-    typeof searchParams?.next === "string" &&
-    searchParams.next.startsWith("/") &&
-    !searchParams.next.startsWith("//")
-      ? searchParams.next
+    typeof nextValue === "string" &&
+    nextValue.startsWith("/") &&
+    !nextValue.startsWith("//")
+      ? nextValue
       : "";
   return (
     <main className="min-h-screen flex items-center justify-center bg-bg relative overflow-hidden">

@@ -1,15 +1,22 @@
 ﻿import Link from "next/link";
 
-type LoginPageProps = {
-  searchParams?: { next?: string };
+type LoginSearchParams = {
+  next?: string | string[];
 };
 
-export default function LoginPage({ searchParams }: LoginPageProps) {
+type LoginPageProps = {
+  searchParams: Promise<LoginSearchParams>;
+};
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const resolvedSearchParams = await searchParams;
+  const rawNext = resolvedSearchParams?.next;
+  const nextValue = Array.isArray(rawNext) ? rawNext[0] : rawNext;
   const next =
-    typeof searchParams?.next === "string" &&
-    searchParams.next.startsWith("/") &&
-    !searchParams.next.startsWith("//")
-      ? searchParams.next
+    typeof nextValue === "string" &&
+    nextValue.startsWith("/") &&
+    !nextValue.startsWith("//")
+      ? nextValue
       : "";
   return (
     <main className="min-h-screen flex items-center justify-center bg-bg relative overflow-hidden">
