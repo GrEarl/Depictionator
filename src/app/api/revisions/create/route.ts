@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
 import { toWikiPath } from "@/lib/wiki";
 import { parseCsv } from "@/lib/forms";
+import { getProtectionLevel } from "@/lib/protection";
 
 export async function POST(request: Request) {
   let session;
@@ -43,6 +44,7 @@ export async function POST(request: Request) {
   const isBase = targetType === "base";
   let parentRevisionId: string | null = null;
   let overlayEntityId: string | null = null;
+  let protectionTags: string[] | null = null;
 
   if (isBase) {
     const article = await prisma.article.findFirst({
@@ -63,6 +65,26 @@ export async function POST(request: Request) {
     }
     overlayEntityId = overlay.entityId;
     parentRevisionId = overlay.activeRevisionId ?? null;
+  }
+
+  const entityIdForProtection = isBase ? articleId : overlayEntityId;
+  if (entityIdForProtection) {
+    const entity = await prisma.entity.findFirst({
+      where: { id: entityIdForProtection, workspaceId },
+      select: { tags: true }
+    });
+    if (!entity) {
+      return apiError("Entity not found", 404);
+    }
+    protectionTags = entity.tags ?? [];
+    const protection = getProtectionLevel(protectionTags);
+    if (protection === "admin") {
+      try {
+        await requireWorkspaceAccess(session.userId, workspaceId, "admin");
+      } catch {
+        return apiError("Forbidden", 403);
+      }
+    }
   }
 
   const now = new Date();
@@ -89,21 +111,15 @@ export async function POST(request: Request) {
     });
 
     if (hasWikiMeta) {
-      const entity = await prisma.entity.findFirst({
+      const existingTags = protectionTags ?? [];
+      const filtered = existingTags.filter((tag) => !tag.startsWith("category:") && !tag.startsWith("template:"));
+      const categoryTags = wikiCategories.map((c) => `category:${c}`);
+      const templateTags = wikiTemplates.map((t) => `template:${t}`);
+      const nextTags = Array.from(new Set([...filtered, ...categoryTags, ...templateTags]));
+      await prisma.entity.update({
         where: { id: articleId, workspaceId },
-        select: { tags: true }
+        data: { tags: { set: nextTags }, updatedById: session.userId }
       });
-      if (entity) {
-        const existingTags = entity.tags ?? [];
-        const filtered = existingTags.filter((tag) => !tag.startsWith("category:") && !tag.startsWith("template:"));
-        const categoryTags = wikiCategories.map((c) => `category:${c}`);
-        const templateTags = wikiTemplates.map((t) => `template:${t}`);
-        const nextTags = Array.from(new Set([...filtered, ...categoryTags, ...templateTags]));
-        await prisma.entity.update({
-          where: { id: articleId, workspaceId },
-          data: { tags: { set: nextTags }, updatedById: session.userId }
-        });
-      }
     }
 
     await notifyWatchers({

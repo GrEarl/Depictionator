@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MarkdownView } from "@/components/MarkdownView";
 import { MarkdownToc } from "@/components/MarkdownToc";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
 import { toWikiPath } from "@/lib/wiki";
+import { getProtectionLevel, type ProtectionLevel } from "@/lib/protection";
 
 type Entity = any;
 type Asset = { id: string; storageKey: string; mimeType: string } | null;
@@ -19,6 +20,7 @@ export function ArticleDetail({
   entity,
   workspaceId,
   user,
+  userRole,
   mainImage,
   parentEntity,
   childEntities,
@@ -30,6 +32,7 @@ export function ArticleDetail({
   entity: Entity;
   workspaceId: string;
   user: any;
+  userRole?: string;
   mainImage?: Asset;
   parentEntity?: EntityRef | null;
   childEntities?: EntityRef[];
@@ -76,6 +79,12 @@ export function ArticleDetail({
   const currentRevision = publishedRevision || latestRevision;
   const displayBody = currentRevision?.bodyMd || "";
   const displayTitle = activeOverlay ? activeOverlay.title : entity.title;
+  const protectionLevel = getProtectionLevel(entity.tags ?? []);
+  const isAdmin = userRole === "admin";
+  const isProtectedAdmin = protectionLevel === "admin";
+  const canEdit = !isProtectedAdmin || isAdmin;
+  const manageDisabled = isProtectedAdmin && !isAdmin;
+  const [renderBody, setRenderBody] = useState(displayBody);
 
   // Compare Tab
   const currentIndex = relevantRevisions.findIndex((r: any) => r.id === currentRevision?.id);
@@ -101,8 +110,56 @@ export function ArticleDetail({
     .filter((tag: string) => tag.startsWith("template:"))
     .map((tag: string) => tag.replace(/^template:/, ""));
   const plainTags = (entity.tags ?? []).filter(
-    (tag: string) => !tag.startsWith("category:") && !tag.startsWith("template:")
+    (tag: string) =>
+      !tag.startsWith("category:") &&
+      !tag.startsWith("template:") &&
+      !tag.startsWith("protected:")
   );
+
+  useEffect(() => {
+    const templateRegex = /\{\{TEMPLATE:([^}|]+)(?:\|[^}]*)?\}\}/g;
+    const matches = Array.from(displayBody.matchAll(templateRegex));
+    if (matches.length === 0) {
+      setRenderBody(displayBody);
+      return;
+    }
+    const names = Array.from(
+      new Set(matches.map((m) => m[1].trim().replace(/^Template:/i, "")).filter(Boolean))
+    );
+    if (names.length === 0) {
+      setRenderBody(displayBody);
+      return;
+    }
+
+    const controller = new AbortController();
+    const resolveTemplates = async () => {
+      try {
+        const response = await fetch("/api/templates/resolve", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId, names }),
+          signal: controller.signal
+        });
+        const data = await response.json();
+        const items: Array<{ name: string; bodyMd: string }> = Array.isArray(data.items) ? data.items : [];
+        const map = new Map(items.map((item) => [item.name.toLowerCase(), item.bodyMd]));
+        let expanded = displayBody;
+        names.forEach((name) => {
+          const content = map.get(name.toLowerCase()) || `> Missing template: ${name}`;
+          const escaped = name.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\\\$&");
+          const pattern = new RegExp(`\\{\\{TEMPLATE:(?:Template:)?${escaped}[^}]*\\}\\}`, "g");
+          expanded = expanded.replace(pattern, content);
+        });
+        setRenderBody(expanded);
+      } catch {
+        setRenderBody(displayBody);
+      }
+    };
+    resolveTemplates();
+    return () => controller.abort();
+  }, [displayBody, workspaceId]);
+
+  const hasRenderBody = Boolean(renderBody?.trim());
 
   return (
     <>
@@ -148,9 +205,12 @@ export function ArticleDetail({
                 <span className={`badge status-${entity.status}`}>{entity.status}</span>
                 {activeOverlay && <span className="badge overlay">Viewpoint</span>}
                 {!publishedRevision && latestRevision && <span className="badge status-draft">Draft</span>}
+                {protectionLevel !== "none" && (
+                  <span className={`badge protected-${protectionLevel}`}>Protected {protectionLevel}</span>
+                )}
               </div>
               <Link
-                href={`/wiki/${encodeURIComponent(`Talk:${displayTitle}`)}`}
+                href={toWikiPath(`Talk:${displayTitle}`)}
                 className="btn-secondary"
               >
                 Talk
@@ -162,7 +222,11 @@ export function ArticleDetail({
               <button
                 key={t}
                 className={`tab-btn ${tab === t ? "active" : ""}`}
-                onClick={() => setTab(t)}
+                disabled={t === "edit" && !canEdit}
+                onClick={() => {
+                  if (t === "edit" && !canEdit) return;
+                  setTab(t);
+                }}
               >
                 {t === "relations" ? "Relations" : t.charAt(0).toUpperCase() + t.slice(1)}
               </button>
@@ -181,16 +245,16 @@ export function ArticleDetail({
               )}
 
               {/* Table of Contents */}
-              {displayBody && (
+              {hasRenderBody && (
                 <div className="article-toc-inline">
-                  <MarkdownToc value={displayBody} />
+                  <MarkdownToc value={renderBody} />
                 </div>
               )}
 
               {/* Main Body */}
               <div className="read-view">
-                {displayBody ? (
-                  <MarkdownView value={displayBody} />
+                {hasRenderBody ? (
+                  <MarkdownView value={renderBody} />
                 ) : (
                   <div className="empty-content">
                     <p>This article has no content yet.</p>
@@ -272,7 +336,14 @@ export function ArticleDetail({
             </>
           )}
 
-          {tab === "edit" && (
+          {tab === "edit" && !canEdit && (
+            <div className="panel">
+              <h2 className="text-lg font-bold">Protected</h2>
+              <p className="muted mt-2">This page is protected. Only admins can edit it.</p>
+            </div>
+          )}
+
+          {tab === "edit" && canEdit && (
             <div className="edit-view">
               <form action="/api/revisions/create" method="post" className="edit-form">
                 <input type="hidden" name="workspaceId" value={workspaceId} />
@@ -542,14 +613,34 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
                     <input type="hidden" name="entityId" value={entity.id} />
                     <label>
                       Rename title
-                      <input name="title" defaultValue={entity.title} />
+                      <input name="title" defaultValue={entity.title} disabled={manageDisabled} />
                     </label>
                     <label className="flex items-center gap-2 text-xs font-semibold normal-case tracking-normal text-muted">
-                      <input type="checkbox" name="addRedirect" defaultChecked />
+                      <input type="checkbox" name="addRedirect" defaultChecked disabled={manageDisabled} />
                       Keep old title as redirect (alias)
                     </label>
-                    <button type="submit" className="btn-secondary">Rename</button>
+                    <button type="submit" className="btn-secondary" disabled={manageDisabled}>Rename</button>
                   </form>
+
+                  {isAdmin ? (
+                    <form action="/api/articles/protect" method="post" className="form-grid">
+                      <input type="hidden" name="workspaceId" value={workspaceId} />
+                      <input type="hidden" name="entityId" value={entity.id} />
+                      <label>
+                        Protection level
+                        <select name="level" defaultValue={protectionLevel}>
+                          <option value="none">None</option>
+                          <option value="editor">Editors</option>
+                          <option value="admin">Admins</option>
+                        </select>
+                      </label>
+                      <button type="submit" className="btn-secondary">Update protection</button>
+                    </form>
+                  ) : (
+                    protectionLevel !== "none" && (
+                      <div className="muted text-xs">Protected: admin only.</div>
+                    )
+                  )}
 
                   <form action="/api/watches/toggle" method="post" className="form-grid">
                     <input type="hidden" name="workspaceId" value={workspaceId} />
@@ -566,6 +657,7 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
                     <button
                       type="submit"
                       className="btn-danger"
+                      disabled={manageDisabled}
                       onClick={(event) => {
                         if (!window.confirm("Delete this article? You can restore it later.")) {
                           event.preventDefault();

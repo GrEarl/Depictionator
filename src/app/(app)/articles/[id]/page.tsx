@@ -18,6 +18,11 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
   if (!workspace) {
     return <div className="panel">Select a workspace.</div>;
   }
+  const membership = await prisma.workspaceMember.findFirst({
+    where: { userId: user.id, workspaceId: workspace.id },
+    select: { role: true }
+  });
+  const userRole = membership?.role ?? "viewer";
   const { id } = await params;
   const resolvedSearchParams = await searchParams;
 
@@ -70,6 +75,16 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
 
   if (!entity) return <div className="panel">Not found.</div>;
 
+  const watch = await prisma.watch.findFirst({
+    where: {
+      workspaceId: workspace.id,
+      userId: user.id,
+      targetType: "entity",
+      targetId: entity.id,
+      notifyInApp: true
+    }
+  });
+
   // Get related entities for the sidebar
   const allRelated = [
     ...entity.relationsFrom.map(r => ({
@@ -115,12 +130,14 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
         entity={entity}
         workspaceId={workspace.id}
         user={user}
+        userRole={userRole}
         mainImage={entity.mainImage}
         parentEntity={entity.parentEntity}
         childEntities={entity.childEntities}
         relatedEntities={allRelated}
         locations={entity.pins}
         searchQuery={query}
+        isWatching={Boolean(watch)}
       />
     </div>
   );

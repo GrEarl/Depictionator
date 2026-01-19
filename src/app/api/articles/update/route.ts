@@ -7,6 +7,7 @@ import { parseCsv, parseOptionalString } from "@/lib/forms";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
 import { toWikiPath } from "@/lib/wiki";
+import { getProtectionLevel } from "@/lib/protection";
 
 export async function POST(request: Request) {
   let session;
@@ -35,6 +36,28 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  const existing = await prisma.entity.findFirst({
+    where: { id: entityId, workspaceId },
+    select: { tags: true }
+  });
+
+  if (!existing) {
+    return apiError("Entity not found", 404);
+  }
+
+  const protection = getProtectionLevel(existing.tags ?? []);
+  if (protection === "admin") {
+    try {
+      await requireWorkspaceAccess(session.userId, workspaceId, "admin");
+    } catch {
+      return apiError("Forbidden", 403);
+    }
+  }
+
+  const nextTagsInput = parseCsv(form.get("tags")).filter((tag) => !tag.startsWith("protected:"));
+  const existingProtected = (existing.tags ?? []).filter((tag) => tag.startsWith("protected:"));
+  const nextTags = Array.from(new Set([...nextTagsInput, ...existingProtected]));
+
   const storyIntroChapterId = parseOptionalString(form.get("storyIntroChapterId"));
   if (storyIntroChapterId) {
     const chapter = await prisma.chapter.findFirst({
@@ -51,7 +74,7 @@ export async function POST(request: Request) {
       title,
       status,
       aliases: parseCsv(form.get("aliases")),
-      tags: parseCsv(form.get("tags")),
+      tags: nextTags,
       worldExistFrom: parseOptionalString(form.get("worldExistFrom")),
       worldExistTo: parseOptionalString(form.get("worldExistTo")),
       storyIntroChapterId,
@@ -77,4 +100,3 @@ export async function POST(request: Request) {
 
   return NextResponse.redirect(toRedirectUrl(request, toWikiPath(entity.title)));
 }
-

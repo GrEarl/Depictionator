@@ -223,6 +223,8 @@ model User {
   assetsCreated            Asset[]             @relation("AssetCreatedBy")      
   llmLogs                  LlmLog[]
   sourceRecordsCreated     SourceRecord[]      @relation("SourceRecordCreatedBy")
+  talkThreads              TalkThread[]        @relation("TalkThreadCreatedBy")
+  talkComments             TalkComment[]       @relation("TalkCommentCreatedBy")
 }
 
 model Session {
@@ -277,6 +279,8 @@ model Workspace {
   watches     Watch[]
   notifications Notification[]
   readStates  ReadState[]
+  talkThreads TalkThread[]
+  talkComments TalkComment[]
   sourceRecords SourceRecord[]
   entityRelations EntityRelation[]
   mapCards    MapCard[]
@@ -333,6 +337,7 @@ model Entity {
   evidenceItems EvidenceItem[]
   relationsFrom EntityRelation[] @relation("RelationFrom")
   relationsTo   EntityRelation[] @relation("RelationTo")
+  talkThreads   TalkThread[]
 
   @@index([workspaceId, type])
 }
@@ -960,6 +965,40 @@ model ReadState {
   workspace Workspace @relation(fields: [workspaceId], references: [id])
 
   @@id([userId, workspaceId, targetType, targetId])
+}
+
+model TalkThread {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  entityId      String
+  title         String
+  createdById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  entity    Entity    @relation(fields: [entityId], references: [id])
+  createdBy User?     @relation("TalkThreadCreatedBy", fields: [createdById], references: [id])
+  comments  TalkComment[]
+
+  @@index([workspaceId, entityId])
+}
+
+model TalkComment {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  threadId      String
+  bodyMd        String
+  createdAt     DateTime @default(now())
+  createdById   String?
+  softDeletedAt DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  thread    TalkThread @relation(fields: [threadId], references: [id])
+  createdBy User?     @relation("TalkCommentCreatedBy", fields: [createdById], references: [id])
+
+  @@index([workspaceId, threadId])
 }
 
 model SourceRecord {

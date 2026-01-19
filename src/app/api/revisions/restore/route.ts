@@ -3,6 +3,7 @@ import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { getProtectionLevel } from "@/lib/protection";
 
 export async function POST(request: Request) {
   let session;
@@ -38,6 +39,33 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  let entityId: string | null = revision.articleId ?? null;
+  if (revision.targetType === "overlay" && revision.overlayId) {
+    const overlay = await prisma.articleOverlay.findFirst({
+      where: { id: revision.overlayId, workspaceId },
+      select: { entityId: true }
+    });
+    entityId = overlay?.entityId ?? null;
+  }
+
+  if (entityId) {
+    const entity = await prisma.entity.findFirst({
+      where: { id: entityId, workspaceId },
+      select: { tags: true }
+    });
+    if (!entity) {
+      return apiError("Entity not found", 404);
+    }
+    const protection = getProtectionLevel(entity.tags ?? []);
+    if (protection === "admin") {
+      try {
+        await requireWorkspaceAccess(session.userId, workspaceId, "admin");
+      } catch {
+        return apiError("Forbidden", 403);
+      }
+    }
+  }
+
   const restored = await prisma.articleRevision.create({
     data: {
       workspaceId,
@@ -63,5 +91,4 @@ export async function POST(request: Request) {
 
   return NextResponse.redirect(toRedirectUrl(request, `/revisions/${restored.id}`));
 }
-
 

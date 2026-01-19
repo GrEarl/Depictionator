@@ -6,6 +6,7 @@ import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { parseOptionalString } from "@/lib/forms";
 import { toWikiPath } from "@/lib/wiki";
+import { getProtectionLevel } from "@/lib/protection";
 
 export async function POST(request: Request) {
   let session;
@@ -41,6 +42,15 @@ export async function POST(request: Request) {
   });
   if (!entity) {
     return apiError("Entity not found", 404);
+  }
+
+  const protection = getProtectionLevel(entity.tags ?? []);
+  if (protection === "admin") {
+    try {
+      await requireWorkspaceAccess(session.userId, workspaceId, "admin");
+    } catch {
+      return apiError("Forbidden", 403);
+    }
   }
 
   const data: Record<string, unknown> = {};

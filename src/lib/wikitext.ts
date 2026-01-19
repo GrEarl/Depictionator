@@ -57,13 +57,15 @@ export function wikiTextToMarkdown(wikitext: string): ParsedWikiText {
     return "";
   });
 
-  // Handle templates (simplified - extract names and keep placeholder)
+  // Handle templates (extract names and keep token for transclusion)
   result = result.replace(/\{\{([^{}|]+)(?:\|[^{}]*)?\}\}/g, (match, name) => {
     const templateName = name.trim();
-    if (!templateName.startsWith("#")) {
-      templates.push(templateName);
+    const baseName = templateName.replace(/^Template:/i, "").trim();
+    if (!templateName.startsWith("#") && baseName) {
+      templates.push(baseName);
     }
-    return `> Template: ${templateName}\n`;
+    if (!baseName) return "";
+    return `{{TEMPLATE:${baseName}}}\n`;
   });
 
   // Handle images/files: [[File:name.jpg|options|caption]] or [[Image:...]]
