@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Map as LeafletMap, Marker as LeafletMarker, LayerGroup, ImageOverlay, LatLng } from "leaflet";
@@ -23,6 +23,13 @@ type MapPayload = {
   title: string;
   bounds: [[number, number], [number, number]] | null;
   imageUrl: string | null;
+  events?: {
+    id: string;
+    title: string;
+    worldStart?: string | null;
+    worldEnd?: string | null;
+    storyOrder?: number | null;
+  }[];
   pins: {
     id: string;
     x: number;
@@ -78,7 +85,7 @@ type FigmaMapEditorProps = {
   viewpoints: ViewpointOption[];
 };
 
-type ToolMode = "select" | "pin" | "path";
+type ToolMode = "select" | "pin" | "path" | "card";
 
 type PinDraft = {
   x: number | null;
@@ -88,8 +95,27 @@ type PinDraft = {
   markerStyleId: string;
   truthFlag: string;
   viewpointId: string;
+  worldFrom: string;
+  worldTo: string;
+  storyFromChapterId: string;
+  storyToChapterId: string;
   entityId: string;
   entityQuery: string;
+};
+
+type PathDraft = {
+  arrowStyle: string;
+  strokeColor: string;
+  strokeWidth: string;
+  markerStyleId: string;
+  truthFlag: string;
+  viewpointId: string;
+  worldFrom: string;
+  worldTo: string;
+  storyFromChapterId: string;
+  storyToChapterId: string;
+  relatedEventId: string;
+  relatedEntityIds: string;
 };
 
 function createIcon(L: any, shape: string, color: string) {
@@ -142,6 +168,10 @@ export function FigmaMapEditor({
     markerStyleId: "",
     truthFlag: "canonical",
     viewpointId: "",
+    worldFrom: "",
+    worldTo: "",
+    storyFromChapterId: "",
+    storyToChapterId: "",
     entityId: "",
     entityQuery: "",
     ...overrides
@@ -149,6 +179,21 @@ export function FigmaMapEditor({
 
   const [pinDraft, setPinDraft] = useState<PinDraft>(createPinDraft());
   const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
+  const [pathDraft, setPathDraft] = useState<PathDraft>({
+    arrowStyle: "arrow",
+    strokeColor: "",
+    strokeWidth: "",
+    markerStyleId: "",
+    truthFlag: "canonical",
+    viewpointId: "",
+    worldFrom: "",
+    worldTo: "",
+    storyFromChapterId: "",
+    storyToChapterId: "",
+    relatedEventId: "",
+    relatedEntityIds: ""
+  });
+  const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   // Zoom state
   const [zoomLevel, setZoomLevel] = useState(0);
@@ -157,15 +202,177 @@ export function FigmaMapEditor({
   const [showImage, setShowImage] = useState(true);
   const [showPins, setShowPins] = useState(true);
   const [showPaths, setShowPaths] = useState(true);
+  const [hiddenLocationTypes, setHiddenLocationTypes] = useState<Set<string>>(new Set());
+
+  const toggleLocationType = (type: string) => {
+    setHiddenLocationTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  };
+
+  // Evidence cards
+  const [isSaving, setIsSaving] = useState(false);
+  const [mapCards, setMapCards] = useState<Array<{
+    id: string;
+    x: number;
+    y: number;
+    type: "entity" | "article" | "event" | "note";
+    title: string;
+    content?: string;
+    entityId?: string;
+    articleId?: string;
+    eventId?: string;
+  }>>([]);
+
+  const [cardConnections, setCardConnections] = useState<Array<{
+    id: string;
+    fromCardId: string;
+    toCardId: string;
+    type: "timeline" | "causal" | "reference";
+    label?: string;
+  }>>([]);
+
+  const [connectingFromCardId, setConnectingFromCardId] = useState<string | null>(null);
+  const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
 
   // Keep mode in ref
   const modeRef = useRef(mode);
   useEffect(() => { modeRef.current = mode; }, [mode]);
 
+  const saveCardsToDatabase = useCallback(async () => {
+    if (!map?.id) return;
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/map-cards/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          mapId: map.id,
+          cards: mapCards,
+          connections: cardConnections
+        })
+      });
+      if (res.ok) {
+        addToast("Cards saved successfully.", "success");
+      } else {
+        addToast("Failed to save cards.", "error");
+      }
+    } catch (error) {
+      console.error("Failed to save cards:", error);
+      addToast("Error saving cards.", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  }, [map?.id, workspaceId, mapCards, cardConnections, addToast]);
+
+  useEffect(() => {
+    if (!map?.id) return;
+    const mapId = map.id;
+    async function loadCardsFromDB() {
+      try {
+        const res = await fetch(`/api/map-cards/load?mapId=${mapId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (Array.isArray(data.cards)) setMapCards(data.cards);
+          if (Array.isArray(data.connections)) setCardConnections(data.connections);
+        }
+      } catch (error) {
+        console.error("Failed to load cards:", error);
+      }
+    }
+    loadCardsFromDB();
+  }, [map?.id]);
+
+  const handleCardMouseDown = useCallback((e: React.MouseEvent, card: typeof mapCards[0]) => {
+    if (connectingFromCardId) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = (e.target as HTMLElement).closest(".evidence-card-on-map")?.getBoundingClientRect();
+    if (!rect) return;
+    setDraggingCardId(card.id);
+  }, [connectingFromCardId]);
+
+  const handleCardMouseMove = useCallback((e: MouseEvent) => {
+    if (!draggingCardId || !containerRef.current) return;
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const newX = e.clientX - containerRect.left;
+    const newY = e.clientY - containerRect.top;
+    setMapCards((prev) => prev.map((card) => card.id === draggingCardId ? { ...card, x: newX, y: newY } : card));
+  }, [draggingCardId]);
+
+  const handleCardMouseUp = useCallback(() => {
+    setDraggingCardId(null);
+  }, []);
+
+  useEffect(() => {
+    if (draggingCardId) {
+      document.addEventListener("mousemove", handleCardMouseMove);
+      document.addEventListener("mouseup", handleCardMouseUp);
+      return () => {
+        document.removeEventListener("mousemove", handleCardMouseMove);
+        document.removeEventListener("mouseup", handleCardMouseUp);
+      };
+    }
+  }, [draggingCardId, handleCardMouseMove, handleCardMouseUp]);
+
+  const autoArrangeEvents = useCallback(() => {
+    const events = map.events ?? [];
+    if (!events.length) {
+      addToast("No events found on this map.", "info");
+      return;
+    }
+    const sortedEvents = [...events].sort((a, b) => {
+      if (a.storyOrder != null && b.storyOrder != null) return a.storyOrder - b.storyOrder;
+      if (a.worldStart && b.worldStart) return a.worldStart.localeCompare(b.worldStart);
+      return 0;
+    });
+    const startX = 150;
+    const startY = 100;
+    const horizontalGap = 300;
+    const verticalGap = 200;
+    const maxPerRow = 4;
+    const newCards = sortedEvents.map((event, index) => {
+      const row = Math.floor(index / maxPerRow);
+      const col = index % maxPerRow;
+      return {
+        id: `event-card-${event.id}`,
+        x: startX + col * horizontalGap,
+        y: startY + row * verticalGap,
+        type: "event" as const,
+        title: event.title,
+        content: event.worldStart || event.storyOrder?.toString(),
+        eventId: event.id
+      };
+    });
+    const newConnections = sortedEvents.slice(0, -1).map((event, index) => ({
+      id: `timeline-conn-${index}`,
+      fromCardId: `event-card-${event.id}`,
+      toCardId: `event-card-${sortedEvents[index + 1].id}`,
+      type: "timeline" as const,
+      label: "timeline"
+    }));
+    setMapCards(newCards);
+    setCardConnections(newConnections);
+  }, [map.events, addToast]);
+
   // Keyboard shortcuts
   useKeyboardShortcut("v", () => setMode("select"));
   useKeyboardShortcut("p", () => setMode("pin"));
   useKeyboardShortcut("l", () => setMode("path"));
+  useKeyboardShortcut("c", () => {
+    setMode("card");
+    setSelectedPinId("");
+    setShowRightPanel(false);
+    draftLayerRef.current?.clearLayers();
+  });
+  useKeyboardShortcut("s", () => saveCardsToDatabase(), { ctrl: true });
   useKeyboardShortcut("Escape", () => {
     setMode("select");
     setSelectedPinId("");
@@ -215,6 +422,7 @@ export function FigmaMapEditor({
 
   const visiblePins = useMemo(() => {
     return map.pins.filter((pin) => {
+      if (pin.locationType && hiddenLocationTypes.has(pin.locationType)) return false;
       const truthFlag = pin.truthFlag ?? "canonical";
       if (viewpointId === "canon") {
         if (truthFlag !== "canonical") return false;
@@ -239,7 +447,7 @@ export function FigmaMapEditor({
       }
       return true;
     });
-  }, [map.pins, viewpointId, chapterId, chapterOrderMap]);
+  }, [map.pins, viewpointId, chapterId, chapterOrderMap, hiddenLocationTypes]);
 
   const visiblePaths = useMemo(() => {
     return map.paths.filter((path) => {
@@ -399,6 +607,10 @@ export function FigmaMapEditor({
               markerStyleId: pin.markerStyleId ?? "",
               truthFlag: pin.truthFlag ?? "canonical",
               viewpointId: pin.viewpointId ?? "",
+              worldFrom: pin.worldFrom ?? "",
+              worldTo: pin.worldTo ?? "",
+              storyFromChapterId: pin.storyFromChapterId ?? "",
+              storyToChapterId: pin.storyToChapterId ?? "",
               entityId: pin.entityId ?? "",
               entityQuery: pin.entityTitle ?? ""
             }));
@@ -460,10 +672,16 @@ export function FigmaMapEditor({
 
         // Draw the path line
         if (points.length > 1) {
+          const dashArray =
+            pathDraft.arrowStyle === "dashed"
+              ? "6 6"
+              : pathDraft.arrowStyle === "dotted"
+                ? "2 6"
+                : undefined;
           L.polyline(points, {
             color: "#ff0033",
             weight: 3,
-            dashArray: "5 5",
+            dashArray,
             opacity: 0.8
           }).addTo(layerGroup);
         }
@@ -480,7 +698,7 @@ export function FigmaMapEditor({
         });
       }
     });
-  }, [pathPoints, mode]);
+  }, [pathPoints, mode, pathDraft.arrowStyle]);
 
   // Drag & Drop Handling
   useEffect(() => {
@@ -502,6 +720,19 @@ export function FigmaMapEditor({
         const containerRect = mapContainer.getBoundingClientRect();
         const mouseX = e.clientX - containerRect.left;
         const mouseY = e.clientY - containerRect.top;
+
+        if (modeRef.current === "card") {
+          const newCard = {
+            id: `card-${Date.now()}`,
+            x: mouseX,
+            y: mouseY,
+            type: "entity" as const,
+            title: title || "",
+            entityId
+          };
+          setMapCards((prev) => [...prev, newCard]);
+          return;
+        }
 
         // Convert container point to map coordinates
         const latlng = mapRef.current.containerPointToLatLng([mouseX, mouseY]);
@@ -545,9 +776,24 @@ export function FigmaMapEditor({
   }, [map, mapReady, workspaceId, defaultLocationType, router, addToast, latLngToMapCoords]);
 
   // API Actions
+  const validatePinForm = () => {
+    const newErrors: Record<string, boolean> = {};
+    if (!pinDraft.label.trim()) newErrors.label = true;
+    if (pinDraft.x === null) newErrors.x = true;
+    if (pinDraft.y === null) newErrors.y = true;
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const safeEntities = Array.isArray(entities) ? entities : [];
+
   async function submitPin() {
-    if (!map || pinDraft.x === null || pinDraft.y === null || !pinDraft.label.trim()) {
-      addToast("Please fill in all required fields (label and position)", "error");
+    if (!validatePinForm()) {
+      addToast("Please fill in all required fields.", "error");
+      return;
+    }
+    if (pinDraft.entityQuery.trim() && !pinDraft.entityId) {
+      addToast("Select a matching entity from the list or clear the field.", "error");
       return;
     }
     try {
@@ -561,7 +807,14 @@ export function FigmaMapEditor({
       form.append("truthFlag", pinDraft.truthFlag);
       if (pinDraft.markerStyleId) form.append("markerStyleId", pinDraft.markerStyleId);
       if (pinDraft.viewpointId) form.append("viewpointId", pinDraft.viewpointId);
+      if (pinDraft.worldFrom) form.append("worldFrom", pinDraft.worldFrom);
+      if (pinDraft.worldTo) form.append("worldTo", pinDraft.worldTo);
+      if (pinDraft.storyFromChapterId) form.append("storyFromChapterId", pinDraft.storyFromChapterId);
+      if (pinDraft.storyToChapterId) form.append("storyToChapterId", pinDraft.storyToChapterId);
       if (pinDraft.entityId) form.append("entityId", pinDraft.entityId);
+      if (!pinDraft.entityId && pinDraft.entityQuery.trim()) {
+        form.append("entityQuery", pinDraft.entityQuery.trim());
+      }
 
       const response = await fetch("/api/pins/create", { method: "POST", body: form });
       if (!response.ok) {
@@ -611,8 +864,12 @@ export function FigmaMapEditor({
 
   async function submitPinUpdate() {
     if (!selectedPinId) return;
-    if (!pinDraft.label.trim()) {
+    if (!validatePinForm()) {
       addToast("Label is required", "error");
+      return;
+    }
+    if (pinDraft.entityQuery.trim() && !pinDraft.entityId) {
+      addToast("Select a matching entity from the list or clear the field.", "error");
       return;
     }
     try {
@@ -626,7 +883,14 @@ export function FigmaMapEditor({
       form.append("truthFlag", pinDraft.truthFlag);
       if (pinDraft.markerStyleId) form.append("markerStyleId", pinDraft.markerStyleId);
       if (pinDraft.viewpointId) form.append("viewpointId", pinDraft.viewpointId);
+      if (pinDraft.worldFrom) form.append("worldFrom", pinDraft.worldFrom);
+      if (pinDraft.worldTo) form.append("worldTo", pinDraft.worldTo);
+      if (pinDraft.storyFromChapterId) form.append("storyFromChapterId", pinDraft.storyFromChapterId);
+      if (pinDraft.storyToChapterId) form.append("storyToChapterId", pinDraft.storyToChapterId);
       if (pinDraft.entityId) form.append("entityId", pinDraft.entityId);
+      if (!pinDraft.entityId && pinDraft.entityQuery.trim()) {
+        form.append("entityQuery", pinDraft.entityQuery.trim());
+      }
 
       const response = await fetch("/api/pins/update", { method: "POST", body: form });
       if (!response.ok) {
@@ -653,8 +917,18 @@ export function FigmaMapEditor({
       form.append("workspaceId", workspaceId);
       form.append("mapId", map.id);
       form.append("polyline", JSON.stringify(pathPoints));
-      form.append("arrowStyle", "arrow");
-      form.append("truthFlag", "canonical");
+      form.append("arrowStyle", pathDraft.arrowStyle || "arrow");
+      if (pathDraft.strokeColor) form.append("strokeColor", pathDraft.strokeColor);
+      if (pathDraft.strokeWidth) form.append("strokeWidth", pathDraft.strokeWidth);
+      if (pathDraft.markerStyleId) form.append("markerStyleId", pathDraft.markerStyleId);
+      if (pathDraft.truthFlag) form.append("truthFlag", pathDraft.truthFlag);
+      if (pathDraft.viewpointId) form.append("viewpointId", pathDraft.viewpointId);
+      if (pathDraft.worldFrom) form.append("worldFrom", pathDraft.worldFrom);
+      if (pathDraft.worldTo) form.append("worldTo", pathDraft.worldTo);
+      if (pathDraft.storyFromChapterId) form.append("storyFromChapterId", pathDraft.storyFromChapterId);
+      if (pathDraft.storyToChapterId) form.append("storyToChapterId", pathDraft.storyToChapterId);
+      if (pathDraft.relatedEventId) form.append("relatedEventId", pathDraft.relatedEventId);
+      if (pathDraft.relatedEntityIds) form.append("relatedEntityIds", pathDraft.relatedEntityIds);
 
       const response = await fetch("/api/paths/create", { method: "POST", body: form });
       if (!response.ok) {
@@ -676,7 +950,7 @@ export function FigmaMapEditor({
 
   const handleEntityQueryChange = (value: string) => {
     const normalized = value.trim().toLowerCase();
-    const match = entities.find((entity) => entity.title.toLowerCase() === normalized);
+    const match = safeEntities.find((entity) => entity.title.toLowerCase() === normalized);
     setPinDraft((prev) => ({
       ...prev,
       entityQuery: value,
@@ -750,9 +1024,58 @@ export function FigmaMapEditor({
             </svg>
             <span className="hidden sm:inline">Path</span>
           </button>
+          <button
+            onClick={() => {
+              setMode("card");
+              setSelectedPinId("");
+              setShowRightPanel(false);
+              draftLayerRef.current?.clearLayers();
+            }}
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+              mode === "card" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
+            }`}
+            title="Place Card Mode (C)"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <path d="M7 7h10M7 12h10M7 17h10" />
+            </svg>
+            <span className="hidden sm:inline">Card</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
+            <button
+              onClick={autoArrangeEvents}
+              className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
+              title="Auto-arrange events"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 6v6l4 2" />
+              </svg>
+            </button>
+            <button
+              onClick={saveCardsToDatabase}
+              className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
+              title="Save cards (Ctrl+S)"
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <svg className="animate-spin h-4 w-4 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
+              )}
+            </button>
+          </div>
           <div className="flex items-center gap-1 text-xs text-muted bg-bg border border-border rounded px-2 py-1">
             <button
               onClick={() => mapRef.current?.zoomOut()}
@@ -798,42 +1121,66 @@ export function FigmaMapEditor({
           <aside className="w-64 border-r border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden">
             <div className="p-4 border-b border-border flex-shrink-0">
               <h3 className="text-xs font-bold uppercase text-muted mb-3">Layers</h3>
-              <div className="space-y-2">
-                <label className="flex items-center justify-between cursor-pointer group">
-                  <span className="text-sm text-ink group-hover:text-accent transition-colors">Map Image</span>
-                  <input
-                    type="checkbox"
-                    checked={showImage}
-                    onChange={(e) => setShowImage(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                </label>
-                <label className="flex items-center justify-between cursor-pointer group">
-                  <span className="text-sm text-ink group-hover:text-accent transition-colors">Pins ({visiblePins.length})</span>
-                  <input
-                    type="checkbox"
-                    checked={showPins}
-                    onChange={(e) => setShowPins(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                </label>
-                <label className="flex items-center justify-between cursor-pointer group">
-                  <span className="text-sm text-ink group-hover:text-accent transition-colors">Paths ({visiblePaths.length})</span>
-                  <input
-                    type="checkbox"
-                    checked={showPaths}
-                    onChange={(e) => setShowPaths(e.target.checked)}
-                    className="w-4 h-4"
-                  />
-                </label>
-              </div>
+            <div className="space-y-2">
+              <label className="flex items-center justify-between cursor-pointer group">
+                <span className="text-sm text-ink group-hover:text-accent transition-colors">Map Image</span>
+                <input
+                  type="checkbox"
+                  checked={showImage}
+                  onChange={(e) => setShowImage(e.target.checked)}
+                  className="w-4 h-4"
+                />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer group">
+                <span className="text-sm text-ink group-hover:text-accent transition-colors">Pins ({visiblePins.length})</span>
+                <input
+                  type="checkbox"
+                  checked={showPins}
+                  onChange={(e) => setShowPins(e.target.checked)}
+                  className="w-4 h-4"
+                />
+              </label>
+              <label className="flex items-center justify-between cursor-pointer group">
+                <span className="text-sm text-ink group-hover:text-accent transition-colors">Paths ({visiblePaths.length})</span>
+                <input
+                  type="checkbox"
+                  checked={showPaths}
+                  onChange={(e) => setShowPaths(e.target.checked)}
+                  className="w-4 h-4"
+                />
+              </label>
             </div>
+
+            <div className="border-t border-border pt-4 mt-4">
+              <details open className="group">
+                <summary className="text-xs font-bold uppercase text-muted mb-3 cursor-pointer flex items-center justify-between group-open:mb-4">
+                  Location Types
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 transition-transform group-open:rotate-180">
+                    <path d="M19 9l-7 7-7-7" />
+                  </svg>
+                </summary>
+                <div className="grid gap-1 max-h-60 overflow-y-auto pr-1">
+                  {locationTypes.map((type) => (
+                    <label key={type} className="flex items-center justify-between p-2 rounded-md hover:bg-bg transition-colors cursor-pointer text-sm">
+                      <span className="capitalize text-ink">{type}</span>
+                      <input
+                        type="checkbox"
+                        checked={!hiddenLocationTypes.has(type)}
+                        onChange={() => toggleLocationType(type)}
+                        className="w-4 h-4"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </details>
+            </div>
+          </div>
 
             <div className="flex-1 overflow-auto p-4">
               <h3 className="text-xs font-bold uppercase text-muted mb-2">Entities</h3>
               <p className="text-xs text-muted mb-3">Drag onto map to create pins</p>
               <div className="space-y-1">
-                {entities.slice(0, 50).map((entity) => (
+                {safeEntities.slice(0, 50).map((entity) => (
                   <div
                     key={entity.id}
                     className="p-2 bg-bg rounded border border-border hover:border-accent transition-colors cursor-move text-sm group"
@@ -851,7 +1198,7 @@ export function FigmaMapEditor({
                     </div>
                   </div>
                 ))}
-                {entities.length === 0 && (
+                {safeEntities.length === 0 && (
                   <p className="text-xs text-muted italic">No entities available</p>
                 )}
               </div>
@@ -868,6 +1215,139 @@ export function FigmaMapEditor({
             {mode === "select" && "Select Mode (V) - Click pins to edit, drag to move"}
             {mode === "pin" && "Pin Mode (P) - Click on map to place a pin"}
             {mode === "path" && `Path Mode (L) - ${pathPoints.length} point${pathPoints.length !== 1 ? "s" : ""} ${pathPoints.length < 2 ? "(need 2+ to create)" : "ready"}`}
+            {mode === "card" && "Card Mode (C) - Drag entities onto map to create cards"}
+          </div>
+
+          {/* Evidence Cards Layer */}
+          <div className="map-cards-layer">
+            <svg className="card-connections-svg" style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }}>
+              <defs>
+                <marker id="arrowhead-timeline" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#f39c12" />
+                </marker>
+                <marker id="arrowhead-causal" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                  <polygon points="0 0, 10 3.5, 0 7" fill="#e74c3c" />
+                </marker>
+              </defs>
+              {cardConnections.map((conn) => {
+                const fromCard = mapCards.find((c) => c.id === conn.fromCardId);
+                const toCard = mapCards.find((c) => c.id === conn.toCardId);
+                if (!fromCard || !toCard) return null;
+                return (
+                  <line
+                    key={conn.id}
+                    x1={fromCard.x}
+                    y1={fromCard.y}
+                    x2={toCard.x}
+                    y2={toCard.y}
+                    className={`connection-line ${conn.type}`}
+                    stroke={conn.type === "timeline" ? "#f39c12" : conn.type === "causal" ? "#e74c3c" : "#95a5a6"}
+                    strokeWidth={conn.type === "timeline" ? 3 : 2}
+                    strokeDasharray={conn.type === "reference" ? "5,5" : "none"}
+                    markerEnd={conn.type === "causal" ? "url(#arrowhead-causal)" : conn.type === "timeline" ? "url(#arrowhead-timeline)" : "none"}
+                  />
+                );
+              })}
+            </svg>
+
+            {mapCards.map((card) => (
+              <div
+                key={card.id}
+                className={`evidence-card-on-map ${connectingFromCardId === card.id ? "connecting-from" : ""} ${connectingFromCardId && connectingFromCardId !== card.id ? "connectable" : ""} ${draggingCardId === card.id ? "dragging" : ""}`}
+                style={{
+                  position: "absolute",
+                  left: `${card.x}px`,
+                  top: `${card.y}px`,
+                  transform: "translate(-50%, -50%)"
+                }}
+                onMouseDown={(e) => handleCardMouseDown(e, card)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (connectingFromCardId) {
+                    if (connectingFromCardId !== card.id) {
+                      const newConnection = {
+                        id: `conn-${Date.now()}`,
+                        fromCardId: connectingFromCardId,
+                        toCardId: card.id,
+                        type: "timeline" as const
+                      };
+                      setCardConnections((prev) => [...prev, newConnection]);
+                    }
+                    setConnectingFromCardId(null);
+                  }
+                }}
+              >
+                <div className={`card-header type-${card.type}`}>
+                  <span className="card-icon">
+                    {card.type === "entity" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+                        <circle cx="12" cy="7" r="4" />
+                      </svg>
+                    )}
+                    {card.type === "article" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                      </svg>
+                    )}
+                    {card.type === "event" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+                      </svg>
+                    )}
+                    {card.type === "note" && (
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                        <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </svg>
+                    )}
+                  </span>
+                  <span className="card-title-text">{card.title}</span>
+                  <button
+                    className="card-connect-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setConnectingFromCardId(card.id);
+                    }}
+                    title="Connect to another card"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                      <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
+                      <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
+                    </svg>
+                  </button>
+                </div>
+                {card.content && (
+                  <div className="card-content-preview">
+                    {card.content.slice(0, 100)}...
+                  </div>
+                )}
+                <div className="card-tape"></div>
+              </div>
+            ))}
+
+            {connectingFromCardId && (
+              <div className="connection-hint-overlay">
+                Click another card to connect (timeline)
+                <button onClick={() => setConnectingFromCardId(null)} className="cancel-connection-btn">
+                  Cancel
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="map-legend floating">
+            <strong>Legend</strong>
+            {markerStyles.map((style) => (
+              <div key={style.id} className="legend-row">
+                <span className={`marker-shape marker-${style.shape}`} style={{ "--marker-color": style.color, backgroundColor: style.color } as CSSProperties} />
+                <span>{style.name}</span>
+              </div>
+            ))}
           </div>
         </main>
 
@@ -897,8 +1377,13 @@ export function FigmaMapEditor({
                 <input
                   type="text"
                   value={pinDraft.label}
-                  onChange={(e) => setPinDraft({ ...pinDraft, label: e.target.value })}
-                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accent transition-colors"
+                  onChange={(e) => {
+                    setPinDraft({ ...pinDraft, label: e.target.value });
+                    if (errors.label) setErrors({ ...errors, label: false });
+                  }}
+                  className={`w-full bg-bg border rounded-lg px-3 py-2 text-sm outline-none transition-colors ${
+                    errors.label ? "border-red-500 ring-1 ring-red-500" : "border-border focus:border-accent"
+                  }`}
                   placeholder="Enter location name..."
                   autoFocus
                 />
@@ -950,6 +1435,97 @@ export function FigmaMapEditor({
                 </select>
               </div>
 
+              <div className="border-t border-border pt-4">
+                <details className="group">
+                  <summary className="text-xs font-bold uppercase text-muted mb-3 cursor-pointer flex items-center gap-2">
+                    Advanced Settings
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 transition-transform group-open:rotate-180">
+                      <path d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </summary>
+
+                  <div className="space-y-4 pb-2">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-muted mb-1">Truth Status</label>
+                        <select
+                          className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                          value={pinDraft.truthFlag}
+                          onChange={(e) => setPinDraft({ ...pinDraft, truthFlag: e.target.value })}
+                        >
+                          <option value="canonical">Canonical</option>
+                          <option value="rumor">Rumor</option>
+                          <option value="belief">Belief</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-muted mb-1">Viewpoint</label>
+                        <select
+                          className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                          value={pinDraft.viewpointId}
+                          onChange={(e) => setPinDraft({ ...pinDraft, viewpointId: e.target.value })}
+                        >
+                          <option value="">Global / Canon</option>
+                          {viewpoints.map((vp) => (
+                            <option key={vp.id} value={vp.id}>{vp.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-muted mb-1">Start (World Time)</label>
+                        <input
+                          className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                          placeholder="e.g. 1000"
+                          value={pinDraft.worldFrom}
+                          onChange={(e) => setPinDraft({ ...pinDraft, worldFrom: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-muted mb-1">End (World Time)</label>
+                        <input
+                          className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                          placeholder="e.g. 1200"
+                          value={pinDraft.worldTo}
+                          onChange={(e) => setPinDraft({ ...pinDraft, worldTo: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-muted mb-1">From Chapter</label>
+                        <select
+                          className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                          value={pinDraft.storyFromChapterId}
+                          onChange={(e) => setPinDraft({ ...pinDraft, storyFromChapterId: e.target.value })}
+                        >
+                          <option value="">Start</option>
+                          {chapters.map((c) => (
+                            <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase text-muted mb-1">To Chapter</label>
+                        <select
+                          className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                          value={pinDraft.storyToChapterId}
+                          onChange={(e) => setPinDraft({ ...pinDraft, storyToChapterId: e.target.value })}
+                        >
+                          <option value="">End</option>
+                          {chapters.map((c) => (
+                            <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </details>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase text-muted mb-2">Linked Entity (Optional)</label>
                 <input
@@ -961,7 +1537,7 @@ export function FigmaMapEditor({
                   list="entity-search"
                 />
                 <datalist id="entity-search">
-                  {entities.map((entity) => (
+                  {safeEntities.map((entity) => (
                     <option key={entity.id} value={entity.title} />
                   ))}
                 </datalist>
@@ -1017,6 +1593,19 @@ export function FigmaMapEditor({
                 {pathPoints.length >= 2 && (
                   <p className="text-xs text-accent">Ready to create path</p>
                 )}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase text-muted tracking-wider">Line Style</label>
+                <select
+                  className="w-full bg-bg border border-border rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
+                  value={pathDraft.arrowStyle}
+                  onChange={(e) => setPathDraft({ ...pathDraft, arrowStyle: e.target.value })}
+                >
+                  <option value="arrow">Solid with Arrow</option>
+                  <option value="dashed">Dashed Line</option>
+                  <option value="dotted">Dotted Line</option>
+                </select>
               </div>
 
               <div className="space-y-2 max-h-60 overflow-y-auto">

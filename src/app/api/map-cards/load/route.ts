@@ -1,29 +1,47 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 
-export async function GET(req: NextRequest) {
+export async function GET(request: Request) {
+  let session;
   try {
-    const { searchParams } = new URL(req.url);
-    const mapId = searchParams.get("mapId");
-
-    if (!mapId) {
-      return NextResponse.json({ error: "mapId required" }, { status: 400 });
-    }
-
-    const [cards, connections] = await Promise.all([
-      prisma.mapCard.findMany({
-        where: { mapId, softDeletedAt: null },
-        orderBy: { createdAt: "asc" }
-      }),
-      prisma.cardConnection.findMany({
-        where: { mapId, softDeletedAt: null },
-        orderBy: { createdAt: "asc" }
-      })
-    ]);
-
-    return NextResponse.json({ cards, connections });
-  } catch (error) {
-    console.error("Error loading map cards:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    session = await requireApiSession();
+  } catch {
+    return apiError("Unauthorized", 401);
   }
+
+  const { searchParams } = new URL(request.url);
+  const mapId = String(searchParams.get("mapId") ?? "");
+
+  if (!mapId) {
+    return apiError("Missing mapId", 400);
+  }
+
+  const map = await prisma.map.findFirst({
+    where: { id: mapId, softDeletedAt: null },
+    select: { workspaceId: true }
+  });
+
+  if (!map) {
+    return apiError("Map not found", 404);
+  }
+
+  try {
+    await requireWorkspaceAccess(session.userId, map.workspaceId, "viewer");
+  } catch {
+    return apiError("Forbidden", 403);
+  }
+
+  const [cards, connections] = await Promise.all([
+    prisma.mapCard.findMany({
+      where: { mapId, workspaceId: map.workspaceId, softDeletedAt: null },
+      orderBy: { createdAt: "asc" }
+    }),
+    prisma.cardConnection.findMany({
+      where: { mapId, workspaceId: map.workspaceId, softDeletedAt: null },
+      orderBy: { createdAt: "asc" }
+    })
+  ]);
+
+  return NextResponse.json({ cards, connections });
 }

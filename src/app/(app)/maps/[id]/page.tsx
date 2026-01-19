@@ -41,7 +41,11 @@ export default async function MapEditorPage({ params }: PageProps) {
       where: { id, workspaceId: workspace.id, softDeletedAt: null },
       include: {
         pins: { where: { softDeletedAt: null }, include: { markerStyle: true, entity: { select: { id: true, title: true } } } },
-        paths: { where: { softDeletedAt: null }, include: { markerStyle: true } }
+        paths: { where: { softDeletedAt: null }, include: { markerStyle: true } },
+        events: {
+          where: { softDeletedAt: null },
+          select: { id: true, title: true, worldStart: true, worldEnd: true, storyOrder: true }
+        }
       }
     }),
     prisma.markerStyle.findMany({
@@ -102,7 +106,8 @@ export default async function MapEditorPage({ params }: PageProps) {
         polyline,
         markerStyle: p.markerStyle ? { color: p.markerStyle.color } : null
       };
-    })
+    }),
+    events: map.events ?? []
   };
 
   return (

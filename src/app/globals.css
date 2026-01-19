@@ -1122,9 +1122,97 @@ button[type="submit"] {
   pointer-events: none;
 }
 
-.evidence-card-on-map,
-.connection-hint-overlay {
+.map-editor-root .evidence-card-on-map,
+.map-editor-root .connection-hint-overlay {
   pointer-events: auto;
+}
+
+.map-editor-root .evidence-card-on-map {
+  min-width: 160px;
+  max-width: 240px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  padding: 8px;
+  color: var(--ink);
+}
+
+.map-editor-root .evidence-card-on-map.connecting-from {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px rgba(255, 0, 51, 0.25);
+}
+
+.map-editor-root .evidence-card-on-map.connectable {
+  outline: 2px dashed rgba(255, 0, 51, 0.3);
+}
+
+.map-editor-root .card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.map-editor-root .card-title-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-editor-root .card-connect-btn {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 2px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.map-editor-root .card-connect-btn:hover {
+  color: var(--accent);
+  background: var(--bg-elevated);
+}
+
+.map-editor-root .card-content-preview {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.map-editor-root .card-tape {
+  margin-top: 6px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 0, 51, 0.3), rgba(255, 0, 51, 0.05));
+}
+
+.map-editor-root .connection-hint-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.map-editor-root .cancel-connection-btn {
+  border: 0;
+  background: var(--bg-elevated);
+  color: var(--ink);
+  padding: 4px 8px;
+  border-radius: 8px;
+  cursor: pointer;
 }
 
 .map-legend.floating {
@@ -1136,6 +1224,15 @@ button[type="submit"] {
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--panel);
+}
+
+.map-editor-root .map-legend .legend-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  margin-top: 4px;
+  color: var(--ink-secondary);
 }
 
 .map-canvas {
