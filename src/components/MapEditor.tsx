@@ -1,18 +1,13 @@
-﻿"use client";
+"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
-import type { Map as LeafletMap, Marker as LeafletMarker } from "leaflet";
+import type { Map as LeafletMap, Marker as LeafletMarker, LayerGroup, ImageOverlay } from "leaflet";
 
 import { Button } from "@/components/ui/Button";
-
 import { useToast, ToastContainer } from "@/components/ui/Toast";
-
 import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
-
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
-
-
 
 type MarkerStyle = {
   id: string;
@@ -139,101 +134,60 @@ type PathDraft = {
 
 function createIcon(L: any, shape: string, color: string) {
   const safeShape = shape || "circle";
-  const html = `<span class="marker-shape marker-${safeShape}" style="--marker-color:${color};"></span>`;
+  const html = `<span class="marker-shape marker-${safeShape}" style="--marker-color:${color}; background-color: ${color}"></span>`;
   return L.divIcon({
     className: "marker-icon",
     html,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8]
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
   });
 }
 
-
-
 export function MapEditor({
-
   map,
-
   workspaceId,
-
   markerStyles,
-
   locationTypes,
-
   entities = [],
-
   eras,
-
   chapters,
-
   viewpoints
-
 }: MapEditorProps) {
-
   const router = useRouter();
-
   const containerRef = useRef<HTMLDivElement | null>(null);
-
+  
+  // Leaflet refs
   const mapRef = useRef<LeafletMap | null>(null);
+  const imageOverlayRef = useRef<ImageOverlay | null>(null);
+  const pinsLayerRef = useRef<LayerGroup | null>(null);
+  const pathsLayerRef = useRef<LayerGroup | null>(null);
+  const draftLayerRef = useRef<LayerGroup | null>(null);
+  const [mapReady, setMapReady] = useState(false);
 
-  const { eraId, chapterId, viewpointId, mode: globalMode } = useGlobalFilters();
-
+  const { eraId, chapterId, viewpointId } = useGlobalFilters();
   const { toasts, addToast, removeToast } = useToast();
 
-  
-
   const [mode, setMode] = useState<"select" | "pin" | "path" | "card">("select");
-
-  const [isSaving, setIsSaving] = useState(false); // Loading state
-
-
+  const [isSaving, setIsSaving] = useState(false);
 
   // Keyboard Navigation (Pan)
-
   useEffect(() => {
-
     const handleKeyDown = (e: KeyboardEvent) => {
-
       if (!mapRef.current) return;
-
       const panAmount = 50;
-
-      // Only handle if not in input
-
       const target = e.target as HTMLElement;
-
       if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
 
-
-
       switch (e.key) {
-
         case "ArrowUp": mapRef.current.panBy([0, -panAmount]); break;
-
         case "ArrowDown": mapRef.current.panBy([0, panAmount]); break;
-
         case "ArrowLeft": mapRef.current.panBy([-panAmount, 0]); break;
-
         case "ArrowRight": mapRef.current.panBy([panAmount, 0]); break;
-
       }
-
     };
-
     window.addEventListener("keydown", handleKeyDown);
-
     return () => window.removeEventListener("keydown", handleKeyDown);
-
   }, []);
-
-
-
-  // ... (rest of state and effects)
-
-
-
-  // ... (rest of functions)
-
 
   const [showImage, setShowImage] = useState(true);
   const [showPins, setShowPins] = useState(true);
@@ -259,10 +213,8 @@ export function MapEditor({
   const visiblePins = useMemo(() => {
     if (!map) return [];
     return map.pins.filter(pin => {
-      // 0. Location Type Visibility
       if (pin.locationType && hiddenLocationTypes.has(pin.locationType)) return false;
 
-      // 1. Viewpoint Filter
       if (viewpointId === "canon") {
         if (pin.truthFlag !== "canonical") return false;
       } else {
@@ -271,22 +223,19 @@ export function MapEditor({
         if (!isCanon && !isMyView) return false;
       }
 
-      // 2. Chapter Filter
       if (chapterId !== "all") {
         const currentOrder = chapterOrderMap.get(chapterId);
         if (currentOrder !== undefined) {
-          // If pin has specific chapter range
           if (pin.storyFromChapterId) {
             const from = chapterOrderMap.get(pin.storyFromChapterId) ?? -1;
-            if (from > currentOrder) return false; // Starts later
+            if (from > currentOrder) return false;
           }
           if (pin.storyToChapterId) {
             const to = chapterOrderMap.get(pin.storyToChapterId) ?? 999999;
-            if (to < currentOrder) return false; // Ends earlier
+            if (to < currentOrder) return false;
           }
         }
       }
-      
       return true;
     });
   }, [map, viewpointId, chapterId, chapterOrderMap, hiddenLocationTypes]);
@@ -294,7 +243,6 @@ export function MapEditor({
   const visiblePaths = useMemo(() => {
     if (!map) return [];
     return map.paths.filter(path => {
-       // Similar Viewpoint logic for paths
       if (viewpointId === "canon") {
         if (path.truthFlag !== "canonical") return false;
       } else {
@@ -306,7 +254,7 @@ export function MapEditor({
     });
   }, [map, viewpointId]);
 
-  // Card state - cards on map (evidence/article cards)
+  // Card state
   const [mapCards, setMapCards] = useState<Array<{
     id: string;
     x: number;
@@ -319,7 +267,6 @@ export function MapEditor({
     eventId?: string;
   }>>([]);
 
-  // Card connections (lines between cards)
   const [cardConnections, setCardConnections] = useState<Array<{
     id: string;
     fromCardId: string;
@@ -328,11 +275,9 @@ export function MapEditor({
     label?: string;
   }>>([]);
 
-  // Save cards to DB
   const saveCardsToDatabase = useCallback(async () => {
     if (!map?.id) return;
     setIsSaving(true);
-
     try {
       const res = await fetch('/api/map-cards/save', {
         method: 'POST',
@@ -344,7 +289,6 @@ export function MapEditor({
           connections: cardConnections
         })
       });
-
       if (res.ok) {
         addToast('Cards saved successfully.', 'success');
       } else {
@@ -361,46 +305,35 @@ export function MapEditor({
   // Keyboard Shortcuts
   useKeyboardShortcut("v", () => setMode("select"));
   useKeyboardShortcut("p", () => setMode("pin"));
-  useKeyboardShortcut("l", () => setMode("path")); // 'l' for Line/Path
+  useKeyboardShortcut("l", () => setMode("path"));
   useKeyboardShortcut("c", () => setMode("card"));
   useKeyboardShortcut("s", () => saveCardsToDatabase(), { ctrl: true });
 
   // Connection mode state
   const [connectingFromCardId, setConnectingFromCardId] = useState<string | null>(null);
-
-  // Card dragging state
   const [draggingCardId, setDraggingCardId] = useState<string | null>(null);
   const [cardDragOffset, setCardDragOffset] = useState({ x: 0, y: 0 });
 
-  // Load cards from DB on mount
   useEffect(() => {
     if (!map || !map.id) return;
-
-    const mapId = map.id; // Capture mapId to avoid null reference inside async function
-
+    const mapId = map.id;
     async function loadCardsFromDB() {
       try {
         const res = await fetch(`/api/map-cards/load?mapId=${mapId}`);
         if (res.ok) {
           const data = await res.json();
-          if (data.cards && data.cards.length > 0) {
-            setMapCards(data.cards);
-          }
-          if (data.connections && data.connections.length > 0) {
-            setCardConnections(data.connections);
-          }
+          if (data.cards && data.cards.length > 0) setMapCards(data.cards);
+          if (data.connections && data.connections.length > 0) setCardConnections(data.connections);
         }
       } catch (error) {
         console.error('Failed to load cards:', error);
       }
     }
-
     loadCardsFromDB();
   }, [map?.id]);
 
-  // Handle card drag
   const handleCardMouseDown = useCallback((e: React.MouseEvent, card: typeof mapCards[0]) => {
-    if (connectingFromCardId) return; // Don't drag while connecting
+    if (connectingFromCardId) return;
     e.preventDefault();
     e.stopPropagation();
     const rect = (e.target as HTMLElement).closest('.evidence-card-on-map')?.getBoundingClientRect();
@@ -414,21 +347,13 @@ export function MapEditor({
     const containerRect = containerRef.current.getBoundingClientRect();
     const newX = e.clientX - containerRect.left;
     const newY = e.clientY - containerRect.top;
-
-    setMapCards((prev) =>
-      prev.map((card) =>
-        card.id === draggingCardId
-          ? { ...card, x: newX, y: newY }
-          : card
-      )
-    );
+    setMapCards((prev) => prev.map((card) => card.id === draggingCardId ? { ...card, x: newX, y: newY } : card));
   }, [draggingCardId]);
 
   const handleCardMouseUp = useCallback(() => {
     setDraggingCardId(null);
   }, []);
 
-  // Add global mouse event listeners for card dragging
   useEffect(() => {
     if (draggingCardId) {
       document.addEventListener('mousemove', handleCardMouseMove);
@@ -440,35 +365,24 @@ export function MapEditor({
     }
   }, [draggingCardId, handleCardMouseMove, handleCardMouseUp]);
 
-  // Auto-arrange events in timeline order
   const autoArrangeEvents = useCallback(() => {
     if (!map?.events || map.events.length === 0) {
       addToast('No events found on this map.', 'info');
       return;
     }
-
-    // Sort events by worldStart or storyOrder
     const sortedEvents = [...map.events].sort((a, b) => {
-      if (a.storyOrder != null && b.storyOrder != null) {
-        return a.storyOrder - b.storyOrder;
-      }
-      if (a.worldStart && b.worldStart) {
-        return a.worldStart.localeCompare(b.worldStart);
-      }
+      if (a.storyOrder != null && b.storyOrder != null) return a.storyOrder - b.storyOrder;
+      if (a.worldStart && b.worldStart) return a.worldStart.localeCompare(b.worldStart);
       return 0;
     });
-
-    // Arrange in a timeline layout (left to right, top to bottom)
     const startX = 150;
     const startY = 100;
     const horizontalGap = 300;
     const verticalGap = 200;
     const maxPerRow = 4;
-
     const newCards = sortedEvents.map((event, index) => {
       const row = Math.floor(index / maxPerRow);
       const col = index % maxPerRow;
-
       return {
         id: `event-card-${event.id}`,
         x: startX + col * horizontalGap,
@@ -479,8 +393,6 @@ export function MapEditor({
         eventId: event.id
       };
     });
-
-    // Create timeline connections
     const newConnections = sortedEvents.slice(0, -1).map((event, index) => ({
       id: `timeline-conn-${index}`,
       fromCardId: `event-card-${event.id}`,
@@ -488,15 +400,12 @@ export function MapEditor({
       type: 'timeline' as const,
       label: '→'
     }));
-
     setMapCards(newCards);
     setCardConnections(newConnections);
   }, [map]);
   
-  // Selection State
+  // Selection & Draft State
   const [selectedPinId, setSelectedPinId] = useState("");
-  
-  // Draft States
   const defaultLocationType = locationTypes[0] ?? "other";
   
   const createPinDraft = useCallback((overrides: Partial<PinDraft> = {}) => ({
@@ -519,7 +428,6 @@ export function MapEditor({
   }), [defaultLocationType]);
 
   const [pinDraft, setPinDraft] = useState<PinDraft>(createPinDraft());
-  
   const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
   const [pathDraft, setPathDraft] = useState<PathDraft>({
     arrowStyle: "arrow",
@@ -536,81 +444,136 @@ export function MapEditor({
     relatedEntityIds: ""
   });
 
-  useEffect(() => {
-    if (!map) return;
-    setSelectedPinId("");
-    setPinDraft(createPinDraft());
-    setPathPoints([]);
-  }, [map?.id, createPinDraft]);
+  // Keep mode in a ref for event handlers to access current value
+  const modeRef = useRef(mode);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
 
-  // Initialize Leaflet
+  // Keep drafts in ref
+  const pinDraftRef = useRef(pinDraft);
+  useEffect(() => { pinDraftRef.current = pinDraft; }, [pinDraft]);
+
+  // Initialize Leaflet Map (Run ONCE per map ID)
   useEffect(() => {
     if (!containerRef.current || !map) return;
     let active = true;
-    const init = async () => {
-      const leafletModule = await import("leaflet");
-      const L = (leafletModule as any).default ?? leafletModule;
+
+    import("leaflet").then((leafletModule) => {
       if (!active || !containerRef.current) return;
+      const L = (leafletModule as any).default ?? leafletModule;
 
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
-      
+      imageOverlayRef.current = null;
+      pinsLayerRef.current = null;
+      pathsLayerRef.current = null;
+      draftLayerRef.current = null;
+
       const bounds = map.bounds ?? [[0, 0], [1000, 1000]];
-      
       const mapInstance = L.map(containerRef.current, {
         crs: L.CRS.Simple,
-        zoomControl: false, // We'll add it manually or rely on scroll
+        zoomControl: false,
         minZoom: -2,
         attributionControl: false
       }) as LeafletMap;
-      
-      mapRef.current = mapInstance;
-      
-      if (map.imageUrl && showImage) {
-        L.imageOverlay(map.imageUrl, bounds).addTo(mapInstance);
-      }
+
       mapInstance.fitBounds(bounds);
 
-      // Render Paths
-      if (showPaths) {
-        visiblePaths.forEach((path) => {
-          // Validate polyline exists and has at least 2 points
-          if (!path.polyline || !Array.isArray(path.polyline) || path.polyline.length < 2) {
-            console.warn(`Skipping invalid path ${path.id}: polyline has insufficient points`);
-            return;
-          }
+      // Create Layer Groups
+      const pinsLayer = L.layerGroup().addTo(mapInstance);
+      const pathsLayer = L.layerGroup().addTo(mapInstance);
+      const draftLayer = L.layerGroup().addTo(mapInstance);
 
-          const points = path.polyline.map((pt) => [pt.y, pt.x]) as [number, number][];
-          const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
-          const weight = path.strokeWidth ?? 3;
-          L.polyline(points, {
-            color,
-            weight,
-            dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
-          }).addTo(mapInstance);
-        });
+      pinsLayerRef.current = pinsLayer;
+      pathsLayerRef.current = pathsLayer;
+      draftLayerRef.current = draftLayer;
+      mapRef.current = mapInstance;
+
+      // Image Overlay
+      if (map.imageUrl) {
+        imageOverlayRef.current = L.imageOverlay(map.imageUrl, bounds).addTo(mapInstance);
       }
 
-      // Render Pins
-      if (showPins) {
-        visiblePins.forEach((pin) => {
-          const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
-          const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
-          const icon = createIcon(L, shape, color);
-          const marker = L.marker([pin.y, pin.x], { 
-            icon, 
-            draggable: true // Always allow dragging
-          });
-          
-          if (pin.label) {
-            marker.bindTooltip(pin.label, { direction: "top", offset: [0, -10] });
-          }
-          
-          marker.on("click", (e: any) => {
-            L.DomEvent.stopPropagation(e); // Prevent map click
-            setMode("select");
+      // --- Event Handlers ---
+      mapInstance.on("click", (event: { latlng: { lng: number; lat: number } }) => {
+        const currentMode = modeRef.current;
+
+        if (currentMode === "pin") {
+          const x = Number(event.latlng.lng.toFixed(1));
+          const y = Number(event.latlng.lat.toFixed(1));
+
+          setPinDraft((prev) => ({ ...prev, x, y }));
+
+          draftLayer.clearLayers();
+          L.circleMarker([y, x], { radius: 6, color: "#ff0033", fillOpacity: 0.8 }).addTo(draftLayer);
+        } else if (currentMode === "path") {
+          const pt = { x: Number(event.latlng.lng.toFixed(1)), y: Number(event.latlng.lat.toFixed(1)) };
+          setPathPoints((prev) => [...prev, pt]);
+        } else if (currentMode === "select") {
+          setSelectedPinId("");
+          setPinDraft(createPinDraft());
+          draftLayer.clearLayers();
+        }
+      });
+
+      setMapReady(true);
+    });
+
+    return () => {
+      active = false;
+      setMapReady(false);
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+      imageOverlayRef.current = null;
+      pinsLayerRef.current = null;
+      pathsLayerRef.current = null;
+      draftLayerRef.current = null;
+    };
+  }, [map?.id]); // Only re-run if map ID changes
+
+  // Update Image Overlay Visibility
+  useEffect(() => {
+    if (!imageOverlayRef.current) return;
+    if (showImage) {
+      imageOverlayRef.current.setOpacity(1);
+    } else {
+      imageOverlayRef.current.setOpacity(0);
+    }
+  }, [showImage]);
+
+  // Update Pins Layer
+  useEffect(() => {
+    if (!pinsLayerRef.current || !mapRef.current) return;
+    
+    import("leaflet").then((leafletModule) => {
+      const L = (leafletModule as any).default ?? leafletModule;
+      const layerGroup = pinsLayerRef.current;
+      if (!layerGroup) return;
+
+      layerGroup.clearLayers();
+      
+      if (!showPins) return;
+
+      visiblePins.forEach((pin) => {
+        const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
+        const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
+        const icon = createIcon(L, shape, color);
+        
+        const marker = L.marker([pin.y, pin.x], { 
+          icon, 
+          draggable: mode === "select" // Only draggable in select mode
+        });
+        
+        if (pin.label) {
+          marker.bindTooltip(pin.label, { direction: "top", offset: [0, -10] });
+        }
+        
+        marker.on("click", (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          if (modeRef.current === "select") {
             setSelectedPinId(pin.id);
             setPinDraft(createPinDraft({
               x: pin.x,
@@ -629,135 +592,151 @@ export function MapEditor({
               entityId: pin.entityId ?? "",
               entityQuery: pin.entityTitle ?? ""
             }));
-          });
-          
-          if (mode === "select") {
-            marker.on("dragend", (event: { target: LeafletMarker }) => {
-              const latlng = event.target.getLatLng();
-              void updatePinPosition(pin.id, latlng.lng, latlng.lat);
-            });
+            
+            // Clear draft layer to avoid double markers
+            draftLayerRef.current?.clearLayers();
           }
-          
-          marker.addTo(mapInstance);
         });
-      }
-
-      // Render Active Path Draft
-      if (pathPoints.length > 0) {
-        const points = pathPoints.map((pt) => [pt.y, pt.x]) as [number, number][];
-        L.polyline(points, { color: "#c44536", weight: 2, dashArray: "4 4" }).addTo(mapInstance);
-        pathPoints.forEach((pt) => {
-          L.circleMarker([pt.y, pt.x], { radius: 4, color: "#c44536", fillOpacity: 1 }).addTo(mapInstance);
+        
+        marker.on("dragend", (event: { target: LeafletMarker }) => {
+          const latlng = event.target.getLatLng();
+          updatePinPosition(pin.id, latlng.lng, latlng.lat);
         });
-      }
-
-      // Map Click Handler
-      mapInstance.on("click", (event: { latlng: { lng: number; lat: number } }) => {
-        if (mode === "pin") {
-          const x = Number(event.latlng.lng.toFixed(1));
-          const y = Number(event.latlng.lat.toFixed(1));
-          setPinDraft((prev) => ({ ...prev, x, y }));
-          // Auto open inspector by keeping mode 'pin' but maybe we need a 'pin-placed' state?
-          // For now, we'll just set the coordinate and let the user fill the form in the floating panel.
-        } else if (mode === "path") {
-          setPathPoints((prev) => [
-            ...prev,
-            { x: Number(event.latlng.lng.toFixed(1)), y: Number(event.latlng.lat.toFixed(1)) }
-          ]);
-        } else if (mode === "select") {
-          setSelectedPinId("");
-          setPinDraft(createPinDraft());
-        }
+        
+        marker.addTo(layerGroup);
       });
+    });
+  }, [visiblePins, showPins, mode, defaultLocationType, createPinDraft]);
 
-      // Handle entity drag and drop onto map
-      const mapContainer = containerRef.current;
-      const handleDragOver = (e: DragEvent) => {
-        e.preventDefault();
-        e.dataTransfer!.dropEffect = "copy";
-      };
+  // Update Paths Layer
+  useEffect(() => {
+    if (!pathsLayerRef.current) return;
+    
+    import("leaflet").then((leafletModule) => {
+      const L = (leafletModule as any).default ?? leafletModule;
+      const layerGroup = pathsLayerRef.current;
+      if (!layerGroup) return;
 
-      const handleDrop = async (e: DragEvent) => {
-        e.preventDefault();
-        const type = e.dataTransfer?.getData("type");
-        const entityId = e.dataTransfer?.getData("id");
-        const title = e.dataTransfer?.getData("title");
+      layerGroup.clearLayers();
+      
+      if (!showPaths) return;
 
-        if (type === "entity" && entityId && map) {
-          // Get map coordinates from mouse position
-          const containerRect = mapContainer.getBoundingClientRect();
-          const mouseX = e.clientX - containerRect.left;
-          const mouseY = e.clientY - containerRect.top;
+      visiblePaths.forEach((path) => {
+        if (!path.polyline || !Array.isArray(path.polyline) || path.polyline.length < 2) return;
+        
+        const points = path.polyline.map((pt) => [pt.y, pt.x]) as [number, number][];
+        const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
+        const weight = path.strokeWidth ?? 3;
+        
+        L.polyline(points, {
+          color,
+          weight,
+          dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
+        }).addTo(layerGroup);
+      });
+    });
+  }, [visiblePaths, showPaths]);
 
-          // Convert to Leaflet coordinates
-          const point = mapInstance.containerPointToLatLng([mouseX, mouseY]);
-          const x = Number(point.lng.toFixed(1));
-          const y = Number(point.lat.toFixed(1));
-
-          // If in card mode, create a card instead of pin
-          if (mode === "card") {
-            // Create evidence card on map (visual only for now)
-            const newCard = {
-              id: `card-${Date.now()}`,
-              x: mouseX,
-              y: mouseY,
-              type: 'entity' as const,
-              title: title || "",
-              entityId: entityId
-            };
-            setMapCards((prev) => [...prev, newCard]);
-            return;
-          }
-
-          // Default: Create pin automatically
-          const form = new FormData();
-          form.append("workspaceId", workspaceId);
-          form.append("mapId", map.id);
-          form.append("entityId", entityId);
-          form.append("label", title || "");
-          form.append("x", String(x));
-          form.append("y", String(y));
-          form.append("locationType", defaultLocationType);
-          form.append("truthFlag", "canonical");
-
-          try {
-            const response = await fetch("/api/pins/create", { method: "POST", body: form });
-            if (response.ok) {
-              // Trigger re-render
-              const url = new URL(window.location.href);
-              url.searchParams.set('_refresh', Date.now().toString());
-              window.history.replaceState({}, '', url);
-              window.location.reload();
-            } else {
-              const errorData = await response.text();
-              console.error("Failed to create pin:", errorData);
-              addToast(`Failed to create pin: ${response.statusText}`, "error");
-            }
-          } catch (error) {
-            console.error("Error creating pin from entity drop:", error);
-            addToast("Failed to create pin. Please try again.", "error");
-          }
+  // Update Draft Layer (Path Drawing)
+  useEffect(() => {
+    if (!draftLayerRef.current) return;
+    
+    import("leaflet").then((leafletModule) => {
+      const L = (leafletModule as any).default ?? leafletModule;
+      const layerGroup = draftLayerRef.current;
+      if (!layerGroup) return;
+      
+      // If we are drawing a path, show it
+      if (mode === "path" && pathPoints.length > 0) {
+        layerGroup.clearLayers();
+        const points = pathPoints.map((pt) => [pt.y, pt.x]) as [number, number][];
+        L.polyline(points, { color: "#c44536", weight: 2, dashArray: "4 4" }).addTo(layerGroup);
+        pathPoints.forEach((pt) => {
+          L.circleMarker([pt.y, pt.x], { radius: 4, color: "#c44536", fillOpacity: 1 }).addTo(layerGroup);
+        });
+      } else if (mode !== "pin") {
+        // If not pinning, clear draft (pin draft is handled in click handler momentarily)
+        // Actually, let's keep pin draft if selected
+        if (!selectedPinId && pinDraft.x === null) {
+           layerGroup.clearLayers();
         }
-      };
+      }
+    });
+  }, [pathPoints, mode, pinDraft.x, selectedPinId]);
 
-      mapContainer.addEventListener("dragover", handleDragOver);
-      mapContainer.addEventListener("drop", handleDrop);
+
+  // Drag & Drop Handling
+  useEffect(() => {
+    const mapContainer = containerRef.current;
+    if (!mapContainer || !map || !mapReady || !mapRef.current) return;
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer!.dropEffect = "copy";
     };
 
-    void init();
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      const type = e.dataTransfer?.getData("type");
+      const entityId = e.dataTransfer?.getData("id");
+      const title = e.dataTransfer?.getData("title");
+
+      if (type === "entity" && entityId) {
+        const containerRect = mapContainer.getBoundingClientRect();
+        const mouseX = e.clientX - containerRect.left;
+        const mouseY = e.clientY - containerRect.top;
+        
+        const point = mapRef.current!.containerPointToLatLng([mouseX, mouseY]);
+        const x = Number(point.lng.toFixed(1));
+        const y = Number(point.lat.toFixed(1));
+
+        if (modeRef.current === "card") {
+          const newCard = {
+            id: `card-${Date.now()}`,
+            x: mouseX,
+            y: mouseY,
+            type: 'entity' as const,
+            title: title || "",
+            entityId: entityId
+          };
+          setMapCards((prev) => [...prev, newCard]);
+          return;
+        }
+
+        // Create pin
+        const form = new FormData();
+        form.append("workspaceId", workspaceId);
+        form.append("mapId", map.id);
+        form.append("entityId", entityId);
+        form.append("label", title || "");
+        form.append("x", String(x));
+        form.append("y", String(y));
+        form.append("locationType", defaultLocationType);
+        form.append("truthFlag", "canonical");
+
+        try {
+          const response = await fetch("/api/pins/create", { method: "POST", body: form });
+          if (response.ok) {
+            router.refresh();
+            addToast("Pin created from entity", "success");
+          } else {
+            addToast("Failed to create pin", "error");
+          }
+        } catch (error) {
+           addToast("Error creating pin", "error");
+        }
+      }
+    };
+
+    mapContainer.addEventListener("dragover", handleDragOver);
+    mapContainer.addEventListener("drop", handleDrop);
 
     return () => {
-      active = false;
-      if (mapRef.current) {
-        mapRef.current.remove();
-        mapRef.current = null;
-      }
+      mapContainer.removeEventListener("dragover", handleDragOver);
+      mapContainer.removeEventListener("drop", handleDrop);
     };
-  }, [map, mode, pathPoints, showImage, showPins, showPaths, selectedPinId, defaultLocationType, createPinDraft, visiblePins, visiblePaths]);
+  }, [map, mapReady, workspaceId, defaultLocationType, router, addToast]);
 
-  if (!map) {
-    return <div className="map-viewer placeholder">Select a map to view</div>;
-  }
 
   // --- API Actions ---
 
@@ -768,7 +747,6 @@ export function MapEditor({
     if (!pinDraft.label.trim()) newErrors.label = true;
     if (pinDraft.x === null) newErrors.x = true;
     if (pinDraft.y === null) newErrors.y = true;
-    
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -803,18 +781,16 @@ export function MapEditor({
         if (v !== null) form.append(k, String(v));
       });
       const response = await fetch("/api/pins/create", { method: "POST", body: form });
-      if (!response.ok) {
-        throw new Error(`Failed to create pin: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(response.statusText);
       
-      // Trigger map refresh without full reload
       setSelectedPinId("");
       setPinDraft(createPinDraft());
       setMode("select");
+      draftLayerRef.current?.clearLayers();
       router.refresh();
+      addToast("Pin created", "success");
     } catch (error) {
-      console.error("Error creating pin:", error);
-      addToast("Failed to create pin. Please try again.", "error");
+      addToast("Failed to create pin", "error");
     }
   }
 
@@ -828,15 +804,13 @@ export function MapEditor({
       form.append("x", String(roundedX));
       form.append("y", String(roundedY));
       const response = await fetch("/api/pins/update", { method: "POST", body: form });
-      if (!response.ok) {
-        throw new Error(`Failed to update pin position: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(response.statusText);
+      
       if (selectedPinId === pinId) {
         setPinDraft((prev) => ({ ...prev, x: roundedX, y: roundedY }));
       }
     } catch (error) {
-      console.error("Error updating pin position:", error);
-      addToast("Failed to update pin position. Please try again.", "error");
+      addToast("Failed to update pin position", "error");
     }
   }
 
@@ -854,15 +828,12 @@ export function MapEditor({
         if (v !== null) form.append(k, String(v));
       });
       const response = await fetch("/api/pins/update", { method: "POST", body: form });
-      if (!response.ok) {
-        throw new Error(`Failed to update pin: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(response.statusText);
       
-      // Trigger map re-render
       router.refresh();
+      addToast("Pin updated", "success");
     } catch (error) {
-      console.error("Error updating pin:", error);
-      addToast("Failed to update pin. Please try again.", "error");
+      addToast("Failed to update pin", "error");
     }
   }
 
@@ -877,28 +848,21 @@ export function MapEditor({
         if (v !== null) form.append(k, String(v));
       });
       const response = await fetch("/api/paths/create", { method: "POST", body: form });
-      if (!response.ok) {
-        throw new Error(`Failed to create path: ${response.statusText}`);
-      }
+      if (!response.ok) throw new Error(response.statusText);
       
-      // Clear path points and trigger re-render
       setPathPoints([]);
       setMode("select");
       router.refresh();
+      addToast("Path created", "success");
     } catch (error) {
-      console.error("Error creating path:", error);
-      addToast("Failed to create path. Please try again.", "error");
+      addToast("Failed to create path", "error");
     }
   }
 
   async function deletePin() {
     if (!selectedPinId || !confirm("Delete this pin?")) return;
-    // Assuming API exists or we use update to soft delete. 
-    // AGENTS.md says soft delete.
-    // There is no /api/pins/delete in list, maybe use update? 
-    // Wait, the file structure showed `api/marker-styles/delete` but not `pins/delete`.
-    // I'll skip delete for now or assume it's missing.
-    addToast("Delete not implemented yet (check API)", "info");
+    // Mock delete for now as API might be missing, or implement soft delete
+    addToast("Delete not implemented in this demo", "info");
   }
 
   // --- Render Helpers ---
@@ -1077,6 +1041,10 @@ export function MapEditor({
       </div>
     </div>
   );
+
+  if (!map) {
+    return <div className="map-viewer placeholder">Select a map to view</div>;
+  }
 
   return (
     <div className="map-viewer-container bg-bg">
@@ -1330,7 +1298,6 @@ export function MapEditor({
             onClick={(e) => {
               e.stopPropagation();
               if (connectingFromCardId) {
-                // Complete connection
                 if (connectingFromCardId !== card.id) {
                   const newConnection = {
                     id: `conn-${Date.now()}`,
@@ -1413,7 +1380,7 @@ export function MapEditor({
          <strong>Legend</strong>
          {markerStyles.map(style => (
             <div key={style.id} className="legend-row">
-              <span className={`marker-shape marker-${style.shape}`} style={{ "--marker-color": style.color } as CSSProperties} />
+              <span className={`marker-shape marker-${style.shape}`} style={{ "--marker-color": style.color, backgroundColor: style.color } as CSSProperties} />
               <span>{style.name}</span>
             </div>
          ))}
@@ -1421,4 +1388,3 @@ export function MapEditor({
     </div>
   );
 }
-
