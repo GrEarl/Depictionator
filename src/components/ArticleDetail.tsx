@@ -118,13 +118,17 @@ export function ArticleDetail({
 
   useEffect(() => {
     const templateRegex = /\{\{TEMPLATE:([^}|]+)(?:\|[^}]*)?\}\}/g;
-    const matches = Array.from(displayBody.matchAll(templateRegex));
+    const matches = Array.from(displayBody.matchAll(templateRegex)) as RegExpMatchArray[];
     if (matches.length === 0) {
       setRenderBody(displayBody);
       return;
     }
     const names = Array.from(
-      new Set(matches.map((m) => m[1].trim().replace(/^Template:/i, "")).filter(Boolean))
+      new Set(
+        matches
+          .map((match) => (match[1] ?? "").trim().replace(/^Template:/i, ""))
+          .filter(Boolean)
+      )
     );
     if (names.length === 0) {
       setRenderBody(displayBody);
