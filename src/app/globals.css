@@ -2224,3 +2224,283 @@ button[type="submit"] {
     flex-direction: column;
   }
 }
+
+/* ===== FIGMA-STYLE MAP EDITOR ===== */
+
+/* Leaflet canvas positioning fix */
+.leaflet-container {
+  background: transparent !important;
+}
+
+.leaflet-pane {
+  z-index: 400;
+}
+
+.leaflet-tile-pane {
+  z-index: 200;
+}
+
+.leaflet-overlay-pane {
+  z-index: 300;
+}
+
+.leaflet-marker-pane {
+  z-index: 600;
+}
+
+.leaflet-tooltip-pane {
+  z-index: 700;
+}
+
+.leaflet-popup-pane {
+  z-index: 800;
+}
+
+/* Marker shapes - cleaner, Figma-style */
+.marker-icon {
+  background: transparent !important;
+  border: none !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.marker-shape {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.1);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.marker-shape:hover {
+  transform: scale(1.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4), 0 0 0 2px rgba(255, 255, 255, 0.3);
+}
+
+.marker-circle {
+  border-radius: 50%;
+}
+
+.marker-square {
+  border-radius: 2px;
+}
+
+.marker-diamond {
+  transform: rotate(45deg);
+  border-radius: 2px;
+}
+
+.marker-triangle {
+  width: 0;
+  height: 0;
+  border: none;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-bottom: 20px solid var(--marker-color, #1f4b99);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.marker-hex {
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+}
+
+.marker-star {
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+
+/* Figma-style sidebar scrollbar */
+.map-editor-root aside::-webkit-scrollbar {
+  width: 8px;
+}
+
+.map-editor-root aside::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.map-editor-root aside::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.map-editor-root aside::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* Map canvas positioning */
+.map-editor-root .leaflet-container .leaflet-control-container {
+  display: none; /* Hide default Leaflet controls */
+}
+
+/* Smooth transitions for panels */
+.map-editor-root aside {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+/* Entity drag cards */
+.map-editor-root [draggable="true"] {
+  cursor: grab;
+  user-select: none;
+}
+
+.map-editor-root [draggable="true"]:active {
+  cursor: grabbing;
+  opacity: 0.7;
+}
+
+/* Toolbar button hover effects */
+.map-editor-header button:hover {
+  background-color: var(--bg-elevated);
+}
+
+.map-editor-header button:active {
+  transform: scale(0.95);
+}
+
+/* Property panel inputs - Figma-style */
+.map-editor-root input[type="text"],
+.map-editor-root input[type="number"],
+.map-editor-root select,
+.map-editor-root textarea {
+  font-family: inherit;
+  font-weight: 500;
+}
+
+.map-editor-root input:focus,
+.map-editor-root select:focus,
+.map-editor-root textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+/* Layer checkboxes - custom style */
+.map-editor-root input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.map-editor-root input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.map-editor-root input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.map-editor-root input[type="checkbox"]:hover {
+  border-color: var(--accent);
+}
+
+/* Mode indicator badge */
+.map-mode-indicator {
+  backdrop-filter: blur(12px);
+  background: rgba(37, 37, 37, 0.95);
+}
+
+/* Zoom controls */
+.map-editor-header button svg {
+  pointer-events: none;
+}
+
+/* Responsive adjustments for Figma editor */
+@media (max-width: 1024px) {
+  .map-editor-root aside.w-64 {
+    width: 240px;
+  }
+  
+  .map-editor-root aside.w-80 {
+    width: 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .map-editor-root aside.w-64,
+  .map-editor-root aside.w-80 {
+    position: absolute;
+    top: 48px;
+    bottom: 0;
+    z-index: 1000;
+    box-shadow: -4px 0 12px rgba(0, 0, 0, 0.5);
+  }
+  
+  .map-editor-root aside.w-64 {
+    left: 0;
+    transform: translateX(-100%);
+  }
+  
+  .map-editor-root aside.w-80 {
+    right: 0;
+    transform: translateX(100%);
+  }
+  
+  .map-editor-root aside.show {
+    transform: translateX(0);
+  }
+}
+
+/* Grid overlay (optional, can be toggled) */
+.map-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: 
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.03) 0px, transparent 1px, transparent 20px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.03) 0px, transparent 1px, transparent 20px);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.map-grid-overlay.visible {
+  opacity: 1;
+}
+
+/* Tooltip styling */
+.leaflet-tooltip {
+  background: rgba(18, 18, 18, 0.95);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-tooltip::before {
+  display: none;
+}
+
+/* Path draft styling */
+.leaflet-interactive {
+  cursor: crosshair;
+}
+
+/* Selection highlight */
+.leaflet-marker-icon.selected {
+  filter: drop-shadow(0 0 8px var(--accent));
+}
+
+/* Smooth canvas rendering */
+.leaflet-container canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}

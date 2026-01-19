@@ -1,0 +1,1056 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import type { Map as LeafletMap, Marker as LeafletMarker, LayerGroup, ImageOverlay, LatLng } from "leaflet";
+
+import { Button } from "@/components/ui/Button";
+import { useToast, ToastContainer } from "@/components/ui/Toast";
+import { useKeyboardShortcut } from "@/hooks/useKeyboardShortcut";
+import { useGlobalFilters } from "@/components/GlobalFilterProvider";
+
+type MarkerStyle = {
+  id: string;
+  name: string;
+  target: string;
+  shape: string;
+  color: string;
+};
+
+type MapPayload = {
+  id: string;
+  title: string;
+  bounds: [[number, number], [number, number]] | null;
+  imageUrl: string | null;
+  pins: {
+    id: string;
+    x: number;
+    y: number;
+    label?: string | null;
+    entityId?: string | null;
+    entityTitle?: string | null;
+    locationType?: string | null;
+    markerShape?: string | null;
+    markerColor?: string | null;
+    markerStyleId?: string | null;
+    markerStyle?: { shape: string; color: string } | null;
+    truthFlag?: string | null;
+    viewpointId?: string | null;
+    worldFrom?: string | null;
+    worldTo?: string | null;
+    storyFromChapterId?: string | null;
+    storyToChapterId?: string | null;
+    layerId?: string | null;
+  }[];
+  paths: {
+    id: string;
+    polyline: { x: number; y: number }[];
+    arrowStyle: string;
+    strokeColor?: string | null;
+    strokeWidth?: number | null;
+    markerStyleId?: string | null;
+    markerStyle?: { color: string } | null;
+    truthFlag?: string | null;
+    viewpointId?: string | null;
+    worldFrom?: string | null;
+    worldTo?: string | null;
+    storyFromChapterId?: string | null;
+    storyToChapterId?: string | null;
+    relatedEventId?: string | null;
+    layerId?: string | null;
+  }[];
+};
+
+type Entity = { id: string; title: string; type: string };
+type EraOption = { id: string; name: string };
+type ChapterOption = { id: string; name: string; orderIndex: number };
+type ViewpointOption = { id: string; name: string };
+
+type FigmaMapEditorProps = {
+  map: MapPayload;
+  workspaceId: string;
+  markerStyles: MarkerStyle[];
+  locationTypes: string[];
+  entities: Entity[];
+  eras: EraOption[];
+  chapters: ChapterOption[];
+  viewpoints: ViewpointOption[];
+};
+
+type ToolMode = "select" | "pin" | "path";
+
+type PinDraft = {
+  x: number | null;
+  y: number | null;
+  label: string;
+  locationType: string;
+  markerStyleId: string;
+  truthFlag: string;
+  viewpointId: string;
+  entityId: string;
+  entityQuery: string;
+};
+
+function createIcon(L: any, shape: string, color: string) {
+  const safeShape = shape || "circle";
+  const html = `<span class="marker-shape marker-${safeShape}" style="--marker-color:${color}; background-color: ${color}"></span>`;
+  return L.divIcon({
+    className: "marker-icon",
+    html,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12]
+  });
+}
+
+export function FigmaMapEditor({
+  map,
+  workspaceId,
+  markerStyles,
+  locationTypes,
+  entities = [],
+  eras,
+  chapters,
+  viewpoints
+}: FigmaMapEditorProps) {
+  const router = useRouter();
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  // Leaflet refs
+  const mapRef = useRef<LeafletMap | null>(null);
+  const imageOverlayRef = useRef<ImageOverlay | null>(null);
+  const pinsLayerRef = useRef<LayerGroup | null>(null);
+  const pathsLayerRef = useRef<LayerGroup | null>(null);
+  const draftLayerRef = useRef<LayerGroup | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+
+  const { eraId, chapterId, viewpointId } = useGlobalFilters();
+  const { toasts, addToast, removeToast } = useToast();
+
+  const [mode, setMode] = useState<ToolMode>("select");
+  const [showLeftSidebar, setShowLeftSidebar] = useState(true);
+  const [showRightPanel, setShowRightPanel] = useState(false);
+  const [selectedPinId, setSelectedPinId] = useState("");
+
+  const defaultLocationType = locationTypes[0] ?? "other";
+
+  const createPinDraft = useCallback((overrides: Partial<PinDraft> = {}): PinDraft => ({
+    x: null,
+    y: null,
+    label: "",
+    locationType: defaultLocationType,
+    markerStyleId: "",
+    truthFlag: "canonical",
+    viewpointId: "",
+    entityId: "",
+    entityQuery: "",
+    ...overrides
+  }), [defaultLocationType]);
+
+  const [pinDraft, setPinDraft] = useState<PinDraft>(createPinDraft());
+  const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
+
+  // Zoom state
+  const [zoomLevel, setZoomLevel] = useState(0);
+
+  // Layer visibility
+  const [showImage, setShowImage] = useState(true);
+  const [showPins, setShowPins] = useState(true);
+  const [showPaths, setShowPaths] = useState(true);
+
+  // Keep mode in ref
+  const modeRef = useRef(mode);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+
+  // Keyboard shortcuts
+  useKeyboardShortcut("v", () => setMode("select"));
+  useKeyboardShortcut("p", () => setMode("pin"));
+  useKeyboardShortcut("l", () => setMode("path"));
+  useKeyboardShortcut("Escape", () => {
+    setMode("select");
+    setSelectedPinId("");
+    setPinDraft(createPinDraft());
+    setPathPoints([]);
+    setShowRightPanel(false);
+    draftLayerRef.current?.clearLayers();
+  });
+
+  // Pan with arrow keys
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!mapRef.current) return;
+      const panAmount = 50;
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA") return;
+
+      switch (e.key) {
+        case "ArrowUp":
+          e.preventDefault();
+          mapRef.current.panBy([0, -panAmount]);
+          break;
+        case "ArrowDown":
+          e.preventDefault();
+          mapRef.current.panBy([0, panAmount]);
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          mapRef.current.panBy([-panAmount, 0]);
+          break;
+        case "ArrowRight":
+          e.preventDefault();
+          mapRef.current.panBy([panAmount, 0]);
+          break;
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Filter pins by viewpoint/chapter
+  const chapterOrderMap = useMemo(() => {
+    const m = new Map<string, number>();
+    chapters.forEach(c => m.set(c.id, c.orderIndex));
+    return m;
+  }, [chapters]);
+
+  const visiblePins = useMemo(() => {
+    return map.pins.filter((pin) => {
+      const truthFlag = pin.truthFlag ?? "canonical";
+      if (viewpointId === "canon") {
+        if (truthFlag !== "canonical") return false;
+      } else {
+        const isCanon = truthFlag === "canonical";
+        const isMyView = pin.viewpointId === viewpointId;
+        if (!isCanon && !isMyView) return false;
+      }
+
+      if (chapterId !== "all") {
+        const currentOrder = chapterOrderMap.get(chapterId);
+        if (currentOrder !== undefined) {
+          if (pin.storyFromChapterId) {
+            const from = chapterOrderMap.get(pin.storyFromChapterId) ?? -1;
+            if (from > currentOrder) return false;
+          }
+          if (pin.storyToChapterId) {
+            const to = chapterOrderMap.get(pin.storyToChapterId) ?? 999999;
+            if (to < currentOrder) return false;
+          }
+        }
+      }
+      return true;
+    });
+  }, [map.pins, viewpointId, chapterId, chapterOrderMap]);
+
+  const visiblePaths = useMemo(() => {
+    return map.paths.filter((path) => {
+      const truthFlag = path.truthFlag ?? "canonical";
+      if (viewpointId === "canon") {
+        if (truthFlag !== "canonical") return false;
+      } else {
+        const isCanon = truthFlag === "canonical";
+        const isMyView = path.viewpointId === viewpointId;
+        if (!isCanon && !isMyView) return false;
+      }
+      return true;
+    });
+  }, [map.paths, viewpointId]);
+
+  // Helper function to convert Leaflet LatLng to map coordinates
+  const latLngToMapCoords = useCallback((latlng: LatLng): { x: number; y: number } => {
+    // In Leaflet CRS.Simple, lng = x and lat = y
+    return {
+      x: Number(latlng.lng.toFixed(1)),
+      y: Number(latlng.lat.toFixed(1))
+    };
+  }, []);
+
+  // Initialize Leaflet Map
+  useEffect(() => {
+    if (!containerRef.current || !map) return;
+    let active = true;
+
+    import("leaflet").then((leafletModule) => {
+      if (!active || !containerRef.current) return;
+      const L = (leafletModule as any).default ?? leafletModule;
+
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+
+      const bounds = map.bounds ?? [[0, 0], [1000, 1000]];
+      const mapInstance = L.map(containerRef.current, {
+        crs: L.CRS.Simple,
+        zoomControl: false,
+        minZoom: -2,
+        maxZoom: 3,
+        attributionControl: false,
+        preferCanvas: true
+      }) as LeafletMap;
+
+      mapInstance.fitBounds(bounds);
+
+      // Track zoom changes
+      mapInstance.on('zoomend', () => {
+        setZoomLevel(mapInstance.getZoom());
+      });
+
+      // Create Layer Groups
+      const pinsLayer = L.layerGroup().addTo(mapInstance);
+      const pathsLayer = L.layerGroup().addTo(mapInstance);
+      const draftLayer = L.layerGroup().addTo(mapInstance);
+
+      pinsLayerRef.current = pinsLayer;
+      pathsLayerRef.current = pathsLayer;
+      draftLayerRef.current = draftLayer;
+      mapRef.current = mapInstance;
+
+      // Image Overlay
+      if (map.imageUrl) {
+        imageOverlayRef.current = L.imageOverlay(map.imageUrl, bounds).addTo(mapInstance);
+      }
+
+      // Click handler
+      mapInstance.on("click", (event: any) => {
+        const currentMode = modeRef.current;
+        const coords = latLngToMapCoords(event.latlng);
+
+        if (currentMode === "pin") {
+          setPinDraft((prev) => ({ ...prev, x: coords.x, y: coords.y }));
+          setShowRightPanel(true);
+
+          // Show draft marker
+          draftLayer.clearLayers();
+          L.circleMarker([coords.y, coords.x], {
+            radius: 8,
+            color: "#ff0033",
+            fillColor: "#ff0033",
+            fillOpacity: 0.6,
+            weight: 2
+          }).addTo(draftLayer);
+        } else if (currentMode === "path") {
+          setPathPoints((prev) => [...prev, coords]);
+        } else if (currentMode === "select") {
+          setSelectedPinId("");
+          setPinDraft(createPinDraft());
+          setShowRightPanel(false);
+          draftLayer.clearLayers();
+        }
+      });
+
+      setMapReady(true);
+      setZoomLevel(mapInstance.getZoom());
+    });
+
+    return () => {
+      active = false;
+      setMapReady(false);
+      if (mapRef.current) {
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+    };
+  }, [map.id, latLngToMapCoords, createPinDraft]);
+
+  // Update Image Overlay Visibility
+  useEffect(() => {
+    if (!imageOverlayRef.current) return;
+    imageOverlayRef.current.setOpacity(showImage ? 1 : 0);
+  }, [showImage]);
+
+  // Update Pins Layer
+  useEffect(() => {
+    if (!pinsLayerRef.current || !mapRef.current) return;
+
+    import("leaflet").then((leafletModule) => {
+      const L = (leafletModule as any).default ?? leafletModule;
+      const layerGroup = pinsLayerRef.current;
+      if (!layerGroup) return;
+
+      layerGroup.clearLayers();
+
+      if (!showPins) return;
+
+      visiblePins.forEach((pin) => {
+        const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
+        const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
+        const icon = createIcon(L, shape, color);
+
+        // In CRS.Simple: marker position is [lat, lng] which maps to [y, x]
+        const marker = L.marker([pin.y, pin.x], {
+          icon,
+          draggable: mode === "select"
+        });
+
+        if (pin.label) {
+          marker.bindTooltip(pin.label, { direction: "top", offset: [0, -10] });
+        }
+
+        marker.on("click", (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          if (modeRef.current === "select") {
+            setSelectedPinId(pin.id);
+            setShowRightPanel(true);
+            setPinDraft(createPinDraft({
+              x: pin.x,
+              y: pin.y,
+              label: pin.label ?? "",
+              locationType: pin.locationType ?? defaultLocationType,
+              markerStyleId: pin.markerStyleId ?? "",
+              truthFlag: pin.truthFlag ?? "canonical",
+              viewpointId: pin.viewpointId ?? "",
+              entityId: pin.entityId ?? "",
+              entityQuery: pin.entityTitle ?? ""
+            }));
+          }
+        });
+
+        marker.on("dragend", (event: any) => {
+          const latlng = event.target.getLatLng();
+          const coords = latLngToMapCoords(latlng);
+          updatePinPosition(pin.id, coords.x, coords.y);
+        });
+
+        marker.addTo(layerGroup);
+      });
+    });
+  }, [visiblePins, showPins, mode, defaultLocationType, createPinDraft, latLngToMapCoords]);
+
+  // Update Paths Layer
+  useEffect(() => {
+    if (!pathsLayerRef.current) return;
+
+    import("leaflet").then((leafletModule) => {
+      const L = (leafletModule as any).default ?? leafletModule;
+      const layerGroup = pathsLayerRef.current;
+      if (!layerGroup) return;
+
+      layerGroup.clearLayers();
+
+      if (!showPaths) return;
+
+      visiblePaths.forEach((path) => {
+        if (!path.polyline || !Array.isArray(path.polyline) || path.polyline.length < 2) return;
+
+        const points = path.polyline.map((pt) => [pt.y, pt.x]) as [number, number][];
+        const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
+        const weight = path.strokeWidth ?? 3;
+
+        L.polyline(points, {
+          color,
+          weight,
+          dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
+        }).addTo(layerGroup);
+      });
+    });
+  }, [visiblePaths, showPaths]);
+
+  // Update Draft Layer (Path Drawing)
+  useEffect(() => {
+    if (!draftLayerRef.current) return;
+
+    import("leaflet").then((leafletModule) => {
+      const L = (leafletModule as any).default ?? leafletModule;
+      const layerGroup = draftLayerRef.current;
+      if (!layerGroup) return;
+
+      if (mode === "path" && pathPoints.length > 0) {
+        layerGroup.clearLayers();
+        const points = pathPoints.map((pt) => [pt.y, pt.x]) as [number, number][];
+
+        // Draw the path line
+        if (points.length > 1) {
+          L.polyline(points, {
+            color: "#ff0033",
+            weight: 3,
+            dashArray: "5 5",
+            opacity: 0.8
+          }).addTo(layerGroup);
+        }
+
+        // Draw point markers
+        pathPoints.forEach((pt, idx) => {
+          L.circleMarker([pt.y, pt.x], {
+            radius: 5,
+            color: "#ff0033",
+            fillColor: "#ff0033",
+            fillOpacity: 1,
+            weight: 2
+          }).addTo(layerGroup);
+        });
+      }
+    });
+  }, [pathPoints, mode]);
+
+  // Drag & Drop Handling
+  useEffect(() => {
+    const mapContainer = containerRef.current;
+    if (!mapContainer || !map || !mapReady || !mapRef.current) return;
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer!.dropEffect = "copy";
+    };
+
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      const type = e.dataTransfer?.getData("type");
+      const entityId = e.dataTransfer?.getData("id");
+      const title = e.dataTransfer?.getData("title");
+
+      if (type === "entity" && entityId && mapRef.current) {
+        const containerRect = mapContainer.getBoundingClientRect();
+        const mouseX = e.clientX - containerRect.left;
+        const mouseY = e.clientY - containerRect.top;
+
+        // Convert container point to map coordinates
+        const latlng = mapRef.current.containerPointToLatLng([mouseX, mouseY]);
+        const coords = latLngToMapCoords(latlng);
+
+        // Create pin
+        const form = new FormData();
+        form.append("workspaceId", workspaceId);
+        form.append("mapId", map.id);
+        form.append("entityId", entityId);
+        form.append("label", title || "");
+        form.append("x", String(coords.x));
+        form.append("y", String(coords.y));
+        form.append("locationType", defaultLocationType);
+        form.append("truthFlag", "canonical");
+
+        try {
+          const response = await fetch("/api/pins/create", { method: "POST", body: form });
+          if (response.ok) {
+            router.refresh();
+            addToast("Pin created from entity", "success");
+          } else {
+            const errorText = await response.text();
+            console.error("Failed to create pin:", errorText);
+            addToast("Failed to create pin", "error");
+          }
+        } catch (error) {
+          console.error("Error creating pin:", error);
+          addToast("Error creating pin", "error");
+        }
+      }
+    };
+
+    mapContainer.addEventListener("dragover", handleDragOver);
+    mapContainer.addEventListener("drop", handleDrop);
+
+    return () => {
+      mapContainer.removeEventListener("dragover", handleDragOver);
+      mapContainer.removeEventListener("drop", handleDrop);
+    };
+  }, [map, mapReady, workspaceId, defaultLocationType, router, addToast, latLngToMapCoords]);
+
+  // API Actions
+  async function submitPin() {
+    if (!map || pinDraft.x === null || pinDraft.y === null || !pinDraft.label.trim()) {
+      addToast("Please fill in all required fields (label and position)", "error");
+      return;
+    }
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("mapId", map.id);
+      form.append("label", pinDraft.label);
+      form.append("x", String(pinDraft.x));
+      form.append("y", String(pinDraft.y));
+      form.append("locationType", pinDraft.locationType);
+      form.append("truthFlag", pinDraft.truthFlag);
+      if (pinDraft.markerStyleId) form.append("markerStyleId", pinDraft.markerStyleId);
+      if (pinDraft.viewpointId) form.append("viewpointId", pinDraft.viewpointId);
+      if (pinDraft.entityId) form.append("entityId", pinDraft.entityId);
+
+      const response = await fetch("/api/pins/create", { method: "POST", body: form });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to create pin:", errorText);
+        throw new Error(response.statusText);
+      }
+
+      setSelectedPinId("");
+      setPinDraft(createPinDraft());
+      setMode("select");
+      setShowRightPanel(false);
+      draftLayerRef.current?.clearLayers();
+      router.refresh();
+      addToast("Pin created successfully", "success");
+    } catch (error) {
+      console.error("Error creating pin:", error);
+      addToast("Failed to create pin", "error");
+    }
+  }
+
+  async function updatePinPosition(pinId: string, x: number, y: number) {
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("pinId", pinId);
+      form.append("x", String(x));
+      form.append("y", String(y));
+
+      const response = await fetch("/api/pins/update", { method: "POST", body: form });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to update pin position:", errorText);
+        throw new Error(response.statusText);
+      }
+
+      if (selectedPinId === pinId) {
+        setPinDraft((prev) => ({ ...prev, x, y }));
+      }
+
+      addToast("Pin position updated", "success");
+    } catch (error) {
+      console.error("Error updating pin position:", error);
+      addToast("Failed to update pin position", "error");
+    }
+  }
+
+  async function submitPinUpdate() {
+    if (!selectedPinId) return;
+    if (!pinDraft.label.trim()) {
+      addToast("Label is required", "error");
+      return;
+    }
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("pinId", selectedPinId);
+      form.append("label", pinDraft.label);
+      if (pinDraft.x !== null) form.append("x", String(pinDraft.x));
+      if (pinDraft.y !== null) form.append("y", String(pinDraft.y));
+      form.append("locationType", pinDraft.locationType);
+      form.append("truthFlag", pinDraft.truthFlag);
+      if (pinDraft.markerStyleId) form.append("markerStyleId", pinDraft.markerStyleId);
+      if (pinDraft.viewpointId) form.append("viewpointId", pinDraft.viewpointId);
+      if (pinDraft.entityId) form.append("entityId", pinDraft.entityId);
+
+      const response = await fetch("/api/pins/update", { method: "POST", body: form });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to update pin:", errorText);
+        throw new Error(response.statusText);
+      }
+
+      router.refresh();
+      addToast("Pin updated successfully", "success");
+    } catch (error) {
+      console.error("Error updating pin:", error);
+      addToast("Failed to update pin", "error");
+    }
+  }
+
+  async function submitPath() {
+    if (!map || pathPoints.length < 2) {
+      addToast("Please add at least 2 points to create a path", "info");
+      return;
+    }
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("mapId", map.id);
+      form.append("polyline", JSON.stringify(pathPoints));
+      form.append("arrowStyle", "arrow");
+      form.append("truthFlag", "canonical");
+
+      const response = await fetch("/api/paths/create", { method: "POST", body: form });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to create path:", errorText);
+        throw new Error(response.statusText);
+      }
+
+      setPathPoints([]);
+      setMode("select");
+      draftLayerRef.current?.clearLayers();
+      router.refresh();
+      addToast("Path created successfully", "success");
+    } catch (error) {
+      console.error("Error creating path:", error);
+      addToast("Failed to create path", "error");
+    }
+  }
+
+  const handleEntityQueryChange = (value: string) => {
+    const normalized = value.trim().toLowerCase();
+    const match = entities.find((entity) => entity.title.toLowerCase() === normalized);
+    setPinDraft((prev) => ({
+      ...prev,
+      entityQuery: value,
+      entityId: match ? match.id : ""
+    }));
+  };
+
+  return (
+    <div className="map-editor-root h-screen flex flex-col bg-bg overflow-hidden">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+      {/* Top Toolbar - Figma style */}
+      <header className="map-editor-header h-12 border-b border-border bg-panel flex items-center justify-between px-4 flex-shrink-0 z-50">
+        <div className="flex items-center gap-3">
+          <Link href="/maps" className="text-muted hover:text-ink transition-colors" title="Back to maps">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </Link>
+          <div className="w-px h-6 bg-border" />
+          <h1 className="font-bold text-ink text-sm">{map.title}</h1>
+        </div>
+
+        <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
+          <button
+            onClick={() => {
+              setMode("select");
+              setShowRightPanel(false);
+              draftLayerRef.current?.clearLayers();
+            }}
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+              mode === "select" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
+            }`}
+            title="Select/Move Mode (V)"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+              <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
+            </svg>
+            <span className="hidden sm:inline">Select</span>
+          </button>
+          <button
+            onClick={() => {
+              setMode("pin");
+              setSelectedPinId("");
+              setPinDraft(createPinDraft());
+            }}
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+              mode === "pin" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
+            }`}
+            title="Place Pin Mode (P)"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+            <span className="hidden sm:inline">Pin</span>
+          </button>
+          <button
+            onClick={() => {
+              setMode("path");
+              setSelectedPinId("");
+              setShowRightPanel(false);
+            }}
+            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+              mode === "path" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
+            }`}
+            title="Draw Path Mode (L)"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+              <path d="M22 12c-4.5 0-4.5-8-9-8s-4.5 8-9 8" />
+            </svg>
+            <span className="hidden sm:inline">Path</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 text-xs text-muted bg-bg border border-border rounded px-2 py-1">
+            <button
+              onClick={() => mapRef.current?.zoomOut()}
+              className="px-1 py-0.5 hover:text-ink transition-colors"
+              title="Zoom Out"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+            </button>
+            <span className="px-1 font-medium min-w-[3ch] text-center">{Math.round((zoomLevel + 2) * 50)}%</span>
+            <button
+              onClick={() => mapRef.current?.zoomIn()}
+              className="px-1 py-0.5 hover:text-ink transition-colors"
+              title="Zoom In"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="11" y1="8" x2="11" y2="14" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+                <path d="M21 21l-4.35-4.35" />
+              </svg>
+            </button>
+          </div>
+          <button
+            onClick={() => setShowLeftSidebar(!showLeftSidebar)}
+            className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
+            title="Toggle Sidebar"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* Left Sidebar */}
+        {showLeftSidebar && (
+          <aside className="w-64 border-r border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden">
+            <div className="p-4 border-b border-border flex-shrink-0">
+              <h3 className="text-xs font-bold uppercase text-muted mb-3">Layers</h3>
+              <div className="space-y-2">
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <span className="text-sm text-ink group-hover:text-accent transition-colors">Map Image</span>
+                  <input
+                    type="checkbox"
+                    checked={showImage}
+                    onChange={(e) => setShowImage(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                </label>
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <span className="text-sm text-ink group-hover:text-accent transition-colors">Pins ({visiblePins.length})</span>
+                  <input
+                    type="checkbox"
+                    checked={showPins}
+                    onChange={(e) => setShowPins(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                </label>
+                <label className="flex items-center justify-between cursor-pointer group">
+                  <span className="text-sm text-ink group-hover:text-accent transition-colors">Paths ({visiblePaths.length})</span>
+                  <input
+                    type="checkbox"
+                    checked={showPaths}
+                    onChange={(e) => setShowPaths(e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4">
+              <h3 className="text-xs font-bold uppercase text-muted mb-2">Entities</h3>
+              <p className="text-xs text-muted mb-3">Drag onto map to create pins</p>
+              <div className="space-y-1">
+                {entities.slice(0, 50).map((entity) => (
+                  <div
+                    key={entity.id}
+                    className="p-2 bg-bg rounded border border-border hover:border-accent transition-colors cursor-move text-sm group"
+                    draggable
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData("type", "entity");
+                      e.dataTransfer.setData("id", entity.id);
+                      e.dataTransfer.setData("title", entity.title);
+                      e.dataTransfer.effectAllowed = "copy";
+                    }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted capitalize">{entity.type}</span>
+                      <span className="text-ink group-hover:text-accent transition-colors flex-1 truncate">{entity.title}</span>
+                    </div>
+                  </div>
+                ))}
+                {entities.length === 0 && (
+                  <p className="text-xs text-muted italic">No entities available</p>
+                )}
+              </div>
+            </div>
+          </aside>
+        )}
+
+        {/* Main Canvas */}
+        <main className="flex-1 relative bg-bg-elevated overflow-hidden">
+          <div ref={containerRef} className="absolute inset-0" style={{ cursor: mode === "path" ? "crosshair" : mode === "pin" ? "crosshair" : "default" }} />
+
+          {/* Mode indicator */}
+          <div className="map-mode-indicator absolute bottom-4 left-4 bg-panel border border-border rounded-lg px-3 py-2 text-xs font-medium text-ink shadow-lg pointer-events-none z-10">
+            {mode === "select" && "Select Mode (V) - Click pins to edit, drag to move"}
+            {mode === "pin" && "Pin Mode (P) - Click on map to place a pin"}
+            {mode === "path" && `Path Mode (L) - ${pathPoints.length} point${pathPoints.length !== 1 ? "s" : ""} ${pathPoints.length < 2 ? "(need 2+ to create)" : "ready"}`}
+          </div>
+        </main>
+
+        {/* Right Properties Panel */}
+        {showRightPanel && (selectedPinId || (mode === "pin" && pinDraft.x !== null)) && (
+          <aside className="w-80 border-l border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden">
+            <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
+              <h3 className="font-bold text-ink">{selectedPinId ? "Edit Pin" : "New Pin"}</h3>
+              <button
+                onClick={() => {
+                  setShowRightPanel(false);
+                  setSelectedPinId("");
+                  setPinDraft(createPinDraft());
+                  draftLayerRef.current?.clearLayers();
+                }}
+                className="text-muted hover:text-ink transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-muted mb-2">Label *</label>
+                <input
+                  type="text"
+                  value={pinDraft.label}
+                  onChange={(e) => setPinDraft({ ...pinDraft, label: e.target.value })}
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accent transition-colors"
+                  placeholder="Enter location name..."
+                  autoFocus
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-muted mb-2">X Coordinate</label>
+                  <input
+                    type="text"
+                    value={pinDraft.x ?? ""}
+                    readOnly
+                    className="w-full bg-bg-elevated border border-border rounded-lg px-3 py-2 text-sm opacity-60 cursor-not-allowed"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-muted mb-2">Y Coordinate</label>
+                  <input
+                    type="text"
+                    value={pinDraft.y ?? ""}
+                    readOnly
+                    className="w-full bg-bg-elevated border border-border rounded-lg px-3 py-2 text-sm opacity-60 cursor-not-allowed"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-muted mb-2">Type</label>
+                <select
+                  value={pinDraft.locationType}
+                  onChange={(e) => setPinDraft({ ...pinDraft, locationType: e.target.value })}
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accent capitalize transition-colors"
+                >
+                  {locationTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-muted mb-2">Marker Style</label>
+                <select
+                  value={pinDraft.markerStyleId}
+                  onChange={(e) => setPinDraft({ ...pinDraft, markerStyleId: e.target.value })}
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accent transition-colors"
+                >
+                  <option value="">Default</option>
+                  {markerStyles.filter(s => s.target !== 'path').map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-muted mb-2">Linked Entity (Optional)</label>
+                <input
+                  type="text"
+                  value={pinDraft.entityQuery}
+                  onChange={(e) => handleEntityQueryChange(e.target.value)}
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:border-accent transition-colors"
+                  placeholder="Type entity name..."
+                  list="entity-search"
+                />
+                <datalist id="entity-search">
+                  {entities.map((entity) => (
+                    <option key={entity.id} value={entity.title} />
+                  ))}
+                </datalist>
+                {pinDraft.entityQuery && !pinDraft.entityId && (
+                  <p className="text-xs text-muted mt-1">Type to search, or leave blank</p>
+                )}
+                {pinDraft.entityId && (
+                  <p className="text-xs text-accent mt-1">Linked to entity</p>
+                )}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border flex-shrink-0">
+              {selectedPinId ? (
+                <Button onClick={submitPinUpdate} className="w-full">Save Changes</Button>
+              ) : (
+                <Button onClick={submitPin} disabled={pinDraft.x === null || !pinDraft.label.trim()} className="w-full">
+                  Create Pin
+                </Button>
+              )}
+            </div>
+          </aside>
+        )}
+
+        {/* Path panel */}
+        {mode === "path" && pathPoints.length > 0 && !showRightPanel && (
+          <aside className="w-80 border-l border-border bg-panel flex flex-col flex-shrink-0">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <h3 className="font-bold text-ink">Draw Path</h3>
+              <button
+                onClick={() => {
+                  setPathPoints([]);
+                  setMode("select");
+                  draftLayerRef.current?.clearLayers();
+                }}
+                className="text-muted hover:text-ink transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 space-y-4">
+              <div className="bg-bg border border-border rounded-lg p-3 text-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-muted">Points:</span>
+                  <span className="text-accent font-bold">{pathPoints.length}</span>
+                </div>
+                {pathPoints.length < 2 && (
+                  <p className="text-xs text-muted">Click on the map to add more points (minimum 2 required)</p>
+                )}
+                {pathPoints.length >= 2 && (
+                  <p className="text-xs text-accent">Ready to create path</p>
+                )}
+              </div>
+
+              <div className="space-y-2 max-h-60 overflow-y-auto">
+                {pathPoints.map((pt, idx) => (
+                  <div key={idx} className="flex items-center justify-between text-xs bg-bg-elevated p-2 rounded">
+                    <span className="text-muted">Point {idx + 1}:</span>
+                    <span className="text-ink font-mono">({pt.x}, {pt.y})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border space-y-2">
+              <Button
+                onClick={submitPath}
+                disabled={pathPoints.length < 2}
+                className="w-full"
+              >
+                Create Path ({pathPoints.length} points)
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPathPoints([]);
+                  draftLayerRef.current?.clearLayers();
+                }}
+                className="w-full"
+              >
+                Clear Points
+              </Button>
+            </div>
+          </aside>
+        )}
+      </div>
+    </div>
+  );
+}
