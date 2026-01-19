@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { CardConnectionType, MapCardType } from "@prisma/client";
+import { CardConnectionType, MapCardType, Prisma } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 
@@ -31,6 +31,12 @@ type ConnectionPayload = {
   style?: string;
   data?: unknown;
 };
+
+function resolveJsonInput(value: unknown) {
+  if (value === null) return Prisma.JsonNull;
+  if (value === undefined) return undefined;
+  return value as Prisma.InputJsonValue;
+}
 
 export async function POST(request: Request) {
   let session;
@@ -132,6 +138,7 @@ export async function POST(request: Request) {
     const y = Number(card.y ?? 0);
     const title = String(card.title || "").trim() || "Untitled";
 
+    const cardData = resolveJsonInput(card.data);
     operations.push(
       prisma.mapCard.upsert({
         where: { id },
@@ -152,7 +159,7 @@ export async function POST(request: Request) {
           articleId: card.articleId ?? null,
           eventId: card.eventId ?? null,
           assetId: card.assetId ?? null,
-          data: card.data ?? null,
+          data: cardData,
           softDeletedAt: null
         },
         update: {
@@ -169,7 +176,7 @@ export async function POST(request: Request) {
           articleId: card.articleId ?? null,
           eventId: card.eventId ?? null,
           assetId: card.assetId ?? null,
-          data: card.data ?? null,
+          data: cardData,
           softDeletedAt: null
         }
       })
@@ -189,6 +196,7 @@ export async function POST(request: Request) {
       ? (typeValue as CardConnectionType)
       : CardConnectionType.timeline;
 
+    const connectionData = resolveJsonInput(conn.data);
     operations.push(
       prisma.cardConnection.upsert({
         where: { id },
@@ -201,14 +209,14 @@ export async function POST(request: Request) {
           type,
           label: conn.label ? String(conn.label) : null,
           style: conn.style ? String(conn.style) : null,
-          data: conn.data ?? null,
+          data: connectionData,
           softDeletedAt: null
         },
         update: {
           type,
           label: conn.label ? String(conn.label) : null,
           style: conn.style ? String(conn.style) : null,
-          data: conn.data ?? null,
+          data: connectionData,
           softDeletedAt: null
         }
       })
