@@ -32,12 +32,14 @@ export default async function JoinPage({ params }: JoinPageProps) {
       })
     : null;
 
-  const maps = await prisma.map.findMany({
-    where: { workspaceId: workspace.id, softDeletedAt: null },
-    select: { id: true, title: true, imageAssetId: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-    take: 6
-  });
+  const maps = membership
+    ? await prisma.map.findMany({
+        where: { workspaceId: workspace.id, softDeletedAt: null },
+        select: { id: true, title: true, imageAssetId: true, updatedAt: true },
+        orderBy: { updatedAt: "desc" },
+        take: 6
+      })
+    : [];
 
   const loginNext = `/join/${workspace.slug}`;
 
@@ -57,57 +59,61 @@ export default async function JoinPage({ params }: JoinPageProps) {
           <span className="text-xs uppercase tracking-[0.3em] text-muted">Workspace Invite</span>
         </header>
 
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-8">
-          <section className="bg-panel border border-border rounded-2xl p-6 shadow-lg space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-sm font-bold uppercase tracking-widest text-muted">Map Preview</h2>
-              <span className="text-xs text-muted">{maps.length} maps</span>
-            </div>
-            {maps.length === 0 && (
-              <div className="border border-dashed border-border rounded-xl p-10 text-center text-sm text-muted">
-                No maps have been added yet.
+        <div
+          className={
+            membership
+              ? "grid lg:grid-cols-[minmax(0,1fr)_360px] gap-8"
+              : "flex justify-center"
+          }
+        >
+          {membership && (
+            <section className="bg-panel border border-border rounded-2xl p-6 shadow-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-muted">Map Preview</h2>
+                <span className="text-xs text-muted">{maps.length} maps</span>
               </div>
-            )}
-            {maps.length > 0 && (
-              <div className="grid md:grid-cols-2 gap-4">
-                {maps.map((map) => {
-                  const canPreviewImages = Boolean(membership);
-                  const imageUrl =
-                    canPreviewImages && map.imageAssetId
+              {maps.length === 0 && (
+                <div className="border border-dashed border-border rounded-xl p-10 text-center text-sm text-muted">
+                  No maps have been added yet.
+                </div>
+              )}
+              {maps.length > 0 && (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {maps.map((map) => {
+                    const imageUrl = map.imageAssetId
                       ? `/api/assets/file/${map.imageAssetId}`
                       : null;
-                  const lockedPreview = Boolean(map.imageAssetId) && !canPreviewImages;
-                  return (
-                    <div key={map.id} className="bg-bg border border-border rounded-xl overflow-hidden">
-                      <div className="aspect-[4/3] bg-slate-900/40 flex items-center justify-center relative">
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={map.title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <span className="text-xs text-muted">No image</span>
-                        )}
-                        {lockedPreview && (
-                          <div className="absolute inset-0 bg-slate-950/60 text-white text-xs font-semibold flex items-center justify-center">
-                            Sign in to preview
-                          </div>
-                        )}
+                    return (
+                      <div key={map.id} className="bg-bg border border-border rounded-xl overflow-hidden">
+                        <div className="aspect-[4/3] bg-slate-900/40 flex items-center justify-center relative">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={map.title}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <span className="text-xs text-muted">No image</span>
+                          )}
+                        </div>
+                        <div className="p-3">
+                          <p className="text-sm font-semibold">{map.title}</p>
+                          <p className="text-[11px] text-muted">Updated {map.updatedAt.toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div className="p-3">
-                        <p className="text-sm font-semibold">{map.title}</p>
-                        <p className="text-[11px] text-muted">Updated {map.updatedAt.toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </section>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          )}
 
-          <aside className="bg-panel border border-border rounded-2xl p-6 shadow-lg space-y-6">
+          <aside
+            className={`bg-panel border border-border rounded-2xl p-6 shadow-lg space-y-6 ${
+              membership ? "" : "w-full max-w-md"
+            }`}
+          >
             <div className="space-y-2">
               <h2 className="text-lg font-bold">Join this workspace</h2>
               <p className="text-sm text-muted">
