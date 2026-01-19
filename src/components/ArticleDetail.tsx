@@ -94,6 +94,16 @@ export function ArticleDetail({
     return acc;
   }, {} as Record<string, RelatedEntity[]>);
 
+  const categoryTags = (entity.tags ?? [])
+    .filter((tag: string) => tag.startsWith("category:"))
+    .map((tag: string) => tag.replace(/^category:/, ""));
+  const templateTags = (entity.tags ?? [])
+    .filter((tag: string) => tag.startsWith("template:"))
+    .map((tag: string) => tag.replace(/^template:/, ""));
+  const plainTags = (entity.tags ?? []).filter(
+    (tag: string) => !tag.startsWith("category:") && !tag.startsWith("template:")
+  );
+
   return (
     <>
       {/* Center Pane: Content */}
@@ -132,11 +142,19 @@ export function ArticleDetail({
                 </div>
               )}
             </div>
-            <div className="article-badges">
-              <span className={`badge type-${entity.type.toLowerCase()}`}>{entity.type}</span>
-              <span className={`badge status-${entity.status}`}>{entity.status}</span>
-              {activeOverlay && <span className="badge overlay">Viewpoint</span>}
-              {!publishedRevision && latestRevision && <span className="badge status-draft">Draft</span>}
+            <div className="article-header-actions">
+              <div className="article-badges">
+                <span className={`badge type-${entity.type.toLowerCase()}`}>{entity.type}</span>
+                <span className={`badge status-${entity.status}`}>{entity.status}</span>
+                {activeOverlay && <span className="badge overlay">Viewpoint</span>}
+                {!publishedRevision && latestRevision && <span className="badge status-draft">Draft</span>}
+              </div>
+              <Link
+                href={`/wiki/${encodeURIComponent(`Talk:${displayTitle}`)}`}
+                className="btn-secondary"
+              >
+                Talk
+              </Link>
             </div>
           </div>
           <div className="article-tabs">
@@ -222,6 +240,32 @@ export function ArticleDetail({
                         View all {relatedEntities.length} relations
                       </button>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {categoryTags.length > 0 && (
+                <div className="article-section">
+                  <h2>Categories</h2>
+                  <div className="tag-list">
+                    {categoryTags.map((tag: string) => (
+                      <Link key={tag} href={`/categories/${encodeURIComponent(tag)}`} className="tag-chip">
+                        {tag}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {templateTags.length > 0 && (
+                <div className="article-section">
+                  <h2>Templates</h2>
+                  <div className="tag-list">
+                    {templateTags.map((tag: string) => (
+                      <Link key={tag} href={`/templates/${encodeURIComponent(tag)}`} className="tag-chip">
+                        {tag}
+                      </Link>
+                    ))}
                   </div>
                 </div>
               )}
@@ -449,11 +493,11 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
                   <td>{entity.worldExistFrom} - {entity.worldExistTo || "Present"}</td>
                 </tr>
               )}
-              {entity.tags?.length > 0 && (
+              {plainTags.length > 0 && (
                 <tr>
                   <th>Tags</th>
                   <td>
-                    {entity.tags.map((tag: string) => (
+                    {plainTags.map((tag: string) => (
                       <span key={tag} className="tag-chip">{tag}</span>
                     ))}
                   </td>

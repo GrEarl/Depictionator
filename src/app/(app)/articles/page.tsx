@@ -119,6 +119,15 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               <Link href="/articles/deleted" className="btn-secondary w-full justify-center">
                 Deleted Articles
               </Link>
+              <Link href="/categories" className="btn-secondary w-full justify-center">
+                Categories
+              </Link>
+              <Link href="/templates" className="btn-secondary w-full justify-center">
+                Templates
+              </Link>
+              <Link href="/files" className="btn-secondary w-full justify-center">
+                Files
+              </Link>
               <p className="text-xs text-muted">
                 作成/インポートは専用ページで進めるようにしました。
               </p>

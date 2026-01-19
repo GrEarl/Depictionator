@@ -5,6 +5,7 @@ import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
 import { toWikiPath } from "@/lib/wiki";
+import { parseCsv } from "@/lib/forms";
 
 export async function POST(request: Request) {
   let session;
@@ -21,6 +22,9 @@ export async function POST(request: Request) {
   const overlayId = String(form.get("overlayId") ?? "");
   const bodyMd = String(form.get("bodyMd") ?? "");
   const changeSummary = String(form.get("changeSummary") ?? "Update");
+  const wikiCategories = parseCsv(form.get("wikiCategories"));
+  const wikiTemplates = parseCsv(form.get("wikiTemplates"));
+  const hasWikiMeta = form.has("wikiCategories") || form.has("wikiTemplates");
 
   if (!workspaceId || (targetType === "base" && !articleId) || (targetType === "overlay" && !overlayId)) {
     return apiError("Missing fields", 400);
@@ -84,6 +88,24 @@ export async function POST(request: Request) {
       data: { baseRevisionId: revision.id }
     });
 
+    if (hasWikiMeta) {
+      const entity = await prisma.entity.findFirst({
+        where: { id: articleId, workspaceId },
+        select: { tags: true }
+      });
+      if (entity) {
+        const existingTags = entity.tags ?? [];
+        const filtered = existingTags.filter((tag) => !tag.startsWith("category:") && !tag.startsWith("template:"));
+        const categoryTags = wikiCategories.map((c) => `category:${c}`);
+        const templateTags = wikiTemplates.map((t) => `template:${t}`);
+        const nextTags = Array.from(new Set([...filtered, ...categoryTags, ...templateTags]));
+        await prisma.entity.update({
+          where: { id: articleId, workspaceId },
+          data: { tags: { set: nextTags }, updatedById: session.userId }
+        });
+      }
+    }
+
     await notifyWatchers({
       workspaceId,
       targetType: "entity",
@@ -114,4 +136,3 @@ export async function POST(request: Request) {
 
   return NextResponse.redirect(toRedirectUrl(request, "/articles"));
 }
-

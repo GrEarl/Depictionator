@@ -42,10 +42,14 @@ export function MarkdownEditor({
     setValue(defaultValue);
   }, [defaultValue]);
 
-  const normalizedValue = useMemo(() => {
-    if (syntax !== "wikitext") return value;
-    return wikiTextToMarkdown(value).markdown;
+  const wikiMeta = useMemo(() => {
+    if (syntax !== "wikitext") return null;
+    return wikiTextToMarkdown(value);
   }, [syntax, value]);
+
+  const normalizedValue = wikiMeta ? wikiMeta.markdown : value;
+  const wikiCategories = wikiMeta ? wikiMeta.categories.join(",") : "";
+  const wikiTemplates = wikiMeta ? wikiMeta.templates.join(",") : "";
 
   const previewValue = normalizedValue;
 
@@ -343,6 +347,12 @@ export function MarkdownEditor({
       )}>
         {/* Hidden input for form submission */}
         <input type="hidden" name={name} value={normalizedValue} />
+        {syntax === "wikitext" && (
+          <>
+            <input type="hidden" name="wikiCategories" value={wikiCategories} />
+            <input type="hidden" name="wikiTemplates" value={wikiTemplates} />
+          </>
+        )}
 
         {(mode === "write" || mode === "split") && (
           <div className="relative">
