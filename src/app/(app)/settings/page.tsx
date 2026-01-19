@@ -19,7 +19,12 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const tab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "members";
   const rawNotice = typeof resolvedSearchParams.notice === "string" ? resolvedSearchParams.notice : null;
   const rawError = typeof resolvedSearchParams.error === "string" ? resolvedSearchParams.error : null;
-  const noticeText = rawNotice === "member-added" ? "Member added successfully." : null;
+  const noticeText =
+    rawNotice === "member-added"
+      ? "Member added successfully."
+      : rawNotice === "member-updated"
+      ? "Member role updated."
+      : null;
   const errorText =
     rawError === "invalid-email"
       ? "Enter a valid email address."
@@ -27,6 +32,14 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
       ? "User not found. Ask them to sign up or use the invite link."
       : rawError === "not-authorized"
       ? "Admin role required to add members."
+      : rawError === "invalid-request"
+      ? "Invalid request."
+      : rawError === "invalid-role"
+      ? "Invalid role selection."
+      : rawError === "member-not-found"
+      ? "Member not found."
+      : rawError === "cannot-change-owner"
+      ? "Owner role cannot be changed."
       : rawError === "workspace-not-found"
       ? "Workspace not found."
       : null;
@@ -243,26 +256,23 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                           )}
                         </div>
                         {!isOwner && member.userId !== user.id && (
-                          <select
-                            defaultValue={member.role}
-                            className="px-2 py-1 bg-bg border border-border rounded text-xs"
-                            onChange={(e) => {
-                              const form = document.createElement('form');
-                              form.method = 'post';
-                              form.action = '/api/members/update-role';
-                              form.innerHTML = `
-                                <input type="hidden" name="workspaceId" value="${workspace.id}" />
-                                <input type="hidden" name="memberId" value="${member.id}" />
-                                <input type="hidden" name="role" value="${e.target.value}" />
-                              `;
-                              document.body.appendChild(form);
-                              form.submit();
-                            }}
-                          >
-                            <option value="viewer">Viewer</option>
-                            <option value="editor">Editor</option>
-                            <option value="admin">Admin</option>
-                          </select>
+                          <form action="/api/workspaces/members/update-role" method="post" className="flex items-center gap-2">
+                            <input type="hidden" name="workspaceId" value={workspace.id} />
+                            <input type="hidden" name="memberId" value={member.id} />
+                            <select
+                              name="role"
+                              defaultValue={member.role}
+                              className="px-2 py-1 bg-bg border border-border rounded text-xs"
+                            >
+                              <option value="viewer">Viewer</option>
+                              <option value="editor">Editor</option>
+                              <option value="reviewer">Reviewer</option>
+                              <option value="admin">Admin</option>
+                            </select>
+                            <button type="submit" className="px-2 py-1 text-xs border border-border rounded hover:bg-bg">
+                              Update
+                            </button>
+                          </form>
                         )}
                       </div>
                     );
