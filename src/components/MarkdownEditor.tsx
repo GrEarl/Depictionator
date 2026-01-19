@@ -8,6 +8,7 @@ import { wikiTextToMarkdown } from "@/lib/wikitext";
 type MarkdownEditorProps = {
   name: string;
   label: string;
+  workspaceId?: string;
   defaultValue?: string;
   rows?: number;
   placeholder?: string;
@@ -19,6 +20,7 @@ type MarkdownEditorProps = {
 export function MarkdownEditor({
   name,
   label,
+  workspaceId,
   defaultValue = "",
   rows = 15,
   placeholder,
@@ -29,6 +31,11 @@ export function MarkdownEditor({
   const [value, setValue] = useState(defaultValue);
   const [mode, setMode] = useState<"split" | "write" | "preview">(defaultMode);
   const [syntax, setSyntax] = useState<"markdown" | "wikitext">(defaultSyntax);
+  const [pickerMode, setPickerMode] = useState<"article" | "image" | null>(null);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [pickerCaption, setPickerCaption] = useState("");
+  const [pickerResults, setPickerResults] = useState<any[]>([]);
+  const [pickerLoading, setPickerLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -96,16 +103,30 @@ export function MarkdownEditor({
   };
 
   const handleArticleLink = () => {
+    if (workspaceId) {
+      setPickerMode("article");
+      setPickerQuery("");
+      setPickerResults([]);
+      return;
+    }
     const title = window.prompt("Article title", "");
     if (!title) return;
     if (syntax === "wikitext") {
       insertText(`[[${title}]]`);
     } else {
-      insertText(`[${title}](/articles?q=${encodeURIComponent(title)})`);
+      const slug = title.replace(/ /g, "_");
+      insertText(`[${title}](/wiki/${encodeURIComponent(slug)})`);
     }
   };
 
   const handleImageInsert = () => {
+    if (workspaceId) {
+      setPickerMode("image");
+      setPickerQuery("");
+      setPickerCaption("");
+      setPickerResults([]);
+      return;
+    }
     const source = window.prompt("Image URL or file name (e.g., File:example.jpg)", "");
     if (!source) return;
     const caption = window.prompt("Caption / alt text", "") || "Image";
@@ -116,6 +137,78 @@ export function MarkdownEditor({
     } else {
       insertText(`![${caption}](${source})`);
     }
+  };
+
+  const handleTemplateInsert = () => {
+    const name = window.prompt("Template name", "");
+    if (!name) return;
+    insertText(`{{${name}}}`);
+  };
+
+  const handleCategoryInsert = () => {
+    const name = window.prompt("Category name", "");
+    if (!name) return;
+    insertText(`[[Category:${name}]]`);
+  };
+
+  const handleRedirectInsert = () => {
+    const target = window.prompt("Redirect target", "");
+    if (!target) return;
+    insertText(`#REDIRECT [[${target}]]\n`);
+  };
+
+  useEffect(() => {
+    if (!pickerMode || !workspaceId) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    const timeout = setTimeout(async () => {
+      try {
+        setPickerLoading(true);
+        const endpoint = pickerMode === "article" ? "/api/entities/search" : "/api/assets/search";
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workspaceId, query: pickerQuery.trim(), limit: 20 }),
+          signal: controller.signal
+        });
+        const data = await response.json();
+        if (!cancelled) {
+          setPickerResults(Array.isArray(data.items) ? data.items : []);
+        }
+      } catch {
+        if (!cancelled) setPickerResults([]);
+      } finally {
+        if (!cancelled) setPickerLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [pickerMode, pickerQuery, workspaceId]);
+
+  const insertArticleFromPicker = (title: string) => {
+    if (!title) return;
+    if (syntax === "wikitext") {
+      insertText(`[[${title}]]`);
+    } else {
+      const slug = title.replace(/ /g, "_");
+      insertText(`[${title}](/wiki/${encodeURIComponent(slug)})`);
+    }
+    setPickerMode(null);
+  };
+
+  const insertImageFromPicker = (assetId: string) => {
+    if (!assetId) return;
+    const caption = pickerCaption.trim() || "Image";
+    if (syntax === "wikitext") {
+      insertText(`[[File:asset:${assetId}|thumb|${caption}]]`);
+    } else {
+      insertText(`![${caption}](/api/assets/file/${assetId})`);
+    }
+    setPickerMode(null);
   };
 
   return (
@@ -156,6 +249,13 @@ export function MarkdownEditor({
             <button type="button" onClick={handleArticleLink}>Article</button>
             <button type="button" onClick={handleImageInsert}>Image</button>
           </div>
+          {syntax === "wikitext" && (
+            <div className="editor-toolbar-group">
+              <button type="button" onClick={handleTemplateInsert}>Template</button>
+              <button type="button" onClick={handleCategoryInsert}>Category</button>
+              <button type="button" onClick={handleRedirectInsert}>Redirect</button>
+            </div>
+          )}
           <div className="editor-toolbar-group">
             <button type="button" onClick={() => insertText(syntax === "wikitext" ? "\n* Item\n* Item\n" : "\n- Item\n- Item\n")}>List</button>
             <button type="button" onClick={() => insertText(syntax === "wikitext" ? "\n> Quote\n" : "\n> Quote\n")}>Quote</button>
@@ -169,6 +269,68 @@ export function MarkdownEditor({
                 onClick={() => setSyntax(s)}
               >
                 {s === "markdown" ? "Markdown" : "Wiki"}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {pickerMode && (
+        <div className="editor-picker">
+          <div className="editor-picker-header">
+            <div className="text-xs font-bold uppercase tracking-widest text-muted">
+              Insert {pickerMode === "article" ? "Article" : "Image"}
+            </div>
+            <button type="button" className="btn-link" onClick={() => setPickerMode(null)}>
+              Close
+            </button>
+          </div>
+          <div className="editor-picker-controls">
+            <input
+              value={pickerQuery}
+              onChange={(event) => setPickerQuery(event.target.value)}
+              placeholder={pickerMode === "article" ? "Search articles..." : "Search images..."}
+            />
+            {pickerMode === "image" && (
+              <input
+                value={pickerCaption}
+                onChange={(event) => setPickerCaption(event.target.value)}
+                placeholder="Caption (optional)"
+              />
+            )}
+          </div>
+          <div className="editor-picker-results">
+            {pickerLoading && <div className="muted text-xs">Loading…</div>}
+            {!pickerLoading && pickerResults.length === 0 && (
+              <div className="muted text-xs">No results.</div>
+            )}
+            {pickerMode === "article" && pickerResults.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="editor-picker-item"
+                onClick={() => insertArticleFromPicker(item.title)}
+              >
+                <div className="editor-picker-title">{item.title}</div>
+                <div className="editor-picker-meta">{item.type}</div>
+              </button>
+            ))}
+            {pickerMode === "image" && pickerResults.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className="editor-picker-item editor-picker-image"
+                onClick={() => insertImageFromPicker(item.id)}
+              >
+                <img
+                  src={`/api/assets/file/${item.id}`}
+                  alt={item.storageKey ?? "Image"}
+                  className="editor-picker-thumb"
+                />
+                <div>
+                  <div className="editor-picker-title">{item.displayName ?? item.storageKey ?? "Image"}</div>
+                  <div className="editor-picker-meta">{item.mimeType}</div>
+                </div>
               </button>
             ))}
           </div>

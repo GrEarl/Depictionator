@@ -7,6 +7,7 @@ import { MarkdownEditor } from "@/components/MarkdownEditor";
 import Link from "next/link";
 import Image from "next/image";
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
+import { toWikiPath } from "@/lib/wiki";
 
 type Entity = any;
 type Asset = { id: string; storageKey: string; mimeType: string } | null;
@@ -23,7 +24,8 @@ export function ArticleDetail({
   childEntities,
   relatedEntities,
   locations,
-  searchQuery
+  searchQuery,
+  isWatching
 }: {
   entity: Entity;
   workspaceId: string;
@@ -34,6 +36,7 @@ export function ArticleDetail({
   relatedEntities?: RelatedEntity[];
   locations?: LocationPin[];
   searchQuery?: string;
+  isWatching?: boolean;
 }) {
   const [tab, setTab] = useState<"read" | "edit" | "history" | "relations">("read");
   const { mode, viewpointId, eraId, chapterId } = useGlobalFilters();
@@ -118,7 +121,7 @@ export function ArticleDetail({
             <div>
               {parentEntity && (
                 <div className="article-breadcrumb">
-                  <Link href={`/articles/${parentEntity.id}`}>{parentEntity.title}</Link>
+                  <Link href={toWikiPath(parentEntity.title)}>{parentEntity.title}</Link>
                   <span className="breadcrumb-sep">/</span>
                 </div>
               )}
@@ -188,7 +191,7 @@ export function ArticleDetail({
                     {childEntities.map((child) => (
                       <Link
                         key={child.id}
-                        href={`/articles/${child.id}`}
+                        href={toWikiPath(child.title)}
                         className="entity-card"
                       >
                         <span className="entity-card-type">{child.type}</span>
@@ -207,7 +210,7 @@ export function ArticleDetail({
                     {relatedEntities.slice(0, 10).map((rel) => (
                       <Link
                         key={`${rel.id}-${rel.relation}`}
-                        href={`/articles/${rel.id}`}
+                        href={toWikiPath(rel.title)}
                         className="related-item"
                       >
                         <span className="related-type">{rel.relation.replace(/_/g, " ")}</span>
@@ -237,6 +240,7 @@ export function ArticleDetail({
                   name="bodyMd"
                   label={`Editing ${activeOverlay ? "Overlay (Draft)" : "Base Article"}`}
                   defaultValue={displayBody}
+                  workspaceId={workspaceId}
                   rows={30}
                   placeholder="# Article Title
 
@@ -381,7 +385,7 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
                     {rels.map((rel) => (
                       <Link
                         key={`${rel.id}-${rel.direction}`}
-                        href={`/articles/${rel.id}`}
+                        href={toWikiPath(rel.title)}
                         className="entity-card"
                       >
                         <span className="entity-card-type">{rel.type}</span>
@@ -459,7 +463,7 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
                 <tr>
                   <th>Parent</th>
                   <td>
-                    <Link href={`/articles/${parentEntity.id}`} className="entity-link">
+                    <Link href={toWikiPath(parentEntity.title)} className="entity-link">
                       {parentEntity.title}
                     </Link>
                   </td>
@@ -487,15 +491,45 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
           {/* Quick Actions */}
           <div className="infobox-actions">
             <details className="action-details">
-               <summary>Actions</summary>
-               <div className="p-2">
-                  <form action="/api/entities/update" method="post" className="form-grid">
+               <summary>Manage</summary>
+               <div className="p-4 space-y-4">
+                  <form action="/api/articles/rename" method="post" className="form-grid">
                     <input type="hidden" name="workspaceId" value={workspaceId} />
                     <input type="hidden" name="entityId" value={entity.id} />
-                    <label className="file-upload-label">
-                      <span>Upload Main Image</span>
-                      <input type="file" name="mainImage" accept="image/*" />
+                    <label>
+                      Rename title
+                      <input name="title" defaultValue={entity.title} />
                     </label>
+                    <label className="flex items-center gap-2 text-xs font-semibold normal-case tracking-normal text-muted">
+                      <input type="checkbox" name="addRedirect" defaultChecked />
+                      Keep old title as redirect (alias)
+                    </label>
+                    <button type="submit" className="btn-secondary">Rename</button>
+                  </form>
+
+                  <form action="/api/watches/toggle" method="post" className="form-grid">
+                    <input type="hidden" name="workspaceId" value={workspaceId} />
+                    <input type="hidden" name="targetType" value="entity" />
+                    <input type="hidden" name="targetId" value={entity.id} />
+                    <button type="submit" className="btn-secondary">
+                      {isWatching ? "Unwatch" : "Watch"}
+                    </button>
+                  </form>
+
+                  <form action="/api/articles/delete" method="post" className="form-grid">
+                    <input type="hidden" name="workspaceId" value={workspaceId} />
+                    <input type="hidden" name="entityId" value={entity.id} />
+                    <button
+                      type="submit"
+                      className="btn-danger"
+                      onClick={(event) => {
+                        if (!window.confirm("Delete this article? You can restore it later.")) {
+                          event.preventDefault();
+                        }
+                      }}
+                    >
+                      Delete
+                    </button>
                   </form>
                </div>
             </details>

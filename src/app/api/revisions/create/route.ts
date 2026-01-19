@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
+import { toWikiPath } from "@/lib/wiki";
 
 export async function POST(request: Request) {
   let session;
@@ -101,8 +102,16 @@ export async function POST(request: Request) {
     meta: { targetType }
   });
 
-  const redirectTarget = isBase ? articleId : overlayEntityId ?? overlayId;
-  return NextResponse.redirect(toRedirectUrl(request, `/articles/${redirectTarget}`));
-}
+  const redirectEntityId = isBase ? articleId : overlayEntityId ?? null;
+  if (redirectEntityId) {
+    const entity = await prisma.entity.findFirst({
+      where: { id: redirectEntityId, workspaceId }
+    });
+    if (entity) {
+      return NextResponse.redirect(toRedirectUrl(request, toWikiPath(entity.title)));
+    }
+  }
 
+  return NextResponse.redirect(toRedirectUrl(request, "/articles"));
+}
 

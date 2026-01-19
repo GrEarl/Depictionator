@@ -1,4 +1,4 @@
-/**
+﻿/**
  * MediaWiki/WikiText parser for Depictionator
  * Converts WikiText to Markdown and handles internal links
  */
@@ -34,6 +34,20 @@ export function wikiTextToMarkdown(wikitext: string): ParsedWikiText {
 
   let result = wikitext;
 
+  // Handle redirects early
+  const redirectMatch = result.match(/^#REDIRECT\s*\[\[([^\]]+)\]\]/i);
+  if (redirectMatch) {
+    const target = redirectMatch[1].trim();
+    const slug = target.replace(/ /g, "_");
+    return {
+      markdown: `> Redirect to [${target}](/wiki/${encodeURIComponent(slug)})`,
+      links: [{ target, display: target, isExternal: false }],
+      images: [],
+      categories: [],
+      templates: [],
+    };
+  }
+
   // Remove HTML comments
   result = result.replace(/<!--[\s\S]*?-->/g, "");
 
@@ -55,7 +69,7 @@ export function wikiTextToMarkdown(wikitext: string): ParsedWikiText {
 
   // Handle images/files: [[File:name.jpg|options|caption]] or [[Image:...]]
   result = result.replace(
-    /\[\[(?:File|Image|ファイル|画像):([^|\]]+)(?:\|([^\]]*))?\]\]/gi,
+    /\[\[(?:File|Image|繝輔ぃ繧､繝ｫ|逕ｻ蜒楯繧ｫ繝・ざ繝ｪ):([^|\]]+)(?:\|([^\]]*))?\]\]/gi,
     (match, filename, rest) => {
       const parts = rest ? rest.split("|") : [];
       const options: string[] = [];
@@ -74,11 +88,17 @@ export function wikiTextToMarkdown(wikitext: string): ParsedWikiText {
         }
       }
 
-      images.push({ filename: filename.trim(), caption, options });
+      const rawFilename = filename.trim();
+      images.push({ filename: rawFilename, caption, options });
+
+      const imgCaption = caption || rawFilename;
+      if (/^asset:/i.test(rawFilename)) {
+        const assetId = rawFilename.replace(/^asset:/i, "").trim();
+        return `![${imgCaption}](/api/assets/file/${encodeURIComponent(assetId)})`;
+      }
 
       // Convert to Markdown image
-      const cleanFilename = filename.trim().replace(/ /g, "_");
-      const imgCaption = caption || cleanFilename;
+      const cleanFilename = rawFilename.replace(/ /g, "_");
       return `![${imgCaption}](/api/wiki/image?file=${encodeURIComponent(cleanFilename)})`;
     }
   );
@@ -89,7 +109,7 @@ export function wikiTextToMarkdown(wikitext: string): ParsedWikiText {
     const cleanDisplay = display?.trim() || cleanTarget;
 
     // Skip special namespaces we've already handled
-    if (/^(File|Image|Category|ファイル|画像|カテゴリ):/i.test(cleanTarget)) {
+    if (/^(File|Image|Category|繝輔ぃ繧､繝ｫ|逕ｻ蜒楯繧ｫ繝・ざ繝ｪ):/i.test(cleanTarget)) {
       return "";
     }
 
@@ -100,8 +120,8 @@ export function wikiTextToMarkdown(wikitext: string): ParsedWikiText {
     });
 
     // Convert to Markdown link (internal entity reference)
-    const slug = cleanTarget.toLowerCase().replace(/ /g, "_");
-    return `[${cleanDisplay}](/articles?q=${encodeURIComponent(cleanTarget)})`;
+    const slug = cleanTarget.replace(/ /g, "_");
+    return `[${cleanDisplay}](/wiki/${encodeURIComponent(slug)})`;
   });
 
   // Handle external links: [http://example.com Display text] or bare URLs
@@ -196,12 +216,20 @@ export function markdownToWikiText(markdown: string): string {
     if (url.startsWith("http://") || url.startsWith("https://")) {
       return `[${url} ${text}]`;
     }
-    // Assume internal link
+    if (url.startsWith("/wiki/")) {
+      const target = decodeURIComponent(url.replace("/wiki/", "")).replace(/_/g, " ");
+      return text && text !== target ? `[[${target}|${text}]]` : `[[${target}]]`;
+    }
+    // Assume internal link fallback
     return `[[${text}]]`;
   });
 
   // Convert images: ![alt](/path) to [[File:name]]
   result = result.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (match, alt, url) => {
+    if (url.startsWith("/api/assets/file/")) {
+      const assetId = url.split("/").pop()?.split("?")[0] || "asset";
+      return `[[File:asset:${decodeURIComponent(assetId)}|${alt || ""}]]`;
+    }
     const filename = url.split("/").pop()?.split("?")[0] || "image";
     return `[[File:${decodeURIComponent(filename)}|${alt || ""}]]`;
   });
@@ -219,14 +247,21 @@ export function extractEntityReferences(text: string): string[] {
   const wikiMatches = text.matchAll(/\[\[([^\]|]+)(?:\|[^\]]+)?\]\]/g);
   for (const match of wikiMatches) {
     const target = match[1].trim();
-    if (!/^(File|Image|Category|ファイル|画像|カテゴリ):/i.test(target)) {
+    if (!/^(File|Image|Category|繝輔ぃ繧､繝ｫ|逕ｻ蜒楯繧ｫ繝・ざ繝ｪ):/i.test(target)) {
       refs.add(target);
     }
   }
 
-  // Markdown links to /articles
-  const mdMatches = text.matchAll(/\[([^\]]+)\]\(\/articles\?q=([^)]+)\)/g);
+  // Markdown links to /wiki
+  const mdMatches = text.matchAll(/\[([^\]]+)\]\(\/wiki\/([^)]+)\)/g);
   for (const match of mdMatches) {
+    const decoded = decodeURIComponent(match[2]).replace(/_/g, " ");
+    refs.add(decoded);
+  }
+
+  // Backward compatibility: legacy /articles?q= links
+  const legacyMatches = text.matchAll(/\[([^\]]+)\]\(\/articles\?q=([^)]+)\)/g);
+  for (const match of legacyMatches) {
     refs.add(decodeURIComponent(match[2]));
   }
 
@@ -238,3 +273,4 @@ export function extractEntityReferences(text: string): string[] {
 
   return Array.from(refs);
 }
+

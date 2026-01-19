@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireWorkspaceRole } from "@/lib/rbac";
 import { logAudit } from "@/lib/audit";
+import { toWikiPath } from "@/lib/wiki";
 
 export async function POST(req: NextRequest) {
   const form = await req.formData();
@@ -89,6 +90,6 @@ export async function POST(req: NextRequest) {
   //   }
   // });
 
-  const redirectUrl = req.headers.get("referer") || `/articles/${fromEntityId}`;
+  const redirectUrl = req.headers.get("referer") || toWikiPath(fromEntity.title);
   return NextResponse.redirect(new URL(redirectUrl, req.url), 303);
 }

@@ -5,6 +5,7 @@ import { TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import { parseOptionalString } from "@/lib/forms";
+import { toWikiPath } from "@/lib/wiki";
 
 export async function POST(request: Request) {
   let session;
@@ -33,6 +34,13 @@ export async function POST(request: Request) {
   });
   if (!overlay) {
     return apiError("Overlay not found", 404);
+  }
+
+  const entity = await prisma.entity.findFirst({
+    where: { id: overlay.entityId, workspaceId }
+  });
+  if (!entity) {
+    return apiError("Entity not found", 404);
   }
 
   const data: Record<string, unknown> = {};
@@ -99,5 +107,5 @@ export async function POST(request: Request) {
     targetId: overlayId
   });
 
-  return NextResponse.redirect(toRedirectUrl(request, "/articles/" + overlay.entityId));
+  return NextResponse.redirect(toRedirectUrl(request, toWikiPath(entity.title)));
 }

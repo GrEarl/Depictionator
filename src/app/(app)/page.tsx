@@ -5,6 +5,7 @@ import { getLocaleFromCookies } from "@/lib/locale";
 import { getUiCopy } from "@/lib/i18n";
 import { OnboardingModal } from "@/components/OnboardingModal";
 import Link from "next/link";
+import { toWikiPath } from "@/lib/wiki";
 
 type MembershipSummary = {
   id: string;
@@ -159,7 +160,7 @@ export default async function DashboardPage() {
                     {recentArticles.slice(0, 5).map((rev) => (
                       <Link
                         key={rev.id}
-                        href={`/articles/${rev.article?.entityId}`}
+                        href={toWikiPath(rev.article?.entity?.title ?? "Article")}
                         className="recent-item"
                       >
                         {rev.article?.entity?.title || "Article"}
@@ -244,5 +245,4 @@ export default async function DashboardPage() {
     </div>
   );
 }
-
 

@@ -50,7 +50,7 @@ export default async function ArticleCreatePage() {
             <input name="tags" placeholder="例: lore, history, major-character" />
             <span className="text-xs text-muted mt-1 block">カンマ区切りで複数指定（例: lore, magic）</span>
           </label>
-          <MarkdownEditor name="bodyMd" label="初期本文" rows={10} defaultMode="write" />
+          <MarkdownEditor name="bodyMd" label="初期本文" rows={10} defaultMode="write" workspaceId={workspace.id} />
           <button type="submit" className="btn-primary">記事を作成</button>
         </form>
       </section>

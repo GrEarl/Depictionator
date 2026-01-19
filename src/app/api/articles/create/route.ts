@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/prisma";
+import { toWikiPath } from "@/lib/wiki";
 import { EntityType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { parseCsv, parseOptionalString } from "@/lib/forms";
@@ -105,7 +106,6 @@ export async function POST(request: Request) {
     meta: { targetType: "base" }
   });
 
-  return NextResponse.redirect(toRedirectUrl(request, `/articles/${entity.id}`));
+  return NextResponse.redirect(toRedirectUrl(request, toWikiPath(entity.title)));
 }
-
 

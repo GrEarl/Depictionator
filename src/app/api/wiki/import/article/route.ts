@@ -6,6 +6,7 @@ import { logAudit } from "@/lib/audit";
 import { buildWikiAttribution, fetchWikiLangLinks, fetchWikiPage, normalizeLang, resolveWikiPageWithFallback } from "@/lib/wiki";
 import { toRedirectUrl } from "@/lib/redirect";
 import { generateText, type LlmProvider } from "@/lib/llm";
+import { toWikiPath } from "@/lib/wiki";
 
 const DEFAULT_WIKI_LANG = process.env.WIKI_DEFAULT_LANG ?? "en";
 const DEFAULT_LLM_PROVIDER = (process.env.WIKI_LLM_PROVIDER ?? process.env.LLM_DEFAULT_PROVIDER ?? "gemini_ai") as LlmProvider;
@@ -224,5 +225,5 @@ export async function POST(request: Request) {
     meta: { source: "wikipedia", url: page.url, lang: pageLang, synthesized: usedLlm }
   });
 
-  return NextResponse.redirect(toRedirectUrl(request, `/articles/${entity.id}`));
+  return NextResponse.redirect(toRedirectUrl(request, toWikiPath(entity.title)));
 }

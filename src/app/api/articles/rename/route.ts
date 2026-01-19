@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/prisma";
-import { EntityStatus } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
-import { parseCsv, parseOptionalString } from "@/lib/forms";
 import { logAudit } from "@/lib/audit";
 import { notifyWatchers } from "@/lib/notifications";
 import { toWikiPath } from "@/lib/wiki";
@@ -20,10 +18,7 @@ export async function POST(request: Request) {
   const workspaceId = String(form.get("workspaceId") ?? "");
   const entityId = String(form.get("entityId") ?? "");
   const title = String(form.get("title") ?? "").trim();
-  const statusValue = String(form.get("status") ?? "draft").trim().toLowerCase();
-  const status = (Object.values(EntityStatus) as string[]).includes(statusValue)
-    ? (statusValue as EntityStatus)
-    : EntityStatus.draft;
+  const addRedirect = String(form.get("addRedirect") ?? "true") !== "false";
 
   if (!workspaceId || !entityId || !title) {
     return apiError("Missing fields", 400);
@@ -35,26 +30,35 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
-  const storyIntroChapterId = parseOptionalString(form.get("storyIntroChapterId"));
-  if (storyIntroChapterId) {
-    const chapter = await prisma.chapter.findFirst({
-      where: { id: storyIntroChapterId, workspaceId, softDeletedAt: null }
-    });
-    if (!chapter) {
-      return apiError("Story chapter not found", 404);
-    }
+  const entity = await prisma.entity.findFirst({
+    where: { id: entityId, workspaceId }
+  });
+
+  if (!entity) {
+    return apiError("Entity not found", 404);
   }
 
-  const entity = await prisma.entity.update({
+  const existing = await prisma.entity.findFirst({
+    where: {
+      workspaceId,
+      id: { not: entityId },
+      title: { equals: title, mode: "insensitive" }
+    }
+  });
+
+  if (existing) {
+    return apiError("Title already exists", 409);
+  }
+
+  const nextAliases = addRedirect
+    ? Array.from(new Set([...(entity.aliases ?? []), entity.title])).filter(Boolean)
+    : entity.aliases ?? [];
+
+  await prisma.entity.update({
     where: { id: entityId, workspaceId },
     data: {
       title,
-      status,
-      aliases: parseCsv(form.get("aliases")),
-      tags: parseCsv(form.get("tags")),
-      worldExistFrom: parseOptionalString(form.get("worldExistFrom")),
-      worldExistTo: parseOptionalString(form.get("worldExistTo")),
-      storyIntroChapterId,
+      aliases: { set: nextAliases },
       updatedById: session.userId
     }
   });
@@ -62,19 +66,19 @@ export async function POST(request: Request) {
   await logAudit({
     workspaceId,
     actorUserId: session.userId,
-    action: "update",
+    action: "rename",
     targetType: "entity",
-    targetId: entity.id
+    targetId: entityId,
+    meta: { from: entity.title, to: title }
   });
 
   await notifyWatchers({
     workspaceId,
     targetType: "entity",
-    targetId: entity.id,
-    type: "entity_updated",
-    payload: { entityId: entity.id }
+    targetId: entityId,
+    type: "entity_renamed",
+    payload: { entityId, from: entity.title, to: title }
   });
 
-  return NextResponse.redirect(toRedirectUrl(request, toWikiPath(entity.title)));
+  return NextResponse.redirect(toRedirectUrl(request, toWikiPath(title)));
 }
-

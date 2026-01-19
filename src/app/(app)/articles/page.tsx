@@ -6,6 +6,7 @@ import { LlmContext } from "@/components/LlmContext";
 import { ArticleList } from "@/components/ArticleList";
 import { getFilteredEntities } from "@/lib/data/articles";
 import { prisma } from "@/lib/prisma";
+import { toWikiPath } from "@/lib/wiki";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 type PageProps = { searchParams: Promise<SearchParams> };
@@ -81,7 +82,7 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
                 <h4 className="text-[10px] font-bold uppercase text-muted tracking-widest mb-4">Recently Updated</h4>
                 <div className="recent-list">
                   {entities.slice(0, 5).map(e => (
-                    <Link key={e.id} href={`/articles/${e.id}`} className="recent-item group">
+                    <Link key={e.id} href={toWikiPath(e.title)} className="recent-item group">
                        <div className="font-semibold text-ink group-hover:text-accent transition-colors">{e.title}</div>
                        <div className="text-[10px] muted uppercase tracking-tighter">{e.type} • {new Date(e.updatedAt).toLocaleDateString()}</div>
                     </Link>
@@ -111,6 +112,12 @@ export default async function ArticlesPage({ searchParams }: PageProps) {
               </Link>
               <Link href="/articles/import" className="btn-secondary w-full justify-center">
                 Wikipediaからインポート
+              </Link>
+              <Link href="/articles/watchlist" className="btn-secondary w-full justify-center">
+                Watchlist
+              </Link>
+              <Link href="/articles/deleted" className="btn-secondary w-full justify-center">
+                Deleted Articles
               </Link>
               <p className="text-xs text-muted">
                 作成/インポートは専用ページで進めるようにしました。

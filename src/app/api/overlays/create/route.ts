@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
+import { toWikiPath } from "@/lib/wiki";
 
 export async function POST(request: Request) {
   let session;
@@ -119,7 +120,6 @@ export async function POST(request: Request) {
     meta: { targetType: "overlay" }
   });
 
-  return NextResponse.redirect(toRedirectUrl(request, `/articles/${entityId}`));
+  return NextResponse.redirect(toRedirectUrl(request, toWikiPath(entity.title)));
 }
-
 

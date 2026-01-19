@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { toWikiPath } from "@/lib/wiki";
 
 type EntitySummary = {
   id: string;
@@ -59,7 +60,7 @@ export function ArticleList({ entities, activeId, filters }: ArticleListProps) {
           {entities.map((entity) => (
             <Link
               key={entity.id}
-              href={`/articles/${entity.id}`}
+              href={toWikiPath(entity.title)}
               className={cn(
                 "group flex items-center justify-between px-3 py-3 rounded-lg transition-all border border-transparent",
                 activeId === entity.id 
