@@ -1081,7 +1081,7 @@ button[type="submit"] {
   position: absolute;
   top: 16px;
   left: 16px;
-  z-index: 10;
+  z-index: 1000;
   display: flex;
   gap: 8px;
   padding: 8px;
@@ -1110,7 +1110,7 @@ button[type="submit"] {
   position: absolute;
   left: 16px;
   bottom: 16px;
-  z-index: 10;
+  z-index: 900;
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid var(--border);
