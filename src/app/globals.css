@@ -1098,6 +1098,12 @@ button[type="submit"] {
   position: absolute;
   inset: 0;
   z-index: 9;
+  pointer-events: none;
+}
+
+.evidence-card-on-map,
+.connection-hint-overlay {
+  pointer-events: auto;
 }
 
 .map-legend.floating {
