@@ -115,3 +115,39 @@ pg_dump -h localhost -U postgres -d worldlore > backup.sql
 
 
 
+
+## Map Editor Features (Figma-Style UX)
+
+The new map editor provides a professional, designer-friendly experience:
+
+### Screen Structure
+- **/maps** - Grid/list view of all maps with preview thumbnails
+- **/maps/[id]** - Fullscreen Figma-style editor for individual maps
+- Separated creation/import/editing workflows for maximum canvas space
+
+### Editor Layout (Figma-inspired)
+- **Top Toolbar**: Mode selection (Select/Pin/Path), zoom controls, back navigation
+- **Left Sidebar**: Layers panel + drag-and-drop entity list
+- **Main Canvas**: Full-screen Leaflet map with proper coordinate handling
+- **Right Panel**: Context-sensitive properties (appears when pin/path selected)
+
+### Tools & Shortcuts
+- **V** - Select/Move mode (default)
+- **P** - Pin placement mode
+- **L** - Path drawing mode
+- **Esc** - Cancel current operation, return to select mode
+- **Arrow Keys** - Pan the map
+- **Drag entities** from sidebar → auto-create pins at drop location
+
+### Fixed Issues
+✅ Tools no longer appear outside map bounds (proper coordinate conversion)
+✅ Inspector panels are fixed UI elements, not canvas overlays
+✅ Map display is fullscreen (not cramped by surrounding UI)
+✅ Intuitive mode switching with visual feedback
+✅ Keyboard-first workflow for power users
+
+### Design Philosophy
+- **Zero training required**: Visual affordances guide users naturally
+- **Direct manipulation**: Drag entities, click to place, immediate feedback
+- **Personas-inspired aesthetics**: Bold typography, vibrant accents, game-like polish
+

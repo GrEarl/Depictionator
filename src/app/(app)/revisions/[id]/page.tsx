@@ -35,8 +35,10 @@ export default async function RevisionDetailPage({ params }: PageProps) {
           parentRevisionId: revision.parentRevisionId ?? null
         }}
       />
-      <h2>Revision {revision.id}</h2>
-      <div className="muted">Status: {revision.status}</div>
+      <h2>Revision Detail</h2>
+      <div className="muted">
+        Status: {revision.status} • {new Date(revision.createdAt).toLocaleString()}
+      </div>
       <form action="/api/revisions/restore" method="post">
         <input type="hidden" name="workspaceId" value={revision.workspaceId} />
         <input type="hidden" name="revisionId" value={revision.id} />

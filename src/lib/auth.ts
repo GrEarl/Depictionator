@@ -1,13 +1,25 @@
-﻿import { cache } from "react";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import type { NextResponse } from "next/server";
+import { MOCK_SESSION, MOCK_USER, MOCK_WORKSPACE_MEMBER, isDevelopmentMode } from "@/lib/mock-data";
 
 export const SESSION_COOKIE = "wl_session";
 const SESSION_MAX_AGE_DAYS = Number(process.env.SESSION_MAX_AGE_DAYS ?? "14");
 
 export const getCurrentSession = cache(async () => {
+  // Mock mode for development without DB
+  if (isDevelopmentMode()) {
+    const cookieStore = await cookies();
+    const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
+    // In dev mode, any session cookie is valid
+    if (sessionId) {
+      return MOCK_SESSION;
+    }
+    return null;
+  }
+
   const cookieStore = await cookies();
   const sessionId = cookieStore.get(SESSION_COOKIE)?.value;
   if (!sessionId) return null;
@@ -33,6 +45,12 @@ export async function requireUser() {
 }
 
 export async function requireWorkspaceMembership(slug: string) {
+  // Mock mode for development
+  if (isDevelopmentMode()) {
+    const user = await requireUser();
+    return MOCK_WORKSPACE_MEMBER;
+  }
+
   const user = await requireUser();
   const membership = await prisma.workspaceMember.findFirst({
     where: {
@@ -47,6 +65,14 @@ export async function requireWorkspaceMembership(slug: string) {
 }
 
 export async function createSession(userId: string, activeWorkspaceId?: string | null) {
+  // Mock mode for development
+  if (isDevelopmentMode()) {
+    return {
+      ...MOCK_SESSION,
+      id: crypto.randomUUID(),
+    };
+  }
+
   const sessionId = crypto.randomUUID();
   const expiresAt = new Date(Date.now() + SESSION_MAX_AGE_DAYS * 24 * 60 * 60 * 1000);
 

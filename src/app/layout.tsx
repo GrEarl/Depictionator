@@ -1,4 +1,5 @@
 import "./globals.css";
+import "leaflet/dist/leaflet.css";
 import { getLocaleFromCookies } from "@/lib/locale";
 
 export const metadata = {
