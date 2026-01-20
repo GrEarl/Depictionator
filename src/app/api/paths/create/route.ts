@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/prisma";
 import { ArrowStyle, TruthFlag } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
@@ -179,7 +178,5 @@ export async function POST(request: Request) {
     });
   }
 
-  return NextResponse.redirect(toRedirectUrl(request, "/maps"));
+  return NextResponse.json({ ok: true, pathId: path.id });
 }
-
-
