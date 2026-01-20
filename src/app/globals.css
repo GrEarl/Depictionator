@@ -224,7 +224,7 @@
 }
 
 .overview-card {
-  @apply panel-game p-6 relative;
+  @apply p-6 relative;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -276,8 +276,13 @@
 }
 
 .action-btn {
-  @apply px-6 py-4 bg-accent hover:bg-accent-hover text-white font-bold uppercase tracking-wide text-center transition-all glow-on-hover;
+  @apply px-6 py-4 bg-accent hover:bg-accent-hover text-white font-bold uppercase tracking-wide text-center transition-all;
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.action-btn:hover {
+  box-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow);
+  transform: translateY(-2px);
 }
 
 /* ==== PANELS ==== */
@@ -362,7 +367,12 @@ input:focus, select:focus, textarea:focus {
 }
 
 button[type="submit"] {
-  @apply px-6 py-3 bg-accent hover:bg-accent-hover text-white font-bold uppercase tracking-wide transition-all glow-on-hover;
+  @apply px-6 py-3 bg-accent hover:bg-accent-hover text-white font-bold uppercase tracking-wide transition-all;
+}
+
+button[type="submit"]:hover {
+  box-shadow: 0 0 20px var(--accent-glow), 0 0 40px var(--accent-glow);
+  transform: translateY(-2px);
 }
 
 /* ==== RESPONSIVE ==== */

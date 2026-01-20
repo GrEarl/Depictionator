@@ -111,7 +111,7 @@ export default async function DashboardPage() {
             <>
               <div className="overview-grid stagger-children">
                 {/* Entity Stats */}
-                <div className="overview-card animate-slide-in">
+                <div className="overview-card panel-game animate-slide-in">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">{copy.nav.articles}</h3>
                   <div className="stat-large">{entities.length}</div>
                   <div className="stat-breakdown">
@@ -126,7 +126,7 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Maps */}
-                <div className="overview-card">
+                <div className="overview-card panel-game">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">{copy.nav.maps}</h3>
                   <div className="stat-large">{maps.length}</div>
                   <div className="recent-list">
@@ -140,7 +140,7 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Evidence Boards */}
-                <div className="overview-card">
+                <div className="overview-card panel-game">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">{copy.nav.boards}</h3>
                   <div className="stat-large">{evidenceBoards.length}</div>
                   <div className="recent-list">
@@ -154,7 +154,7 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* Recent Updates */}
-                <div className="overview-card">
+                <div className="overview-card panel-game">
                   <h3 className="text-xs font-bold uppercase tracking-widest text-muted mb-2">{copy.dashboard.recentActivity}</h3>
                   <div className="recent-list">
                     {recentArticles.slice(0, 5).map((rev) => (
@@ -245,4 +245,3 @@ export default async function DashboardPage() {
     </div>
   );
 }
-
