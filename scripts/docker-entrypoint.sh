@@ -7,11 +7,11 @@ if [ -z "$DATABASE_URL" ]; then
 fi
 
 echo "Enabling pgvector extension..."
-npx prisma db execute --stdin <<SQL
+npx prisma db execute --config /app/prisma.config.ts --stdin <<SQL
 CREATE EXTENSION IF NOT EXISTS vector;
 SQL
 
 echo "Running prisma db push..."
-npx prisma db push --accept-data-loss
+npx prisma db push --config /app/prisma.config.ts --accept-data-loss
 
 exec "$@"
