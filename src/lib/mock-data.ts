@@ -12,8 +12,7 @@ export const MOCK_WORKSPACE = {
   id: "mock-workspace-1",
   name: "Demo Workspace",
   slug: "demo-workspace",
-  description: "A demo workspace for UI testing",
-  ownerId: MOCK_USER.id,
+  createdById: MOCK_USER.id,
   createdAt: new Date("2024-01-01"),
   updatedAt: new Date("2024-01-01"),
 };
