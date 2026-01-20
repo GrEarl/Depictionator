@@ -907,6 +907,32 @@ export function FigmaMapEditor({
     }
   }
 
+  async function deletePin() {
+    if (!selectedPinId) return;
+    if (!confirm("Delete this pin?")) return;
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("pinId", selectedPinId);
+      const response = await fetch("/api/pins/delete", { method: "POST", body: form });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Failed to delete pin:", errorText);
+        throw new Error(response.statusText);
+      }
+
+      setSelectedPinId("");
+      setPinDraft(createPinDraft());
+      setShowRightPanel(false);
+      draftLayerRef.current?.clearLayers();
+      router.refresh();
+      addToast("Pin deleted", "success");
+    } catch (error) {
+      console.error("Error deleting pin:", error);
+      addToast("Failed to delete pin", "error");
+    }
+  }
+
   async function submitPath() {
     if (!map || pathPoints.length < 2) {
       addToast("Please add at least 2 points to create a path", "info");
@@ -959,7 +985,7 @@ export function FigmaMapEditor({
   };
 
   return (
-    <div className="map-editor-root h-screen flex flex-col bg-bg overflow-hidden">
+    <div className="map-editor-root h-full min-h-0 w-full flex flex-col bg-bg overflow-hidden">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       {/* Top Toolbar - Figma style */}
@@ -1115,7 +1141,7 @@ export function FigmaMapEditor({
         </div>
       </header>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left Sidebar */}
         {showLeftSidebar && (
           <aside className="w-64 border-r border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden">
@@ -1207,7 +1233,7 @@ export function FigmaMapEditor({
         )}
 
         {/* Main Canvas */}
-        <main className="flex-1 relative bg-bg-elevated overflow-hidden">
+        <main className="flex-1 min-w-0 relative bg-bg-elevated overflow-hidden">
           <div ref={containerRef} className="absolute inset-0" style={{ cursor: mode === "path" ? "crosshair" : mode === "pin" ? "crosshair" : "default" }} />
 
           {/* Mode indicator */}
@@ -1552,7 +1578,14 @@ export function FigmaMapEditor({
 
             <div className="p-4 border-t border-border flex-shrink-0">
               {selectedPinId ? (
-                <Button onClick={submitPinUpdate} className="w-full">Save Changes</Button>
+                <div className="flex gap-2">
+                  <Button onClick={submitPinUpdate} className="flex-1">Save Changes</Button>
+                  <Button variant="danger" onClick={deletePin} title="Delete Pin">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                    </svg>
+                  </Button>
+                </div>
               ) : (
                 <Button onClick={submitPin} disabled={pinDraft.x === null || !pinDraft.label.trim()} className="w-full">
                   Create Pin
