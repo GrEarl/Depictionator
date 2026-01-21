@@ -1132,19 +1132,19 @@ button[type="submit"]:hover {
 
 .map-editor-root main {
   position: relative;
-  z-index: 1;
+  z-index: 0;
 }
 
 .map-editor-root .leaflet-container {
   position: relative;
-  z-index: 1;
+  z-index: 2;
 }
 
 .map-editor-root .leaflet-pane,
 .map-editor-root .leaflet-map-pane,
 .map-editor-root .leaflet-overlay-pane,
 .map-editor-root .leaflet-image-layer {
-  z-index: 1 !important;
+  z-index: 2 !important;
 }
 
 .map-editor-root .evidence-card-on-map,
