@@ -1418,8 +1418,16 @@ export function FigmaMapEditor({
         )}
 
         {/* Main Canvas */}
-        <main className="flex-1 min-w-0 relative bg-bg-elevated overflow-hidden">
-          <div ref={containerRef} className="absolute inset-0" style={{ cursor: mode === "path" ? "crosshair" : mode === "pin" ? "crosshair" : "default" }} />
+          <main className="flex-1 min-w-0 relative bg-bg-elevated overflow-hidden">
+            <div
+              ref={containerRef}
+              className="absolute inset-0 w-full h-full"
+              style={{
+                cursor: mode === "path" ? "crosshair" : mode === "pin" ? "crosshair" : "default",
+                width: "100%",
+                height: "100%"
+              }}
+            />
 
           {/* Mode indicator */}
           <div className="map-mode-indicator absolute bottom-4 right-4 bg-panel border border-border rounded-lg px-3 py-2 text-xs font-medium text-ink shadow-lg pointer-events-none z-10">
