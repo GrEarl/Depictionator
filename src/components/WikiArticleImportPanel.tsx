@@ -47,6 +47,8 @@ export function WikiArticleImportPanel({
   const [publish, setPublish] = useState("false");
   const [useLlm, setUseLlm] = useState("true");
   const [aggregateLangs, setAggregateLangs] = useState("true");
+  const [importMedia, setImportMedia] = useState("true");
+  const [mediaLimit, setMediaLimit] = useState("50");
   const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [templateName, setTemplateName] = useState("");
@@ -288,6 +290,30 @@ export function WikiArticleImportPanel({
                       <label className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border cursor-pointer">
                         <span className="text-[10px] font-bold uppercase text-muted">Multi-Lang</span>
                         <input type="checkbox" name="aggregateLangs" checked={aggregateLangs === "true"} onChange={(e) => setAggregateLangs(e.target.checked ? "true" : "false")} className="w-4 h-4 rounded text-accent" />
+                      </label>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <label className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border cursor-pointer">
+                        <span className="text-[10px] font-bold uppercase text-muted">Import Media</span>
+                        <input
+                          type="checkbox"
+                          checked={importMedia === "true"}
+                          onChange={(e) => setImportMedia(e.target.checked ? "true" : "false")}
+                          className="w-4 h-4 rounded text-accent"
+                        />
+                        <input type="hidden" name="importMedia" value={importMedia} />
+                      </label>
+                      <label className="flex flex-col gap-1 p-2 rounded-lg bg-bg border border-border">
+                        <span className="text-[10px] font-bold uppercase text-muted">Media Limit</span>
+                        <input
+                          name="mediaLimit"
+                          type="number"
+                          min={0}
+                          max={300}
+                          value={mediaLimit}
+                          onChange={(e) => setMediaLimit(e.target.value)}
+                          className="w-full bg-bg border border-border rounded-lg px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
+                        />
                       </label>
                     </div>
                     <div className="space-y-3">

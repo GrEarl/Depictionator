@@ -3,7 +3,18 @@ import { prisma } from "@/lib/prisma";
 import { EntityType, SourceTargetType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
-import { buildWikiAttribution, fetchWikiLangLinks, fetchWikiPage, normalizeLang, resolveWikiPageWithFallback } from "@/lib/wiki";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
+import {
+  buildWikiAttribution,
+  fetchWikiImageInfo,
+  fetchWikiLangLinks,
+  fetchWikiPage,
+  fetchWikiPageMedia,
+  normalizeLang,
+  resolveWikiPageWithFallback,
+  safeFilename
+} from "@/lib/wiki";
 import { toRedirectUrl } from "@/lib/redirect";
 import { generateText, type LlmProvider } from "@/lib/llm";
 import { toWikiPath } from "@/lib/wiki";
@@ -11,6 +22,8 @@ import { toWikiPath } from "@/lib/wiki";
 const DEFAULT_WIKI_LANG = process.env.WIKI_DEFAULT_LANG ?? "en";
 const DEFAULT_LLM_PROVIDER = (process.env.WIKI_LLM_PROVIDER ?? process.env.LLM_DEFAULT_PROVIDER ?? "gemini_ai") as LlmProvider;
 const DEFAULT_LANG_LIMIT = Number(process.env.WIKI_IMPORT_LANG_LIMIT ?? "10");
+const DEFAULT_MEDIA_LIMIT = Number(process.env.WIKI_IMPORT_MEDIA_LIMIT ?? "50");
+const DEFAULT_MEDIA_MAX_BYTES = Number(process.env.WIKI_IMPORT_MEDIA_MAX_BYTES ?? `${200 * 1024 * 1024}`);
 
 type WikiPage = NonNullable<Awaited<ReturnType<typeof fetchWikiPage>>>;
 type WikiSource = {
@@ -93,6 +106,71 @@ function renderPromptTemplate(template: string, targetLang: string, sources: Wik
   return rendered;
 }
 
+async function importWikiAsset(
+  workspaceId: string,
+  userId: string,
+  info: Awaited<ReturnType<typeof fetchWikiImageInfo>>
+) {
+  if (!info) return null;
+  const download = await fetch(info.url);
+  if (!download.ok) {
+    throw new Error(`Failed to download media (${download.status})`);
+  }
+
+  const arrayBuffer = await download.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  const storageDir = path.join(process.cwd(), "storage", workspaceId);
+  await mkdir(storageDir, { recursive: true });
+  const storageKey = `${Date.now()}-${safeFilename(info.title)}`;
+  await writeFile(path.join(storageDir, storageKey), buffer);
+
+  const asset = await prisma.asset.create({
+    data: {
+      workspaceId,
+      kind: info.mime.startsWith("image/") ? "image" : "file",
+      storageKey,
+      mimeType: info.mime,
+      size: info.size ?? buffer.length,
+      width: info.width,
+      height: info.height,
+      createdById: userId,
+      sourceUrl: info.url,
+      author: info.author,
+      licenseId: info.licenseId,
+      licenseUrl: info.licenseUrl,
+      attributionText: info.attributionText,
+      retrievedAt: new Date()
+    }
+  });
+
+  await prisma.sourceRecord.create({
+    data: {
+      workspaceId,
+      targetType: SourceTargetType.asset,
+      targetId: asset.id,
+      sourceUrl: info.url,
+      title: info.title,
+      author: info.author,
+      licenseId: info.licenseId,
+      licenseUrl: info.licenseUrl,
+      attributionText: info.attributionText,
+      retrievedAt: new Date(),
+      createdById: userId
+    }
+  });
+
+  await logAudit({
+    workspaceId,
+    actorUserId: userId,
+    action: "import",
+    targetType: "asset",
+    targetId: asset.id,
+    meta: { source: "wikipedia", url: info.url }
+  });
+
+  return asset;
+}
+
 export async function POST(request: Request) {
   let session;
   try {
@@ -119,6 +197,17 @@ export async function POST(request: Request) {
   const llmPrompt = String(form.get("llmPrompt") ?? "").trim();
   const llmPromptTemplateId = String(form.get("llmPromptTemplateId") ?? "").trim();
   const llmPromptTemplateName = String(form.get("llmPromptTemplateName") ?? "").trim();
+  const importMedia = String(form.get("importMedia") ?? "true") === "true";
+  const mediaLimitRaw = Number(form.get("mediaLimit") ?? DEFAULT_MEDIA_LIMIT);
+  const mediaLimit = Math.min(
+    Math.max(Number.isFinite(mediaLimitRaw) ? mediaLimitRaw : DEFAULT_MEDIA_LIMIT, 0),
+    300
+  );
+  const mediaMaxRaw = Number(form.get("mediaMaxBytes") ?? DEFAULT_MEDIA_MAX_BYTES);
+  const mediaMaxBytes = Math.max(
+    Number.isFinite(mediaMaxRaw) ? mediaMaxRaw : DEFAULT_MEDIA_MAX_BYTES,
+    0
+  );
 
   if (!workspaceId || (!pageId && !title)) {
     return apiError("Missing fields", 400);
@@ -244,6 +333,67 @@ export async function POST(request: Request) {
       where: { entityId: entity.id },
       data: { baseRevisionId: revision.id }
     });
+  }
+
+  if (importMedia) {
+    const mediaEntries: Array<{ title: string; lang: string }> = [];
+    const pageImageTitle = page.pageImageTitle?.replace(/^File:/i, "").trim();
+    if (pageImageTitle) {
+      mediaEntries.push({ title: pageImageTitle, lang: pageLang });
+    }
+
+    const mediaLists = await Promise.all(
+      sources.map(async (source) => {
+        try {
+          const titles = await fetchWikiPageMedia(source.lang, source.page.pageId);
+          return titles.map((title) => ({ title, lang: source.lang }));
+        } catch {
+          return [] as Array<{ title: string; lang: string }>;
+        }
+      })
+    );
+    mediaEntries.push(...mediaLists.flat());
+
+    const seen = new Set<string>();
+    const deduped = mediaEntries.filter((entry) => {
+      const key = entry.title.toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const limited = mediaLimit > 0 ? deduped.slice(0, mediaLimit) : deduped;
+    let mainImageId: string | null = null;
+
+    for (const entry of limited) {
+      try {
+        let info = await fetchWikiImageInfo(entry.lang, entry.title);
+        if (!info && entry.lang !== "commons") {
+          info = await fetchWikiImageInfo("commons", entry.title);
+        }
+        if (!info) continue;
+        if (mediaMaxBytes && info.size && info.size > mediaMaxBytes) continue;
+
+        const asset = await importWikiAsset(workspaceId, session.userId, info);
+        if (!asset) continue;
+        if (!mainImageId && info.mime.startsWith("image/")) {
+          if (pageImageTitle && entry.title === pageImageTitle) {
+            mainImageId = asset.id;
+          } else if (!pageImageTitle) {
+            mainImageId = asset.id;
+          }
+        }
+      } catch {
+        // ignore failed media
+      }
+    }
+
+    if (mainImageId) {
+      await prisma.entity.update({
+        where: { id: entity.id },
+        data: { mainImageId }
+      });
+    }
   }
 
   for (const source of sources) {

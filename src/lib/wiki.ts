@@ -6,6 +6,7 @@ export type WikiPage = {
   extract?: string;
   wikitext?: string;
   thumbnail?: { source: string; width: number; height: number } | null;
+  pageImageTitle?: string | null;
 };
 
 export type WikiLangLink = { lang: string; title: string };
@@ -81,7 +82,7 @@ export async function fetchWikiPage(
     inprop: "url",
     rvprop: "content",
     rvslots: "main",
-    piprop: "thumbnail",
+    piprop: "thumbnail|name",
     pithumbsize: "800"
   };
 
@@ -119,8 +120,51 @@ export async function fetchWikiPage(
     wikitext: wikitext || undefined,
     thumbnail: page.thumbnail
       ? { source: page.thumbnail.source, width: page.thumbnail.width, height: page.thumbnail.height }
-      : null
+      : null,
+    pageImageTitle: page.pageimage ? String(page.pageimage) : null
   };
+}
+
+export async function fetchWikiPageMedia(langInput: string | null, pageId: string): Promise<string[]> {
+  const lang = normalizeLang(langInput || DEFAULT_LANG) || DEFAULT_LANG;
+  if (!pageId) return [];
+
+  let titles: string[] = [];
+  let imContinue: string | null = null;
+
+  do {
+    const params: Record<string, string> = {
+      action: "query",
+      format: "json",
+      origin: "*",
+      prop: "images",
+      imlimit: "500",
+      pageids: pageId
+    };
+    if (imContinue) {
+      params.imcontinue = imContinue;
+    }
+
+    const url = buildWikiApiUrl(lang, params);
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Wikipedia request failed (${response.status})`);
+    }
+    const data = await response.json();
+    const pages = data?.query?.pages ?? {};
+    const page = Object.values(pages)[0] as any;
+    const images = page?.images ?? [];
+    titles = titles.concat(
+      images
+        .map((image: any) => String(image.title || ""))
+        .filter(Boolean)
+        .map((title: string) => title.replace(/^File:/i, "").trim())
+        .filter(Boolean)
+    );
+    imContinue = data?.continue?.imcontinue ?? null;
+  } while (imContinue);
+
+  return Array.from(new Set(titles));
 }
 
 export async function fetchWikiLangLinks(lang: string, pageId: string): Promise<WikiLangLink[]> {
