@@ -48,7 +48,8 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
     ? await Promise.all([
         prisma.viewpoint.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
-          orderBy: { createdAt: "asc" }
+          orderBy: { createdAt: "asc" },
+          include: { entity: { select: { id: true, title: true } } }
         }),
         prisma.asset.findMany({
           where: { workspaceId: workspace.id, softDeletedAt: null },
@@ -309,6 +310,15 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                     <textarea name="description" rows={2} placeholder="What information is known/unknown from this viewpoint?" className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent" />
                     <span className="text-xs text-muted">Optional notes about this perspective's knowledge</span>
                   </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase text-muted">Linked Entity (optional)</label>
+                    <input
+                      name="entityQuery"
+                      placeholder="Type entity title or alias"
+                      className="w-full px-3 py-2 bg-bg border border-border rounded-lg outline-none focus:ring-2 focus:ring-accent"
+                    />
+                    <span className="text-xs text-muted">Leave blank if not linked to a specific entity.</span>
+                  </div>
                   <div className="pt-2">
                     <button type="submit" className="px-4 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent-hover transition-colors">Add Viewpoint</button>
                   </div>
@@ -321,15 +331,58 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                     <div key={v.id} className="flex items-center justify-between p-3 bg-bg rounded-lg border border-border">
                       <div className="flex items-center gap-3">
                         <span className="w-2 h-2 rounded-full bg-accent"></span>
-                        <span className="font-medium text-sm">{v.name}</span>
+                        <div>
+                          <div className="font-medium text-sm">{v.name}</div>
+                          {v.description && <div className="text-xs text-muted">{v.description}</div>}
+                          {v.entity && (
+                            <div className="text-[10px] text-muted uppercase tracking-widest">
+                              Linked: {v.entity.title}
+                            </div>
+                          )}
+                        </div>
                         <span className="text-xs text-muted uppercase border border-border px-1.5 rounded">{v.type}</span>
                       </div>
-                      <form action="/api/archive" method="post">
-                        <input type="hidden" name="workspaceId" value={workspace.id} />
-                        <input type="hidden" name="targetType" value="viewpoint" />
-                        <input type="hidden" name="targetId" value={v.id} />
-                        <button type="submit" className="text-xs text-muted hover:text-red-500 transition-colors">Archive</button>
-                      </form>
+                      <div className="flex items-center gap-3">
+                        <details className="action-details">
+                          <summary>Manage</summary>
+                          <form action="/api/viewpoints/update" method="post" className="form-grid p-4">
+                            <input type="hidden" name="workspaceId" value={workspace.id} />
+                            <input type="hidden" name="viewpointId" value={v.id} />
+                            <label>
+                              Name
+                              <input name="name" defaultValue={v.name} />
+                            </label>
+                            <label>
+                              Type
+                              <select name="type" defaultValue={v.type} className="capitalize">
+                                {VIEWPOINT_TYPES.map((t) => (
+                                  <option key={t} value={t}>{t}</option>
+                                ))}
+                              </select>
+                            </label>
+                            <label>
+                              Description
+                              <textarea name="description" rows={2} defaultValue={v.description || ""} />
+                            </label>
+                            <label>
+                              Linked Entity (optional)
+                              <input
+                                name="entityQuery"
+                                defaultValue={v.entity?.title ?? ""}
+                                placeholder="Type entity title or alias"
+                              />
+                              <span className="text-xs text-muted">Leave blank to clear link.</span>
+                            </label>
+                            <button type="submit" className="btn-secondary">Update</button>
+                          </form>
+                        </details>
+                        <form action="/api/archive" method="post">
+                          <input type="hidden" name="workspaceId" value={workspace.id} />
+                          <input type="hidden" name="targetType" value="viewpoint" />
+                          <input type="hidden" name="targetId" value={v.id} />
+                          <button type="submit" className="text-xs text-muted hover:text-red-500 transition-colors">Archive</button>
+                        </form>
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -21,6 +21,7 @@ export async function POST(request: Request) {
     ? (typeValue as ViewpointType)
     : ViewpointType.player;
   const entityId = String(form.get("entityId") ?? "").trim();
+  const entityQuery = String(form.get("entityQuery") ?? "").trim();
   const description = String(form.get("description") ?? "").trim();
 
   if (!workspaceId || !name) {
@@ -33,12 +34,31 @@ export async function POST(request: Request) {
     return apiError("Forbidden", 403);
   }
 
+  let resolvedEntityId = entityId || null;
+  if (!resolvedEntityId && entityQuery) {
+    const entity = await prisma.entity.findFirst({
+      where: {
+        workspaceId,
+        softDeletedAt: null,
+        OR: [
+          { title: { equals: entityQuery, mode: "insensitive" } },
+          { aliases: { has: entityQuery } }
+        ]
+      },
+      select: { id: true }
+    });
+    if (!entity) {
+      return apiError("Entity not found", 404);
+    }
+    resolvedEntityId = entity.id;
+  }
+
   const viewpoint = await prisma.viewpoint.create({
     data: {
       workspaceId,
       name,
       type,
-      entityId: entityId || null,
+      entityId: resolvedEntityId,
       description: description || null
     }
   });
@@ -53,5 +73,4 @@ export async function POST(request: Request) {
 
   return NextResponse.redirect(toRedirectUrl(request, "/settings"));
 }
-
 

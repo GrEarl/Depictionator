@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 interface PerspectiveInfo {
   id: string;
   name: string;
-  type: 'character' | 'faction' | 'organization' | 'nation';
+  type: 'player' | 'faction' | 'character' | 'omniscient';
   color: string;
 }
 
@@ -49,6 +49,15 @@ export default function PerspectiveAnalysisPanel({ entityId, perspectiveId }: Pr
   const [analysis, setAnalysis] = useState<EntityPerspectiveView | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [entities, setEntities] = useState<Array<{ id: string; title: string; type: string }>>([]);
+  const fallbackColor = (value: string) => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash << 5) - hash + value.charCodeAt(i);
+      hash |= 0;
+    }
+    const hue = Math.abs(hash) % 360;
+    return `hsl(${hue} 70% 55%)`;
+  };
 
   // Load perspectives
   useEffect(() => {
@@ -58,7 +67,7 @@ export default function PerspectiveAnalysisPanel({ entityId, perspectiveId }: Pr
       const res = await fetch(`/api/perspectives?workspaceId=${workspaceId}`);
       if (res.ok) {
         const data = await res.json();
-        setPerspectives(data);
+        setPerspectives(Array.isArray(data) ? data : []);
       }
     }
 
@@ -73,7 +82,7 @@ export default function PerspectiveAnalysisPanel({ entityId, perspectiveId }: Pr
       const res = await fetch(`/api/entities?workspaceId=${workspaceId}&limit=100`);
       if (res.ok) {
         const data = await res.json();
-        setEntities(data);
+        setEntities(Array.isArray(data) ? data : []);
       }
     }
 
@@ -223,7 +232,7 @@ export default function PerspectiveAnalysisPanel({ entityId, perspectiveId }: Pr
                     <span
                       className="w-3 h-3 rounded-full"
                       style={{
-                        backgroundColor: perspectives.find(p => p.id === pov.perspectiveId)?.color || '#999'
+                        backgroundColor: perspectives.find(p => p.id === pov.perspectiveId)?.color || fallbackColor(pov.perspectiveId)
                       }}
                     ></span>
                     {pov.perspectiveName}

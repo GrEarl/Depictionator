@@ -49,16 +49,25 @@ export async function POST(request: Request) {
       return apiError("Invalid viewpoint type", 400);
     }
   }
-  const entityId = parseOptionalString(form.get("entityId"));
-  if (entityId !== null) {
-    if (entityId) {
+  const entityQuery = form.get("entityQuery");
+  if (entityQuery !== null) {
+    const query = String(entityQuery ?? "").trim();
+    if (!query) {
+      data.entityId = null;
+    } else {
       const entity = await prisma.entity.findFirst({
-        where: { id: entityId, workspaceId, softDeletedAt: null }
+        where: {
+          workspaceId,
+          softDeletedAt: null,
+          OR: [
+            { title: { equals: query, mode: "insensitive" } },
+            { aliases: { has: query } }
+          ]
+        },
+        select: { id: true }
       });
       if (!entity) return apiError("Entity not found", 404);
-      data.entityId = entityId;
-    } else {
-      data.entityId = null;
+      data.entityId = entity.id;
     }
   }
 
