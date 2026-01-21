@@ -71,7 +71,7 @@ export async function fetchWikiPage(
   const lang = normalizeLang(langInput || DEFAULT_LANG) || DEFAULT_LANG;
   if (!pageId && !title) return null;
 
-  const url = buildWikiApiUrl(lang, {
+  const params: Record<string, string> = {
     action: "query",
     format: "json",
     origin: "*",
@@ -82,16 +82,25 @@ export async function fetchWikiPage(
     rvprop: "content",
     rvslots: "main",
     piprop: "thumbnail",
-    pithumbsize: "800",
-    titles: title || "",
-    pageids: pageId || ""
-  });
+    pithumbsize: "800"
+  };
+
+  if (pageId) {
+    params.pageids = pageId;
+  } else if (title) {
+    params.titles = title;
+  }
+
+  const url = buildWikiApiUrl(lang, params);
 
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Wikipedia request failed (${response.status})`);
   }
   const data = await response.json();
+  if (data?.error?.info) {
+    throw new Error(data.error.info);
+  }
   const pages = data?.query?.pages ?? {};
   const page = Object.values(pages)[0] as any;
   if (!page || page.missing) return null;
