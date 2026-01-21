@@ -38,6 +38,7 @@ export function WikiArticleImportPanel({
   const defaultEntityType = entityTypes[0] ?? "concept";
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState("en");
+  const [targetLang, setTargetLang] = useState("");
   const [results, setResults] = useState<WikiSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -293,16 +294,32 @@ export function WikiArticleImportPanel({
                       </label>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
-                      <label className="flex items-center justify-between p-2 rounded-lg bg-bg border border-border cursor-pointer">
-                        <span className="text-[10px] font-bold uppercase text-muted">Import Media</span>
+                      <label className="flex flex-col gap-1 p-2 rounded-lg bg-bg border border-border">
+                        <span className="text-[10px] font-bold uppercase text-muted">Target Language</span>
                         <input
-                          type="checkbox"
-                          checked={importMedia === "true"}
-                          onChange={(e) => setImportMedia(e.target.checked ? "true" : "false")}
-                          className="w-4 h-4 rounded text-accent"
+                          name="targetLang"
+                          value={targetLang}
+                          onChange={(e) => setTargetLang(e.target.value)}
+                          placeholder="e.g. ja, en, fr"
+                          className="w-full bg-bg border border-border rounded-lg px-2 py-1 text-xs outline-none focus:ring-2 focus:ring-accent"
                         />
-                        <input type="hidden" name="importMedia" value={importMedia} />
+                        <span className="text-[10px] text-muted">Blank = same as source</span>
                       </label>
+                      <div className="flex flex-col gap-1 p-2 rounded-lg bg-bg border border-border">
+                        <span className="text-[10px] font-bold uppercase text-muted">Import Media</span>
+                        <label className="flex items-center justify-between cursor-pointer">
+                          <span className="text-xs text-muted">Enabled</span>
+                          <input
+                            type="checkbox"
+                            checked={importMedia === "true"}
+                            onChange={(e) => setImportMedia(e.target.checked ? "true" : "false")}
+                            className="w-4 h-4 rounded text-accent"
+                          />
+                        </label>
+                        <input type="hidden" name="importMedia" value={importMedia} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-4">
                       <label className="flex flex-col gap-1 p-2 rounded-lg bg-bg border border-border">
                         <span className="text-[10px] font-bold uppercase text-muted">Media Limit</span>
                         <input

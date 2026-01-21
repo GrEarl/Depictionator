@@ -59,11 +59,13 @@ function buildSynthesisPrompt(targetLang: string, sources: WikiSource[]): string
     `Create a concise internal wiki article in ${targetLang}.`,
     `Use only the provided sources. Do not invent facts.`,
     `If sources conflict, note the conflict clearly.`,
-    `Output Markdown only.`,
+    `Output Markdown only (no HTML, no wikitext, no templates).`,
+    `Use proper Markdown headings (##), lists, and links.`,
     `Structure:`,
     `- Summary section with 3-6 bullet points.`,
     `- 2-6 sections with ## headings.`,
-    `- End with a "Sources" section listing each source as "- [lang] URL".`
+    `- End with a "Sources" section listing each source as "- [lang] URL".`,
+    `Keep paragraphs short and readable.`
   ].join("\n");
   const sourceList = sources
     .map((source) => `- [${source.lang}] ${source.page.title}: ${source.page.url}`)
