@@ -142,6 +142,7 @@ export function FigmaMapEditor({
 }: FigmaMapEditorProps) {
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const overlayObjectUrlRef = useRef<string | null>(null);
 
   // Leaflet refs
   const mapRef = useRef<LeafletMap | null>(null);
@@ -500,6 +501,9 @@ export function FigmaMapEditor({
       }) as LeafletMap;
 
       mapInstance.fitBounds(bounds);
+      setTimeout(() => {
+        mapInstance.invalidateSize();
+      }, 50);
 
       // Track zoom changes
       mapInstance.on('zoomend', () => {
@@ -516,9 +520,55 @@ export function FigmaMapEditor({
       draftLayerRef.current = draftLayer;
       mapRef.current = mapInstance;
 
-      // Image Overlay
+      // Image Overlay (fetch-first to avoid auth/caching issues)
       if (map.imageUrl) {
-        imageOverlayRef.current = L.imageOverlay(map.imageUrl, bounds).addTo(mapInstance);
+        const addOverlay = (url: string) => {
+          if (imageOverlayRef.current) {
+            imageOverlayRef.current.remove();
+            imageOverlayRef.current = null;
+          }
+          const overlay = L.imageOverlay(url, bounds, {
+            opacity: showImage ? 1 : 0
+          }).addTo(mapInstance);
+          imageOverlayRef.current = overlay;
+          overlay.on("load", () => {
+            mapInstance.invalidateSize();
+          });
+          return overlay;
+        };
+
+        const loadOverlay = async () => {
+          try {
+            const response = await fetch(map.imageUrl as string, { credentials: "include" });
+            if (!response.ok) throw new Error("failed to fetch map image");
+            const blob = await response.blob();
+            if (!active) return;
+            const objectUrl = URL.createObjectURL(blob);
+            overlayObjectUrlRef.current = objectUrl;
+            addOverlay(objectUrl);
+          } catch {
+            if (!active) return;
+            const overlay = addOverlay(map.imageUrl as string);
+            const imgEl = overlay.getElement();
+            if (imgEl) {
+              imgEl.addEventListener("error", async () => {
+                try {
+                  const response = await fetch(map.imageUrl as string, { credentials: "include" });
+                  if (!response.ok) return;
+                  const blob = await response.blob();
+                  if (!active) return;
+                  const objectUrl = URL.createObjectURL(blob);
+                  overlayObjectUrlRef.current = objectUrl;
+                  overlay.setUrl(objectUrl);
+                } catch {
+                  // ignore fallback failures
+                }
+              }, { once: true });
+            }
+          }
+        };
+
+        loadOverlay();
       }
 
       // Click handler
@@ -560,8 +610,20 @@ export function FigmaMapEditor({
         mapRef.current.remove();
         mapRef.current = null;
       }
+      if (overlayObjectUrlRef.current) {
+        URL.revokeObjectURL(overlayObjectUrlRef.current);
+        overlayObjectUrlRef.current = null;
+      }
     };
   }, [map.id, latLngToMapCoords, createPinDraft]);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const timer = setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [showLeftSidebar, showRightPanel]);
 
   // Update Image Overlay Visibility
   useEffect(() => {
