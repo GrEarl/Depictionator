@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
@@ -25,6 +25,12 @@ type WikiArticleImportPanelProps = {
   entityTypes: string[];
 };
 
+type PromptTemplate = {
+  id: string;
+  name: string;
+  prompt: string;
+};
+
 export function WikiArticleImportPanel({
   workspaceId,
   entityTypes
@@ -41,6 +47,66 @@ export function WikiArticleImportPanel({
   const [publish, setPublish] = useState("false");
   const [useLlm, setUseLlm] = useState("true");
   const [aggregateLangs, setAggregateLangs] = useState("true");
+  const [promptTemplates, setPromptTemplates] = useState<PromptTemplate[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [templateName, setTemplateName] = useState("");
+  const [promptText, setPromptText] = useState("");
+  const [promptMessage, setPromptMessage] = useState("");
+
+  const loadTemplates = async () => {
+    try {
+      const res = await fetch(`/api/llm-templates?workspaceId=${workspaceId}&scope=wiki_import_article`);
+      if (!res.ok) return;
+      const data = await res.json();
+      setPromptTemplates(Array.isArray(data.items) ? data.items : []);
+    } catch {
+      setPromptTemplates([]);
+    }
+  };
+
+  const handleTemplateSelect = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    if (!templateId) {
+      setPromptText("");
+      setTemplateName("");
+      return;
+    }
+    const template = promptTemplates.find((t) => t.id === templateId);
+    if (!template) return;
+    setPromptText(template.prompt);
+    setTemplateName(template.name);
+  };
+
+  const saveTemplate = async () => {
+    const name = templateName.trim();
+    const prompt = promptText.trim();
+    if (!name || !prompt) {
+      setPromptMessage("Template name and prompt are required.");
+      return;
+    }
+    setPromptMessage("");
+    try {
+      const res = await fetch("/api/llm-templates/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          scope: "wiki_import_article",
+          name,
+          prompt
+        })
+      });
+      if (!res.ok) {
+        const text = await res.text();
+        setPromptMessage(text || "Failed to save template.");
+        return;
+      }
+      await loadTemplates();
+      setPromptMessage("Template saved.");
+    } catch {
+      setPromptMessage("Failed to save template.");
+    }
+  };
 
   const runSearch = async () => {
     const trimmed = query.trim();
@@ -96,6 +162,11 @@ export function WikiArticleImportPanel({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!workspaceId) return;
+    loadTemplates();
+  }, [workspaceId]);
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -218,6 +289,47 @@ export function WikiArticleImportPanel({
                         <span className="text-[10px] font-bold uppercase text-muted">Multi-Lang</span>
                         <input type="checkbox" name="aggregateLangs" checked={aggregateLangs === "true"} onChange={(e) => setAggregateLangs(e.target.checked ? "true" : "false")} className="w-4 h-4 rounded text-accent" />
                       </label>
+                    </div>
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold uppercase tracking-widest text-muted">LLM Prompt Template</label>
+                      <select
+                        value={selectedTemplateId}
+                        onChange={(e) => handleTemplateSelect(e.target.value)}
+                        className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
+                      >
+                        <option value="">Default (system prompt)</option>
+                        {promptTemplates.map((template) => (
+                          <option key={template.id} value={template.id}>{template.name}</option>
+                        ))}
+                      </select>
+                      <div className="grid gap-3">
+                        <textarea
+                          name="llmPrompt"
+                          value={promptText}
+                          onChange={(e) => setPromptText(e.target.value)}
+                          rows={6}
+                          placeholder="Optional custom prompt. Use {{targetLang}}, {{source_list}}, {{sources}}, {{source_count}} placeholders."
+                          className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-xs outline-none focus:ring-2 focus:ring-accent"
+                        />
+                        <input type="hidden" name="llmPromptTemplateId" value={selectedTemplateId} />
+                        <input type="hidden" name="llmPromptTemplateName" value={templateName} />
+                        <div className="grid grid-cols-[1fr_auto] gap-2">
+                          <input
+                            value={templateName}
+                            onChange={(e) => setTemplateName(e.target.value)}
+                            placeholder="Template name to save"
+                            className="w-full px-3 py-2 bg-bg border border-border rounded-lg text-xs outline-none focus:ring-2 focus:ring-accent"
+                          />
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            onClick={saveTemplate}
+                          >
+                            Save Template
+                          </button>
+                        </div>
+                        {promptMessage && <div className="text-xs text-muted">{promptMessage}</div>}
+                      </div>
                     </div>
                   </div>
                 </details>

@@ -65,6 +65,34 @@ function buildSynthesisPrompt(targetLang: string, sources: WikiSource[]): string
   return `${header}\n\nSources:\n${sourceList}\n\n${bodies}`;
 }
 
+function renderPromptTemplate(template: string, targetLang: string, sources: WikiSource[]): string {
+  const sourceList = sources
+    .map((source) => `- [${source.lang}] ${source.page.title}: ${source.page.url}`)
+    .join("\n");
+  const bodies = sources
+    .map((source) => {
+      const extract = pickSourceContent(source.page);
+      const clipped = truncateText(extract, 4000);
+      return `SOURCE [${source.lang}] ${source.page.title}\nURL: ${source.page.url}\nCONTENT:\n${clipped}`;
+    })
+    .join("\n\n");
+  const replacements: Record<string, string> = {
+    targetLang,
+    source_list: sourceList,
+    sources: bodies,
+    source_count: String(sources.length)
+  };
+  const rendered = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
+    if (key in replacements) return replacements[key];
+    return match;
+  });
+
+  if (!rendered.includes(sourceList) && !rendered.includes("SOURCE [")) {
+    return `${rendered}\n\nSources:\n${sourceList}\n\n${bodies}`;
+  }
+  return rendered;
+}
+
 export async function POST(request: Request) {
   let session;
   try {
@@ -88,6 +116,9 @@ export async function POST(request: Request) {
   const llmProvider = (llmProviderRaw || DEFAULT_LLM_PROVIDER) as LlmProvider;
   const llmModel = String(form.get("llmModel") ?? process.env.WIKI_LLM_MODEL ?? "").trim();
   const codexAuthBase64 = String(form.get("codexAuthBase64") ?? "").trim();
+  const llmPrompt = String(form.get("llmPrompt") ?? "").trim();
+  const llmPromptTemplateId = String(form.get("llmPromptTemplateId") ?? "").trim();
+  const llmPromptTemplateName = String(form.get("llmPromptTemplateName") ?? "").trim();
 
   if (!workspaceId || (!pageId && !title)) {
     return apiError("Missing fields", 400);
@@ -127,7 +158,26 @@ export async function POST(request: Request) {
     }
 
     const outputLang = targetLang || preferredLang;
-    const prompt = buildSynthesisPrompt(outputLang, sources);
+    let templatePrompt = llmPrompt;
+    if (!templatePrompt && llmPromptTemplateId) {
+      const template = await prisma.llmPromptTemplate.findFirst({
+        where: { id: llmPromptTemplateId, workspaceId }
+      });
+      if (template) templatePrompt = template.prompt;
+    }
+    if (!templatePrompt && llmPromptTemplateName) {
+      const template = await prisma.llmPromptTemplate.findFirst({
+        where: {
+          workspaceId,
+          scope: "wiki_import_article",
+          name: llmPromptTemplateName
+        }
+      });
+      if (template) templatePrompt = template.prompt;
+    }
+    const prompt = templatePrompt
+      ? renderPromptTemplate(templatePrompt, outputLang, sources)
+      : buildSynthesisPrompt(outputLang, sources);
     try {
       bodyMd = await generateText({
         provider: llmProvider,

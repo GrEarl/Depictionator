@@ -284,6 +284,22 @@ model Workspace {
   entityRelations EntityRelation[]
   mapCards    MapCard[]
   cardConnections CardConnection[]
+  promptTemplates LlmPromptTemplate[]
+}
+
+model LlmPromptTemplate {
+  id          String   @id @default(cuid())
+  workspaceId String
+  scope       String
+  name        String
+  prompt      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([workspaceId, scope, name])
+  @@index([workspaceId, scope])
 }
 
 model WorkspaceMember {
