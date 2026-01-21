@@ -93,6 +93,7 @@ type PinDraft = {
   label: string;
   locationType: string;
   markerStyleId: string;
+  markerColor: string;
   truthFlag: string;
   viewpointId: string;
   worldFrom: string;
@@ -166,6 +167,7 @@ export function FigmaMapEditor({
     label: "",
     locationType: defaultLocationType,
     markerStyleId: "",
+    markerColor: "",
     truthFlag: "canonical",
     viewpointId: "",
     worldFrom: "",
@@ -606,6 +608,7 @@ export function FigmaMapEditor({
               label: pin.label ?? "",
               locationType: pin.locationType ?? defaultLocationType,
               markerStyleId: pin.markerStyleId ?? "",
+              markerColor: pin.markerColor ?? "",
               truthFlag: pin.truthFlag ?? "canonical",
               viewpointId: pin.viewpointId ?? "",
               worldFrom: pin.worldFrom ?? "",
@@ -875,6 +878,7 @@ export function FigmaMapEditor({
       form.append("locationType", pinDraft.locationType);
       form.append("truthFlag", pinDraft.truthFlag);
       if (pinDraft.markerStyleId) form.append("markerStyleId", pinDraft.markerStyleId);
+      if (pinDraft.markerColor) form.append("markerColor", pinDraft.markerColor);
       if (pinDraft.viewpointId) form.append("viewpointId", pinDraft.viewpointId);
       if (pinDraft.worldFrom) form.append("worldFrom", pinDraft.worldFrom);
       if (pinDraft.worldTo) form.append("worldTo", pinDraft.worldTo);
@@ -951,6 +955,7 @@ export function FigmaMapEditor({
       form.append("locationType", pinDraft.locationType);
       form.append("truthFlag", pinDraft.truthFlag);
       if (pinDraft.markerStyleId) form.append("markerStyleId", pinDraft.markerStyleId);
+      if (pinDraft.markerColor) form.append("markerColor", pinDraft.markerColor);
       if (pinDraft.viewpointId) form.append("viewpointId", pinDraft.viewpointId);
       if (pinDraft.worldFrom) form.append("worldFrom", pinDraft.worldFrom);
       if (pinDraft.worldTo) form.append("worldTo", pinDraft.worldTo);
@@ -1579,6 +1584,27 @@ export function FigmaMapEditor({
                 </select>
               </div>
 
+              <div>
+                <label className="block text-xs font-bold uppercase text-muted mb-2">Marker Color</label>
+                <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                  <input
+                    type="color"
+                    value={pinDraft.markerColor || "#1f4b99"}
+                    onChange={(e) => setPinDraft({ ...pinDraft, markerColor: e.target.value })}
+                    className="w-full h-10 bg-bg border border-border rounded-lg px-2"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setPinDraft({ ...pinDraft, markerColor: "" })}
+                    className="text-xs px-2 py-2 rounded-lg border border-border text-muted hover:text-ink hover:border-accent transition-colors"
+                    title="Reset to default"
+                  >
+                    Reset
+                  </button>
+                </div>
+                <p className="text-[10px] text-muted mt-1">Leave default to use the style color.</p>
+              </div>
+
               <div className="border-t border-border pt-4">
                 <details className="group">
                   <summary className="text-xs font-bold uppercase text-muted mb-3 cursor-pointer flex items-center gap-2">
@@ -1757,6 +1783,40 @@ export function FigmaMapEditor({
                   <option value="dashed">Dashed Line</option>
                   <option value="dotted">Dotted Line</option>
                 </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold uppercase text-muted tracking-wider">Stroke Color</label>
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center mt-1">
+                    <input
+                      type="color"
+                      value={pathDraft.strokeColor || "#1f4b99"}
+                      onChange={(e) => setPathDraft({ ...pathDraft, strokeColor: e.target.value })}
+                      className="w-full h-9 bg-bg border border-border rounded-lg px-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPathDraft({ ...pathDraft, strokeColor: "" })}
+                      className="text-xs px-2 py-2 rounded-lg border border-border text-muted hover:text-ink hover:border-accent transition-colors"
+                      title="Reset to default"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase text-muted tracking-wider">Stroke Width</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={pathDraft.strokeWidth}
+                    onChange={(e) => setPathDraft({ ...pathDraft, strokeWidth: e.target.value })}
+                    className="w-full bg-bg border border-border rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-accent mt-1"
+                    placeholder="3"
+                  />
+                </div>
               </div>
 
               <div className="space-y-2 max-h-60 overflow-y-auto">
