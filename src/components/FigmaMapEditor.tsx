@@ -204,6 +204,20 @@ export function FigmaMapEditor({
   const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
   const [pathDraft, setPathDraft] = useState<PathDraft>(createPathDraft());
   const [showPathOrder, setShowPathOrder] = useState(false);
+  const pathOrderStorageKey = useMemo(() => `depictionator:map:${map.id}:showPathOrder`, [map.id]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const stored = window.localStorage.getItem(pathOrderStorageKey);
+    if (stored === null) return;
+    setShowPathOrder(stored === "true");
+  }, [pathOrderStorageKey]);
+
+  const handlePathOrderToggle = useCallback((value: boolean) => {
+    setShowPathOrder(value);
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(pathOrderStorageKey, String(value));
+  }, [pathOrderStorageKey]);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   // Zoom state
@@ -2261,7 +2275,7 @@ export function FigmaMapEditor({
                   type="checkbox"
                   className="w-4 h-4"
                   checked={showPathOrder}
-                  onChange={(e) => setShowPathOrder(e.target.checked)}
+                  onChange={(e) => handlePathOrderToggle(e.target.checked)}
                 />
               </label>
               <Button
