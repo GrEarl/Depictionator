@@ -157,6 +157,7 @@ export function FigmaMapEditor({
 
   const [mode, setMode] = useState<ToolMode>("select");
   const [showLeftSidebar, setShowLeftSidebar] = useState(true);
+  const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [selectedPinId, setSelectedPinId] = useState("");
 
@@ -1131,159 +1132,244 @@ export function FigmaMapEditor({
     }));
   };
 
+  const filterPillClass = (active: boolean) =>
+    `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors whitespace-nowrap ${
+      active
+        ? "bg-accent text-white border-accent shadow-sm"
+        : "bg-bg text-muted border-border hover:text-ink hover:border-accent"
+    }`;
+
   return (
     <div className="map-editor-root h-full min-h-0 w-full flex flex-col bg-bg overflow-hidden">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       {/* Top Toolbar - Figma style */}
-      <header className="map-editor-header h-12 border-b border-border bg-panel flex items-center justify-between px-4 flex-shrink-0 z-50">
-        <div className="flex items-center gap-3">
-          <Link href="/maps" className="text-muted hover:text-ink transition-colors" title="Back to maps">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </Link>
-          <div className="w-px h-6 bg-border" />
-          <h1 className="font-bold text-ink text-sm">{map.title}</h1>
-        </div>
-
-        <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
-          <button
-            onClick={() => {
-              setMode("select");
-              setShowRightPanel(false);
-              draftLayerRef.current?.clearLayers();
-            }}
-            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
-              mode === "select" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
-            }`}
-            title="Select/Move Mode (V)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-              <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
-            </svg>
-            <span className="hidden sm:inline">Select</span>
-          </button>
-          <button
-            onClick={() => {
-              setMode("pin");
-              setSelectedPinId("");
-              setPinDraft(createPinDraft());
-            }}
-            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
-              mode === "pin" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
-            }`}
-            title="Place Pin Mode (P)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
-              <circle cx="12" cy="10" r="3" />
-            </svg>
-            <span className="hidden sm:inline">Pin</span>
-          </button>
-          <button
-            onClick={() => {
-              setMode("path");
-              setSelectedPinId("");
-              setShowRightPanel(false);
-            }}
-            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
-              mode === "path" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
-            }`}
-            title="Draw Path Mode (L)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-              <path d="M22 12c-4.5 0-4.5-8-9-8s-4.5 8-9 8" />
-            </svg>
-            <span className="hidden sm:inline">Path</span>
-          </button>
-          <button
-            onClick={() => {
-              setMode("card");
-              setSelectedPinId("");
-              setShowRightPanel(false);
-              draftLayerRef.current?.clearLayers();
-            }}
-            className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
-              mode === "card" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
-            }`}
-            title="Place Card Mode (C)"
-          >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <path d="M7 7h10M7 12h10M7 17h10" />
-            </svg>
-            <span className="hidden sm:inline">Card</span>
-          </button>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
-            <button
-              onClick={autoArrangeEvents}
-              className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
-              title="Auto-arrange events"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 6v6l4 2" />
+      <header className="map-editor-header border-b border-border bg-panel px-4 py-3 flex flex-col gap-3 flex-shrink-0 z-50">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3">
+            <Link href="/maps" className="text-muted hover:text-ink transition-colors" title="Back to maps">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                <polyline points="15 18 9 12 15 6" />
               </svg>
-            </button>
-            <button
-              onClick={saveCardsToDatabase}
-              className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
-              title="Save cards (Ctrl+S)"
-              disabled={isSaving}
-            >
-              {isSaving ? (
-                <svg className="animate-spin h-4 w-4 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-              ) : (
+            </Link>
+            <div className="w-px h-6 bg-border" />
+            <h1 className="font-bold text-ink text-sm">{map.title}</h1>
+          </div>
+
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
+              <button
+                onClick={() => {
+                  setMode("select");
+                  setShowRightPanel(false);
+                  draftLayerRef.current?.clearLayers();
+                }}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                  mode === "select" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
+                }`}
+                title="Select/Move Mode (V)"
+              >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                  <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-                  <polyline points="17 21 17 13 7 13 7 21" />
-                  <polyline points="7 3 7 8 15 8" />
+                  <path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z" />
                 </svg>
-              )}
-            </button>
+                <span className="hidden sm:inline">Select</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMode("pin");
+                  setSelectedPinId("");
+                  setPinDraft(createPinDraft());
+                }}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                  mode === "pin" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
+                }`}
+                title="Place Pin Mode (P)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                <span className="hidden sm:inline">Pin</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMode("path");
+                  setSelectedPinId("");
+                  setShowRightPanel(false);
+                }}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                  mode === "path" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
+                }`}
+                title="Draw Path Mode (L)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <path d="M22 12c-4.5 0-4.5-8-9-8s-4.5 8-9 8" />
+                </svg>
+                <span className="hidden sm:inline">Path</span>
+              </button>
+              <button
+                onClick={() => {
+                  setMode("card");
+                  setSelectedPinId("");
+                  setShowRightPanel(false);
+                  draftLayerRef.current?.clearLayers();
+                }}
+                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                  mode === "card" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
+                }`}
+                title="Place Card Mode (C)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <path d="M7 7h10M7 12h10M7 17h10" />
+                </svg>
+                <span className="hidden sm:inline">Card</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
+                <button
+                  onClick={autoArrangeEvents}
+                  className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
+                  title="Auto-arrange events"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <circle cx="12" cy="12" r="10" />
+                    <path d="M12 6v6l4 2" />
+                  </svg>
+                </button>
+                <button
+                  onClick={saveCardsToDatabase}
+                  className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
+                  title="Save cards (Ctrl+S)"
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <svg className="animate-spin h-4 w-4 text-accent" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                      <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
+                      <polyline points="17 21 17 13 7 13 7 21" />
+                      <polyline points="7 3 7 8 15 8" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              <div className="flex items-center gap-1 text-xs text-muted bg-bg border border-border rounded px-2 py-1">
+                <button
+                  onClick={() => mapRef.current?.zoomOut()}
+                  className="px-1 py-0.5 hover:text-ink transition-colors"
+                  title="Zoom Out"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                    <path d="M21 21l-4.35-4.35" />
+                  </svg>
+                </button>
+                <span className="px-1 font-medium min-w-[3ch] text-center">{Math.round((zoomLevel + 2) * 50)}%</span>
+                <button
+                  onClick={() => mapRef.current?.zoomIn()}
+                  className="px-1 py-0.5 hover:text-ink transition-colors"
+                  title="Zoom In"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="11" y1="8" x2="11" y2="14" />
+                    <line x1="8" y1="11" x2="14" y2="11" />
+                    <path d="M21 21l-4.35-4.35" />
+                  </svg>
+                </button>
+              </div>
+              <button
+                onClick={() => setShowLeftSidebar(!showLeftSidebar)}
+                className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
+                title="Toggle Sidebar"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                </svg>
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-1 text-xs text-muted bg-bg border border-border rounded px-2 py-1">
-            <button
-              onClick={() => mapRef.current?.zoomOut()}
-              className="px-1 py-0.5 hover:text-ink transition-colors"
-              title="Zoom Out"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="8" y1="11" x2="14" y2="11" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-            </button>
-            <span className="px-1 font-medium min-w-[3ch] text-center">{Math.round((zoomLevel + 2) * 50)}%</span>
-            <button
-              onClick={() => mapRef.current?.zoomIn()}
-              className="px-1 py-0.5 hover:text-ink transition-colors"
-              title="Zoom In"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                <circle cx="11" cy="11" r="8" />
-                <line x1="11" y1="8" x2="11" y2="14" />
-                <line x1="8" y1="11" x2="14" y2="11" />
-                <path d="M21 21l-4.35-4.35" />
-              </svg>
-            </button>
+        </div>
+
+        <div className="flex items-start gap-3">
+          <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-3 py-2 ${filtersExpanded ? "space-y-2" : ""}`}>
+            {filtersExpanded ? (
+              <>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Layers</span>
+                  <label className={filterPillClass(showImage)}>
+                    <input type="checkbox" className="sr-only" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
+                    Map Image
+                  </label>
+                  <label className={filterPillClass(showPins)}>
+                    <input type="checkbox" className="sr-only" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
+                    Pins ({visiblePins.length})
+                  </label>
+                  <label className={filterPillClass(showPaths)}>
+                    <input type="checkbox" className="sr-only" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
+                    Paths ({visiblePaths.length})
+                  </label>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 max-h-24 overflow-y-auto pr-1">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Location Types</span>
+                  {locationTypes.map((type) => {
+                    const active = !hiddenLocationTypes.has(type);
+                    return (
+                      <label key={type} className={filterPillClass(active)}>
+                        <input type="checkbox" className="sr-only" checked={active} onChange={() => toggleLocationType(type)} />
+                        <span className="capitalize">{type}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center gap-6 overflow-x-auto pb-1">
+                <div className="flex items-center gap-2 min-w-max">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Layers</span>
+                  <label className={filterPillClass(showImage)}>
+                    <input type="checkbox" className="sr-only" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
+                    Map Image
+                  </label>
+                  <label className={filterPillClass(showPins)}>
+                    <input type="checkbox" className="sr-only" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
+                    Pins ({visiblePins.length})
+                  </label>
+                  <label className={filterPillClass(showPaths)}>
+                    <input type="checkbox" className="sr-only" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
+                    Paths ({visiblePaths.length})
+                  </label>
+                </div>
+                <div className="h-5 w-px bg-border" />
+                <div className="flex items-center gap-2 min-w-max">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Location Types</span>
+                  {locationTypes.map((type) => {
+                    const active = !hiddenLocationTypes.has(type);
+                    return (
+                      <label key={type} className={filterPillClass(active)}>
+                        <input type="checkbox" className="sr-only" checked={active} onChange={() => toggleLocationType(type)} />
+                        <span className="capitalize">{type}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           <button
-            onClick={() => setShowLeftSidebar(!showLeftSidebar)}
-            className="px-2 py-1.5 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors"
-            title="Toggle Sidebar"
+            onClick={() => setFiltersExpanded((prev) => !prev)}
+            className="px-3 py-2 rounded-lg border border-border bg-bg text-xs font-semibold uppercase tracking-[0.2em] text-muted hover:text-ink hover:border-accent transition-colors"
+            title="Toggle filter layout"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-              <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-              <line x1="9" y1="3" x2="9" y2="21" />
-            </svg>
+            {filtersExpanded ? "1段" : "2段"}
           </button>
         </div>
       </header>
@@ -1292,63 +1378,6 @@ export function FigmaMapEditor({
         {/* Left Sidebar */}
         {showLeftSidebar && (
           <aside className="w-64 border-r border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden min-h-0">
-            <div className="p-4 border-b border-border flex-shrink-0">
-              <h3 className="text-xs font-bold uppercase text-muted mb-3">Layers</h3>
-            <div className="space-y-2">
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-sm text-ink group-hover:text-accent transition-colors">Map Image</span>
-                <input
-                  type="checkbox"
-                  checked={showImage}
-                  onChange={(e) => setShowImage(e.target.checked)}
-                  className="w-4 h-4"
-                />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-sm text-ink group-hover:text-accent transition-colors">Pins ({visiblePins.length})</span>
-                <input
-                  type="checkbox"
-                  checked={showPins}
-                  onChange={(e) => setShowPins(e.target.checked)}
-                  className="w-4 h-4"
-                />
-              </label>
-              <label className="flex items-center justify-between cursor-pointer group">
-                <span className="text-sm text-ink group-hover:text-accent transition-colors">Paths ({visiblePaths.length})</span>
-                <input
-                  type="checkbox"
-                  checked={showPaths}
-                  onChange={(e) => setShowPaths(e.target.checked)}
-                  className="w-4 h-4"
-                />
-              </label>
-            </div>
-
-            <div className="border-t border-border pt-4 mt-4">
-              <details open className="group">
-                <summary className="text-xs font-bold uppercase text-muted mb-3 cursor-pointer flex items-center justify-between group-open:mb-4">
-                  Location Types
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="w-3 h-3 transition-transform group-open:rotate-180">
-                    <path d="M19 9l-7 7-7-7" />
-                  </svg>
-                </summary>
-                <div className="grid gap-1 max-h-60 overflow-y-auto pr-1">
-                  {locationTypes.map((type) => (
-                    <label key={type} className="flex items-center justify-between p-2 rounded-md hover:bg-bg transition-colors cursor-pointer text-sm">
-                      <span className="capitalize text-ink">{type}</span>
-                      <input
-                        type="checkbox"
-                        checked={!hiddenLocationTypes.has(type)}
-                        onChange={() => toggleLocationType(type)}
-                        className="w-4 h-4"
-                      />
-                    </label>
-                  ))}
-                </div>
-              </details>
-            </div>
-          </div>
-
             <div className="flex-1 min-h-0 flex flex-col">
               <div className="p-4 border-b border-border flex-shrink-0">
                 <h3 className="text-xs font-bold uppercase text-muted mb-2">Entities</h3>
