@@ -54,7 +54,7 @@ export default async function MapEditorPage({ params }: PageProps) {
     }),
     prisma.entity.findMany({
       where: { workspaceId: workspace.id, softDeletedAt: null },
-      select: { id: true, title: true, type: true },
+      select: { id: true, title: true, type: true, tags: true },
       orderBy: { title: "asc" }
     }),
     prisma.era.findMany({

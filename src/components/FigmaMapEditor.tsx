@@ -69,7 +69,7 @@ type MapPayload = {
   }[];
 };
 
-type Entity = { id: string; title: string; type: string };
+type Entity = { id: string; title: string; type: string; tags?: string[] };
 type EraOption = { id: string; name: string };
 type ChapterOption = { id: string; name: string; orderIndex: number };
 type ViewpointOption = { id: string; name: string };
@@ -810,6 +810,51 @@ export function FigmaMapEditor({
   };
 
   const safeEntities = Array.isArray(entities) ? entities : [];
+  const [entityTypeFilter, setEntityTypeFilter] = useState("all");
+  const [entityGenreFilter, setEntityGenreFilter] = useState("all");
+
+  const entityTypeOptions = useMemo(() => {
+    const types = new Set<string>();
+    safeEntities.forEach((entity) => {
+      if (entity.type) types.add(entity.type);
+    });
+    return Array.from(types).sort((a, b) => a.localeCompare(b));
+  }, [safeEntities]);
+
+  const entityGenreMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    safeEntities.forEach((entity) => {
+      (entity.tags ?? []).forEach((rawTag) => {
+        const tag = rawTag.trim();
+        const lower = tag.toLowerCase();
+        if (!lower.startsWith("genre:") && !lower.startsWith("category:")) return;
+        const label = tag.split(":").slice(1).join(":").trim();
+        if (!label) return;
+        if (!map.has(label)) {
+          map.set(label, new Set<string>());
+        }
+        map.get(label)?.add(lower);
+      });
+    });
+    return map;
+  }, [safeEntities]);
+
+  const entityGenreOptions = useMemo(() => {
+    return Array.from(entityGenreMap.keys()).sort((a, b) => a.localeCompare(b));
+  }, [entityGenreMap]);
+
+  const filteredEntities = useMemo(() => {
+    return safeEntities.filter((entity) => {
+      if (entityTypeFilter !== "all" && entity.type !== entityTypeFilter) return false;
+      if (entityGenreFilter !== "all") {
+        const allowedTags = entityGenreMap.get(entityGenreFilter);
+        if (!allowedTags || allowedTags.size === 0) return false;
+        const matches = (entity.tags ?? []).some((tag) => allowedTags.has(tag.trim().toLowerCase()));
+        if (!matches) return false;
+      }
+      return true;
+    });
+  }, [safeEntities, entityTypeFilter, entityGenreFilter, entityGenreMap]);
 
   async function submitPin() {
     if (!validatePinForm()) {
@@ -1179,7 +1224,7 @@ export function FigmaMapEditor({
       <div className="flex flex-1 min-h-0 overflow-hidden">
         {/* Left Sidebar */}
         {showLeftSidebar && (
-          <aside className="w-64 border-r border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden">
+          <aside className="w-64 border-r border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden min-h-0">
             <div className="p-4 border-b border-border flex-shrink-0">
               <h3 className="text-xs font-bold uppercase text-muted mb-3">Layers</h3>
             <div className="space-y-2">
@@ -1237,11 +1282,48 @@ export function FigmaMapEditor({
             </div>
           </div>
 
-            <div className="flex-1 overflow-auto p-4">
-              <h3 className="text-xs font-bold uppercase text-muted mb-2">Entities</h3>
-              <p className="text-xs text-muted mb-3">Drag onto map to create pins</p>
-              <div className="space-y-1">
-                {safeEntities.slice(0, 50).map((entity) => (
+            <div className="flex-1 min-h-0 flex flex-col">
+              <div className="p-4 border-b border-border flex-shrink-0">
+                <h3 className="text-xs font-bold uppercase text-muted mb-2">Entities</h3>
+                <p className="text-xs text-muted mb-3">Drag onto map to create pins</p>
+                <div className="grid gap-2">
+                  <div>
+                    <label className="text-[11px] font-semibold uppercase tracking-widest text-muted">Type</label>
+                    <select
+                      value={entityTypeFilter}
+                      onChange={(e) => setEntityTypeFilter(e.target.value)}
+                      className="w-full mt-1"
+                    >
+                      <option value="all">All types</option>
+                      {entityTypeOptions.map((type) => (
+                        <option key={type} value={type}>
+                          {type}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold uppercase tracking-widest text-muted">Genre</label>
+                    <select
+                      value={entityGenreFilter}
+                      onChange={(e) => setEntityGenreFilter(e.target.value)}
+                      className="w-full mt-1"
+                      disabled={entityGenreOptions.length === 0}
+                    >
+                      <option value="all">All genres</option>
+                      {entityGenreOptions.map((genre) => (
+                        <option key={genre} value={genre}>
+                          {genre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 min-h-0 overflow-auto p-4">
+                <div className="space-y-1">
+                  {filteredEntities.map((entity) => (
                   <div
                     key={entity.id}
                     className="p-2 bg-bg rounded border border-border hover:border-accent transition-colors cursor-move text-sm group"
@@ -1258,10 +1340,11 @@ export function FigmaMapEditor({
                       <span className="text-ink group-hover:text-accent transition-colors flex-1 truncate">{entity.title}</span>
                     </div>
                   </div>
-                ))}
-                {safeEntities.length === 0 && (
-                  <p className="text-xs text-muted italic">No entities available</p>
-                )}
+                  ))}
+                  {filteredEntities.length === 0 && (
+                    <p className="text-xs text-muted italic">No entities match the current filters</p>
+                  )}
+                </div>
               </div>
             </div>
           </aside>
