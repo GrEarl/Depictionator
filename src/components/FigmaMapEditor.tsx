@@ -568,7 +568,7 @@ export function FigmaMapEditor({
 
   // Update Pins Layer
   useEffect(() => {
-    if (!pinsLayerRef.current || !mapRef.current) return;
+    if (!mapReady || !pinsLayerRef.current || !mapRef.current) return;
 
     import("leaflet").then((leafletModule) => {
       const L = (leafletModule as any).default ?? leafletModule;
@@ -626,11 +626,11 @@ export function FigmaMapEditor({
         marker.addTo(layerGroup);
       });
     });
-  }, [visiblePins, showPins, mode, defaultLocationType, createPinDraft, latLngToMapCoords]);
+  }, [mapReady, visiblePins, showPins, mode, defaultLocationType, createPinDraft, latLngToMapCoords]);
 
   // Update Paths Layer
   useEffect(() => {
-    if (!pathsLayerRef.current) return;
+    if (!mapReady || !pathsLayerRef.current) return;
 
     import("leaflet").then((leafletModule) => {
       const L = (leafletModule as any).default ?? leafletModule;
@@ -655,7 +655,7 @@ export function FigmaMapEditor({
         }).addTo(layerGroup);
       });
     });
-  }, [visiblePaths, showPaths]);
+  }, [mapReady, visiblePaths, showPaths]);
 
   // Update Draft Layer (Path Drawing)
   useEffect(() => {
