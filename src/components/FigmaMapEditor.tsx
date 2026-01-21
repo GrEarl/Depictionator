@@ -1275,7 +1275,7 @@ export function FigmaMapEditor({
   };
 
   const filterPillClass = (active: boolean) =>
-    `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-semibold transition-colors whitespace-nowrap ${
+    `inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] leading-none font-semibold transition-colors whitespace-nowrap h-6 ${
       active
         ? "bg-accent text-white border-accent shadow-sm"
         : "bg-bg text-muted border-border hover:text-ink hover:border-accent"
@@ -1453,7 +1453,7 @@ export function FigmaMapEditor({
         </div>
 
         <div className="flex items-start gap-3">
-          <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-3 py-2 ${filtersExpanded ? "space-y-2" : ""}`}>
+          <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-3 ${filtersExpanded ? "py-2 space-y-2" : "py-1.5"}`}>
             {filtersExpanded ? (
               <>
                 <div className="flex flex-wrap items-center gap-2">
@@ -1485,44 +1485,22 @@ export function FigmaMapEditor({
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-6 overflow-x-auto pb-1">
-                <div className="flex items-center gap-2 min-w-max">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Layers</span>
-                  <label className={filterPillClass(showImage)}>
-                    <input type="checkbox" className="sr-only" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
-                    Map Image
-                  </label>
-                  <label className={filterPillClass(showPins)}>
-                    <input type="checkbox" className="sr-only" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
-                    Pins ({visiblePins.length})
-                  </label>
-                  <label className={filterPillClass(showPaths)}>
-                    <input type="checkbox" className="sr-only" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
-                    Paths ({visiblePaths.length})
-                  </label>
-                </div>
-                <div className="h-5 w-px bg-border" />
-                <div className="flex items-center gap-2 min-w-max">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Location Types</span>
-                  {locationTypes.map((type) => {
-                    const active = !hiddenLocationTypes.has(type);
-                    return (
-                      <label key={type} className={filterPillClass(active)}>
-                        <input type="checkbox" className="sr-only" checked={active} onChange={() => toggleLocationType(type)} />
-                        <span className="capitalize">{type}</span>
-                      </label>
-                    );
-                  })}
+              <div className="flex items-center justify-between gap-3 text-xs text-muted">
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Filters</span>
+                  <span className="text-[11px]">
+                    Layers {Number(showImage) + Number(showPins) + Number(showPaths)}/3 ・ Types {locationTypes.length - hiddenLocationTypes.size}/{locationTypes.length}
+                  </span>
                 </div>
               </div>
             )}
           </div>
           <button
             onClick={() => setFiltersExpanded((prev) => !prev)}
-            className="px-3 py-2 rounded-lg border border-border bg-bg text-xs font-semibold uppercase tracking-[0.2em] text-muted hover:text-ink hover:border-accent transition-colors"
+            className="px-2.5 py-1.5 rounded-lg border border-border bg-bg text-[10px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-ink hover:border-accent transition-colors"
             title="Toggle filter layout"
           >
-            {filtersExpanded ? "1谿ｵ" : "2谿ｵ"}
+            {filtersExpanded ? "2段" : "1段"}
           </button>
         </div>
       </header>
