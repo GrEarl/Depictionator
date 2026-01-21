@@ -11,20 +11,14 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const mapId = String(searchParams.get("mapId") ?? "");
-
-  if (!mapId) {
-    return apiError("Missing mapId", 400);
-  }
+  const mapId = String(searchParams.get("mapId") ?? "").trim();
+  if (!mapId) return apiError("mapId required", 400);
 
   const map = await prisma.map.findFirst({
     where: { id: mapId, softDeletedAt: null },
-    select: { workspaceId: true }
+    select: { id: true, workspaceId: true }
   });
-
-  if (!map) {
-    return apiError("Map not found", 404);
-  }
+  if (!map) return apiError("Map not found", 404);
 
   try {
     await requireWorkspaceAccess(session.userId, map.workspaceId, "viewer");
@@ -35,11 +29,27 @@ export async function GET(request: Request) {
   const [cards, connections] = await Promise.all([
     prisma.mapCard.findMany({
       where: { mapId, workspaceId: map.workspaceId, softDeletedAt: null },
-      orderBy: { createdAt: "asc" }
+      select: {
+        id: true,
+        x: true,
+        y: true,
+        type: true,
+        title: true,
+        content: true,
+        entityId: true,
+        articleId: true,
+        eventId: true
+      }
     }),
     prisma.cardConnection.findMany({
       where: { mapId, workspaceId: map.workspaceId, softDeletedAt: null },
-      orderBy: { createdAt: "asc" }
+      select: {
+        id: true,
+        fromCardId: true,
+        toCardId: true,
+        type: true,
+        label: true
+      }
     })
   ]);
 

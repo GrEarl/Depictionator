@@ -1234,6 +1234,24 @@ button[type="submit"]:hover {
   background: var(--panel);
 }
 
+.path-point-index {
+  pointer-events: none;
+}
+
+.path-point-index .path-index-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
 .map-editor-root .map-legend .legend-row {
   display: flex;
   align-items: center;

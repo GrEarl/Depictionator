@@ -193,6 +193,7 @@ export function FigmaMapEditor({
     relatedEventId: "",
     relatedEntityIds: ""
   });
+  const [showPathOrder, setShowPathOrder] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   // Zoom state
@@ -653,9 +654,21 @@ export function FigmaMapEditor({
           weight,
           dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
         }).addTo(layerGroup);
+
+        if (showPathOrder) {
+          path.polyline.forEach((pt, idx) => {
+            const icon = L.divIcon({
+              className: "path-point-index",
+              html: `<span class="path-index-badge">${idx + 1}</span>`,
+              iconSize: [22, 22],
+              iconAnchor: [11, 11]
+            });
+            L.marker([pt.y, pt.x], { icon, interactive: false }).addTo(layerGroup);
+          });
+        }
       });
     });
-  }, [mapReady, visiblePaths, showPaths]);
+  }, [mapReady, visiblePaths, showPaths, showPathOrder]);
 
   // Update Draft Layer (Path Drawing)
   useEffect(() => {
@@ -666,8 +679,9 @@ export function FigmaMapEditor({
       const layerGroup = draftLayerRef.current;
       if (!layerGroup) return;
 
+      layerGroup.clearLayers();
+
       if (mode === "path" && pathPoints.length > 0) {
-        layerGroup.clearLayers();
         const points = pathPoints.map((pt) => [pt.y, pt.x]) as [number, number][];
 
         // Draw the path line
@@ -695,10 +709,20 @@ export function FigmaMapEditor({
             fillOpacity: 1,
             weight: 2
           }).addTo(layerGroup);
+
+          if (showPathOrder) {
+            const icon = L.divIcon({
+              className: "path-point-index",
+              html: `<span class="path-index-badge">${idx + 1}</span>`,
+              iconSize: [22, 22],
+              iconAnchor: [11, 11]
+            });
+            L.marker([pt.y, pt.x], { icon, interactive: false }).addTo(layerGroup);
+          }
         });
       }
     });
-  }, [pathPoints, mode, pathDraft.arrowStyle]);
+  }, [pathPoints, mode, pathDraft.arrowStyle, showPathOrder]);
 
   // Drag & Drop Handling
   useEffect(() => {
@@ -938,6 +962,10 @@ export function FigmaMapEditor({
       addToast("Please add at least 2 points to create a path", "info");
       return;
     }
+    if (!workspaceId) {
+      addToast("Workspace not found. Please reload and try again.", "error");
+      return;
+    }
     try {
       const form = new FormData();
       form.append("workspaceId", workspaceId);
@@ -958,9 +986,16 @@ export function FigmaMapEditor({
 
       const response = await fetch("/api/paths/create", { method: "POST", body: form });
       if (!response.ok) {
-        const errorText = await response.text();
+        let errorText = "";
+        try {
+          const data = await response.json();
+          errorText = data?.error ? String(data.error) : JSON.stringify(data);
+        } catch {
+          errorText = await response.text();
+        }
         console.error("Failed to create path:", errorText);
-        throw new Error(response.statusText);
+        addToast(errorText || "Failed to create path", "error");
+        return;
       }
 
       setPathPoints([]);
@@ -1651,13 +1686,33 @@ export function FigmaMapEditor({
               </div>
             </div>
 
-            <div className="p-4 border-t border-border space-y-2">
+            <div className="p-4 border-t border-border space-y-3">
+              <label className="flex items-center justify-between text-xs font-semibold text-muted">
+                <span>Show step numbers</span>
+                <input
+                  type="checkbox"
+                  className="w-4 h-4"
+                  checked={showPathOrder}
+                  onChange={(e) => setShowPathOrder(e.target.checked)}
+                />
+              </label>
               <Button
                 onClick={submitPath}
                 disabled={pathPoints.length < 2}
                 className="w-full"
               >
                 Create Path ({pathPoints.length} points)
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setPathPoints((prev) => prev.slice(0, -1));
+                  draftLayerRef.current?.clearLayers();
+                }}
+                disabled={pathPoints.length === 0}
+                className="w-full"
+              >
+                Undo Last Point
               </Button>
               <Button
                 variant="outline"
