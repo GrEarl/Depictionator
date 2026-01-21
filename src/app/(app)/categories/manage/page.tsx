@@ -2,8 +2,9 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { prisma } from "@/lib/prisma";
+import { CategoryManager } from "@/components/CategoryManager";
 
-export default async function CategoriesPage() {
+export default async function CategoryManagePage() {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
 
@@ -24,26 +25,20 @@ export default async function CategoriesPage() {
       });
   });
 
-  const categories = Array.from(counts.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  const categories = Array.from(counts.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([name, count]) => ({ name, count }));
 
   return (
-    <div className="panel">
+    <div className="panel space-y-4">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Categories</h2>
-          <p className="muted mt-2">Browse articles by category.</p>
+          <p className="muted mt-1">Manage category tags in this workspace.</p>
         </div>
-        <Link href="/categories/manage" className="btn-secondary">Manage</Link>
+        <Link href="/categories" className="btn-secondary">Back to list</Link>
       </div>
-      <div className="list-sm mt-4">
-        {categories.length === 0 && <div className="muted">No categories yet.</div>}
-        {categories.map(([name, count]) => (
-          <Link key={name} href={`/categories/${encodeURIComponent(name)}`} className="list-row-sm">
-            <div className="font-semibold">{name}</div>
-            <span className="muted text-xs">{count}</span>
-          </Link>
-        ))}
-      </div>
+      <CategoryManager workspaceId={workspace.id} categories={categories} />
     </div>
   );
 }

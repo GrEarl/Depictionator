@@ -11,14 +11,20 @@ export default async function TemplatesPage() {
 
   const entities = await prisma.entity.findMany({
     where: { workspaceId: workspace.id, softDeletedAt: null },
-    select: { tags: true }
+    select: { title: true, tags: true }
   });
 
   const counts = new Map<string, number>();
   entities.forEach((entity) => {
+    const isTemplateEntity = entity.title.toLowerCase().startsWith("template:");
+    if (isTemplateEntity) {
+      const base = entity.title.replace(/^Template:/i, "").trim();
+      if (base) counts.set(base, counts.get(base) ?? 0);
+    }
     entity.tags
       .filter((tag) => tag.startsWith("template:"))
       .forEach((tag) => {
+        if (isTemplateEntity) return;
         const name = tag.replace(/^template:/, "");
         counts.set(name, (counts.get(name) ?? 0) + 1);
       });
@@ -28,8 +34,13 @@ export default async function TemplatesPage() {
 
   return (
     <div className="panel">
-      <h2 className="text-xl font-bold">Templates</h2>
-      <p className="muted mt-2">Templates referenced in articles.</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold">Templates</h2>
+          <p className="muted mt-2">Templates referenced in articles.</p>
+        </div>
+        <Link href="/templates/editor" className="btn-secondary">New Template</Link>
+      </div>
       <div className="list-sm mt-4">
         {templates.length === 0 && <div className="muted">No templates yet.</div>}
         {templates.map(([name, count]) => (

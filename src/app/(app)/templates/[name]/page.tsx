@@ -14,7 +14,9 @@ export default async function TemplateDetailPage({ params }: PageProps) {
 
   const { name } = await params;
   const decoded = decodeURIComponent(name);
-  const tag = `template:${decoded}`;
+  const baseName = decoded.replace(/^Template:/i, "").trim();
+  const templateTitle = `Template:${baseName}`;
+  const tag = `template:${baseName}`;
 
   const entities = await prisma.entity.findMany({
     where: { workspaceId: workspace.id, softDeletedAt: null, tags: { has: tag } },
@@ -24,8 +26,23 @@ export default async function TemplateDetailPage({ params }: PageProps) {
 
   return (
     <div className="panel">
-      <h2 className="text-xl font-bold">Template: {decoded}</h2>
-      <p className="muted mt-2">{entities.length} articles</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold">Template: {baseName}</h2>
+          <p className="muted mt-2">{entities.length} articles</p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href={`/templates/editor?name=${encodeURIComponent(baseName)}`}
+            className="btn-secondary"
+          >
+            Edit Template
+          </Link>
+          <Link href={toWikiPath(templateTitle)} className="btn-secondary">
+            View
+          </Link>
+        </div>
+      </div>
       <div className="list-sm mt-4">
         {entities.length === 0 && <div className="muted">No articles using this template.</div>}
         {entities.map((entity) => (
