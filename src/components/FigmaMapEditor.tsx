@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
@@ -65,6 +65,7 @@ type MapPayload = {
     storyFromChapterId?: string | null;
     storyToChapterId?: string | null;
     relatedEventId?: string | null;
+    relatedEntityIds?: string[] | null;
     layerId?: string | null;
   }[];
 };
@@ -160,6 +161,8 @@ export function FigmaMapEditor({
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [selectedPinId, setSelectedPinId] = useState("");
+  const [selectedPathId, setSelectedPathId] = useState("");
+  const [isEditingPathPoints, setIsEditingPathPoints] = useState(false);
 
   const defaultLocationType = locationTypes[0] ?? "other";
 
@@ -181,9 +184,7 @@ export function FigmaMapEditor({
     ...overrides
   }), [defaultLocationType]);
 
-  const [pinDraft, setPinDraft] = useState<PinDraft>(createPinDraft());
-  const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
-  const [pathDraft, setPathDraft] = useState<PathDraft>({
+  const createPathDraft = useCallback((overrides: Partial<PathDraft> = {}): PathDraft => ({
     arrowStyle: "arrow",
     strokeColor: "",
     strokeWidth: "",
@@ -195,8 +196,13 @@ export function FigmaMapEditor({
     storyFromChapterId: "",
     storyToChapterId: "",
     relatedEventId: "",
-    relatedEntityIds: ""
-  });
+    relatedEntityIds: "",
+    ...overrides
+  }), []);
+
+  const [pinDraft, setPinDraft] = useState<PinDraft>(createPinDraft());
+  const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
+  const [pathDraft, setPathDraft] = useState<PathDraft>(createPathDraft());
   const [showPathOrder, setShowPathOrder] = useState(false);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
@@ -381,7 +387,10 @@ export function FigmaMapEditor({
   useKeyboardShortcut("Escape", () => {
     setMode("select");
     setSelectedPinId("");
+    setSelectedPathId("");
+    setIsEditingPathPoints(false);
     setPinDraft(createPinDraft());
+    setPathDraft(createPathDraft());
     setPathPoints([]);
     setShowRightPanel(false);
     draftLayerRef.current?.clearLayers();
@@ -467,6 +476,11 @@ export function FigmaMapEditor({
       return true;
     });
   }, [map.paths, viewpointId]);
+
+  const selectedPath = useMemo(() => {
+    if (!selectedPathId) return null;
+    return map.paths.find((path) => path.id === selectedPathId) ?? null;
+  }, [map.paths, selectedPathId]);
 
   // Helper function to convert Leaflet LatLng to map coordinates
   const latLngToMapCoords = useCallback((latlng: LatLng): { x: number; y: number } => {
@@ -594,7 +608,10 @@ export function FigmaMapEditor({
           setPathPoints((prev) => [...prev, coords]);
         } else if (currentMode === "select") {
           setSelectedPinId("");
+          setSelectedPathId("");
+          setIsEditingPathPoints(false);
           setPinDraft(createPinDraft());
+          setPathDraft(createPathDraft());
           setShowRightPanel(false);
           draftLayer.clearLayers();
         }
@@ -660,13 +677,15 @@ export function FigmaMapEditor({
           marker.bindTooltip(pin.label, { direction: "top", offset: [0, -10] });
         }
 
-        marker.on("click", (e: any) => {
-          L.DomEvent.stopPropagation(e);
-          if (modeRef.current === "select") {
-            setSelectedPinId(pin.id);
-            setShowRightPanel(true);
-            setPinDraft(createPinDraft({
-              x: pin.x,
+          marker.on("click", (e: any) => {
+            L.DomEvent.stopPropagation(e);
+            if (modeRef.current === "select") {
+              setSelectedPinId(pin.id);
+              setSelectedPathId("");
+              setIsEditingPathPoints(false);
+              setShowRightPanel(true);
+              setPinDraft(createPinDraft({
+                x: pin.x,
               y: pin.y,
               label: pin.label ?? "",
               locationType: pin.locationType ?? defaultLocationType,
@@ -715,11 +734,36 @@ export function FigmaMapEditor({
         const color = path.strokeColor ?? path.markerStyle?.color ?? "#1f4b99";
         const weight = path.strokeWidth ?? 3;
 
-        L.polyline(points, {
-          color,
-          weight,
-          dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
-        }).addTo(layerGroup);
+          const polylineLayer = L.polyline(points, {
+            color,
+            weight,
+            dashArray: path.arrowStyle === "dashed" ? "6 6" : path.arrowStyle === "dotted" ? "2 6" : undefined
+          }).addTo(layerGroup);
+
+          polylineLayer.on("click", (event: any) => {
+            L.DomEvent.stopPropagation(event);
+            if (modeRef.current !== "select") return;
+            setMode("select");
+            setSelectedPinId("");
+            setSelectedPathId(path.id);
+            setIsEditingPathPoints(false);
+            setPathPoints([]);
+            setShowRightPanel(true);
+            setPathDraft(createPathDraft({
+              arrowStyle: path.arrowStyle ?? "arrow",
+              strokeColor: path.strokeColor ?? "",
+              strokeWidth: path.strokeWidth ? String(path.strokeWidth) : "",
+              markerStyleId: path.markerStyleId ?? "",
+              truthFlag: path.truthFlag ?? "canonical",
+              viewpointId: path.viewpointId ?? "",
+              worldFrom: path.worldFrom ?? "",
+              worldTo: path.worldTo ?? "",
+              storyFromChapterId: path.storyFromChapterId ?? "",
+              storyToChapterId: path.storyToChapterId ?? "",
+              relatedEventId: path.relatedEventId ?? "",
+              relatedEntityIds: Array.isArray(path.relatedEntityIds) ? path.relatedEntityIds.join(",") : ""
+            }));
+          });
 
         if (showPathOrder) {
           path.polyline.forEach((pt, idx) => {
@@ -733,8 +777,8 @@ export function FigmaMapEditor({
           });
         }
       });
-    });
-  }, [mapReady, visiblePaths, showPaths, showPathOrder]);
+      });
+    }, [mapReady, visiblePaths, showPaths, showPathOrder, createPathDraft]);
 
   // Update Draft Layer (Path Drawing)
   useEffect(() => {
@@ -1071,6 +1115,10 @@ export function FigmaMapEditor({
   }
 
   async function submitPath() {
+    if (isEditingPathPoints && selectedPathId) {
+      await submitPathUpdate({ includePolyline: true, exitEdit: true });
+      return;
+    }
     if (!map || pathPoints.length < 2) {
       addToast("Please add at least 2 points to create a path", "info");
       return;
@@ -1113,12 +1161,106 @@ export function FigmaMapEditor({
 
       setPathPoints([]);
       setMode("select");
+      setPathDraft(createPathDraft());
       draftLayerRef.current?.clearLayers();
       router.refresh();
       addToast("Path created successfully", "success");
     } catch (error) {
       console.error("Error creating path:", error);
       addToast("Failed to create path", "error");
+    }
+  }
+
+  async function submitPathUpdate({ includePolyline = false, exitEdit = false }: { includePolyline?: boolean; exitEdit?: boolean } = {}) {
+    if (!selectedPathId) return;
+    if (!workspaceId) {
+      addToast("Workspace not found. Please reload and try again.", "error");
+      return;
+    }
+    if (includePolyline && pathPoints.length < 2) {
+      addToast("Please add at least 2 points to update the path", "info");
+      return;
+    }
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("pathId", selectedPathId);
+      form.append("arrowStyle", pathDraft.arrowStyle || "arrow");
+      if (pathDraft.strokeColor) form.append("strokeColor", pathDraft.strokeColor);
+      if (pathDraft.strokeWidth) form.append("strokeWidth", pathDraft.strokeWidth);
+      if (pathDraft.markerStyleId) form.append("markerStyleId", pathDraft.markerStyleId);
+      if (pathDraft.truthFlag) form.append("truthFlag", pathDraft.truthFlag);
+      if (pathDraft.viewpointId) form.append("viewpointId", pathDraft.viewpointId);
+      if (pathDraft.worldFrom) form.append("worldFrom", pathDraft.worldFrom);
+      if (pathDraft.worldTo) form.append("worldTo", pathDraft.worldTo);
+      if (pathDraft.storyFromChapterId) form.append("storyFromChapterId", pathDraft.storyFromChapterId);
+      if (pathDraft.storyToChapterId) form.append("storyToChapterId", pathDraft.storyToChapterId);
+      if (pathDraft.relatedEventId) form.append("relatedEventId", pathDraft.relatedEventId);
+      if (pathDraft.relatedEntityIds) form.append("relatedEntityIds", pathDraft.relatedEntityIds);
+      if (includePolyline) {
+        form.append("polyline", JSON.stringify(pathPoints));
+      }
+
+      const response = await fetch("/api/paths/update", { method: "POST", body: form });
+      if (!response.ok) {
+        let errorText = "";
+        try {
+          const data = await response.json();
+          errorText = data?.error ? String(data.error) : JSON.stringify(data);
+        } catch {
+          errorText = await response.text();
+        }
+        console.error("Failed to update path:", errorText);
+        addToast(errorText || "Failed to update path", "error");
+        return;
+      }
+
+      if (exitEdit) {
+        setIsEditingPathPoints(false);
+        setPathPoints([]);
+        setMode("select");
+        draftLayerRef.current?.clearLayers();
+      }
+      router.refresh();
+      addToast("Path updated", "success");
+    } catch (error) {
+      console.error("Error updating path:", error);
+      addToast("Failed to update path", "error");
+    }
+  }
+
+  async function deletePath() {
+    if (!selectedPathId) return;
+    if (!workspaceId) {
+      addToast("Workspace not found. Please reload and try again.", "error");
+      return;
+    }
+    try {
+      const form = new FormData();
+      form.append("workspaceId", workspaceId);
+      form.append("pathId", selectedPathId);
+      const response = await fetch("/api/paths/delete", { method: "POST", body: form });
+      if (!response.ok) {
+        let errorText = "";
+        try {
+          const data = await response.json();
+          errorText = data?.error ? String(data.error) : JSON.stringify(data);
+        } catch {
+          errorText = await response.text();
+        }
+        console.error("Failed to delete path:", errorText);
+        addToast(errorText || "Failed to delete path", "error");
+        return;
+      }
+      setSelectedPathId("");
+      setShowRightPanel(false);
+      setIsEditingPathPoints(false);
+      setPathPoints([]);
+      router.refresh();
+      addToast("Path deleted", "success");
+    } catch (error) {
+      console.error("Error deleting path:", error);
+      addToast("Failed to delete path", "error");
     }
   }
 
@@ -1159,11 +1301,13 @@ export function FigmaMapEditor({
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
               <button
-                onClick={() => {
-                  setMode("select");
-                  setShowRightPanel(false);
-                  draftLayerRef.current?.clearLayers();
-                }}
+              onClick={() => {
+                setMode("select");
+                setShowRightPanel(false);
+                setSelectedPathId("");
+                setIsEditingPathPoints(false);
+                draftLayerRef.current?.clearLayers();
+              }}
                 className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
                   mode === "select" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
                 }`}
@@ -1175,11 +1319,14 @@ export function FigmaMapEditor({
                 <span className="hidden sm:inline">Select</span>
               </button>
               <button
-                onClick={() => {
-                  setMode("pin");
-                  setSelectedPinId("");
-                  setPinDraft(createPinDraft());
-                }}
+              onClick={() => {
+                setMode("pin");
+                setSelectedPinId("");
+                setSelectedPathId("");
+                setIsEditingPathPoints(false);
+                setPathPoints([]);
+                setPinDraft(createPinDraft());
+              }}
                 className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
                   mode === "pin" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
                 }`}
@@ -1192,11 +1339,15 @@ export function FigmaMapEditor({
                 <span className="hidden sm:inline">Pin</span>
               </button>
               <button
-                onClick={() => {
-                  setMode("path");
-                  setSelectedPinId("");
-                  setShowRightPanel(false);
-                }}
+              onClick={() => {
+                setMode("path");
+                setSelectedPinId("");
+                setSelectedPathId("");
+                setIsEditingPathPoints(false);
+                setPathPoints([]);
+                setPathDraft(createPathDraft());
+                setShowRightPanel(false);
+              }}
                 className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
                   mode === "path" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
                 }`}
@@ -1208,12 +1359,14 @@ export function FigmaMapEditor({
                 <span className="hidden sm:inline">Path</span>
               </button>
               <button
-                onClick={() => {
-                  setMode("card");
-                  setSelectedPinId("");
-                  setShowRightPanel(false);
-                  draftLayerRef.current?.clearLayers();
-                }}
+              onClick={() => {
+                setMode("card");
+                setSelectedPinId("");
+                setSelectedPathId("");
+                setIsEditingPathPoints(false);
+                setShowRightPanel(false);
+                draftLayerRef.current?.clearLayers();
+              }}
                 className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
                   mode === "card" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
                 }`}
@@ -1369,7 +1522,7 @@ export function FigmaMapEditor({
             className="px-3 py-2 rounded-lg border border-border bg-bg text-xs font-semibold uppercase tracking-[0.2em] text-muted hover:text-ink hover:border-accent transition-colors"
             title="Toggle filter layout"
           >
-            {filtersExpanded ? "1段" : "2段"}
+            {filtersExpanded ? "1谿ｵ" : "2谿ｵ"}
           </button>
         </div>
       </header>
@@ -1600,7 +1753,199 @@ export function FigmaMapEditor({
         </main>
 
         {/* Right Properties Panel */}
-        {showRightPanel && (selectedPinId || (mode === "pin" && pinDraft.x !== null)) && (
+        {showRightPanel && selectedPathId && (
+          <aside className="w-80 border-l border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden">
+            <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
+              <h3 className="font-bold text-ink">Edit Path</h3>
+              <button
+                onClick={() => {
+                  setShowRightPanel(false);
+                  setSelectedPathId("");
+                  setIsEditingPathPoints(false);
+                  setPathDraft(createPathDraft());
+                }}
+                className="text-muted hover:text-ink transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-auto p-4 space-y-4">
+              <div className="bg-bg border border-border rounded-lg p-3 text-xs text-muted">
+                {selectedPath?.polyline?.length ? `${selectedPath.polyline.length} points` : "No points yet"}
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold uppercase text-muted tracking-wider">Line Style</label>
+                <select
+                  className="w-full bg-bg border border-border rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
+                  value={pathDraft.arrowStyle}
+                  onChange={(e) => setPathDraft({ ...pathDraft, arrowStyle: e.target.value })}
+                >
+                  <option value="arrow">Solid with Arrow</option>
+                  <option value="dashed">Dashed Line</option>
+                  <option value="dotted">Dotted Line</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold uppercase text-muted tracking-wider">Stroke Color</label>
+                  <div className="grid grid-cols-[1fr_auto] gap-2 items-center mt-1">
+                    <input
+                      type="color"
+                      value={pathDraft.strokeColor || "#1f4b99"}
+                      onChange={(e) => setPathDraft({ ...pathDraft, strokeColor: e.target.value })}
+                      className="w-full h-9 bg-bg border border-border rounded-lg px-2"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setPathDraft({ ...pathDraft, strokeColor: "" })}
+                      className="text-xs px-2 py-2 rounded-lg border border-border text-muted hover:text-ink hover:border-accent transition-colors"
+                      title="Reset to default"
+                    >
+                      Reset
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs font-bold uppercase text-muted tracking-wider">Stroke Width</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={pathDraft.strokeWidth}
+                    onChange={(e) => setPathDraft({ ...pathDraft, strokeWidth: e.target.value })}
+                    className="w-full bg-bg border border-border rounded-lg px-2 py-2 text-sm outline-none focus:ring-2 focus:ring-accent mt-1"
+                    placeholder="3"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-muted mb-1">Truth Status</label>
+                  <select
+                    className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                    value={pathDraft.truthFlag}
+                    onChange={(e) => setPathDraft({ ...pathDraft, truthFlag: e.target.value })}
+                  >
+                    <option value="canonical">Canonical</option>
+                    <option value="rumor">Rumor</option>
+                    <option value="belief">Belief</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-muted mb-1">Viewpoint</label>
+                  <select
+                    className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                    value={pathDraft.viewpointId}
+                    onChange={(e) => setPathDraft({ ...pathDraft, viewpointId: e.target.value })}
+                  >
+                    <option value="">Global / Canon</option>
+                    {viewpoints.map((vp) => (
+                      <option key={vp.id} value={vp.id}>{vp.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-muted mb-1">Start (World Time)</label>
+                  <input
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                    placeholder="e.g. 1000"
+                    value={pathDraft.worldFrom}
+                    onChange={(e) => setPathDraft({ ...pathDraft, worldFrom: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-muted mb-1">End (World Time)</label>
+                  <input
+                    className="w-full bg-bg border border-border rounded-lg px-3 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                    placeholder="e.g. 1200"
+                    value={pathDraft.worldTo}
+                    onChange={(e) => setPathDraft({ ...pathDraft, worldTo: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-muted mb-1">From Chapter</label>
+                  <select
+                    className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                    value={pathDraft.storyFromChapterId}
+                    onChange={(e) => setPathDraft({ ...pathDraft, storyFromChapterId: e.target.value })}
+                  >
+                    <option value="">Start</option>
+                    {chapters.map((c) => (
+                      <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase text-muted mb-1">To Chapter</label>
+                  <select
+                    className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                    value={pathDraft.storyToChapterId}
+                    onChange={(e) => setPathDraft({ ...pathDraft, storyToChapterId: e.target.value })}
+                  >
+                    <option value="">End</option>
+                    {chapters.map((c) => (
+                      <option key={c.id} value={c.id}>{c.orderIndex}. {c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold uppercase text-muted mb-1">Related Event</label>
+                <select
+                  className="w-full bg-bg border border-border rounded-lg px-2 py-1.5 text-xs outline-none focus:border-accent transition-colors"
+                  value={pathDraft.relatedEventId}
+                  onChange={(e) => setPathDraft({ ...pathDraft, relatedEventId: e.target.value })}
+                >
+                  <option value="">None</option>
+                  {(map.events ?? []).map((event) => (
+                    <option key={event.id} value={event.id}>{event.title}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border flex flex-col gap-2 flex-shrink-0">
+              <Button
+                onClick={() => {
+                  if (!selectedPath?.polyline?.length) {
+                    addToast("This path has no points to edit.", "info");
+                    return;
+                  }
+                  setPathPoints(selectedPath.polyline.map((pt) => ({ x: pt.x, y: pt.y })));
+                  setIsEditingPathPoints(true);
+                  setMode("path");
+                  setShowRightPanel(false);
+                }}
+                variant="outline"
+              >
+                Edit Points
+              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => submitPathUpdate()} className="flex-1">Save Path</Button>
+                <Button variant="danger" onClick={deletePath} title="Delete Path">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                    <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                  </svg>
+                </Button>
+              </div>
+            </div>
+          </aside>
+        )}
+
+        {showRightPanel && !selectedPathId && (selectedPinId || (mode === "pin" && pinDraft.x !== null)) && (
           <aside className="w-80 border-l border-border bg-panel flex flex-col flex-shrink-0 overflow-hidden">
             <div className="p-4 border-b border-border flex items-center justify-between flex-shrink-0">
               <h3 className="font-bold text-ink">{selectedPinId ? "Edit Pin" : "New Pin"}</h3>
@@ -1608,6 +1953,9 @@ export function FigmaMapEditor({
                 onClick={() => {
                   setShowRightPanel(false);
                   setSelectedPinId("");
+                  setSelectedPathId("");
+                  setIsEditingPathPoints(false);
+                  setPathPoints([]);
                   setPinDraft(createPinDraft());
                   draftLayerRef.current?.clearLayers();
                 }}
@@ -1837,16 +2185,16 @@ export function FigmaMapEditor({
             </div>
           </aside>
         )}
-
         {/* Path panel */}
         {mode === "path" && pathPoints.length > 0 && !showRightPanel && (
           <aside className="w-80 border-l border-border bg-panel flex flex-col flex-shrink-0">
             <div className="p-4 border-b border-border flex items-center justify-between">
-              <h3 className="font-bold text-ink">Draw Path</h3>
+              <h3 className="font-bold text-ink">{isEditingPathPoints ? "Edit Path" : "Draw Path"}</h3>
               <button
                 onClick={() => {
                   setPathPoints([]);
                   setMode("select");
+                  setIsEditingPathPoints(false);
                   draftLayerRef.current?.clearLayers();
                 }}
                 className="text-muted hover:text-ink transition-colors"
@@ -1943,7 +2291,7 @@ export function FigmaMapEditor({
                 disabled={pathPoints.length < 2}
                 className="w-full"
               >
-                Create Path ({pathPoints.length} points)
+                {isEditingPathPoints ? "Update Path" : "Create Path"} ({pathPoints.length} points)
               </Button>
               <Button
                 variant="outline"
@@ -1973,3 +2321,4 @@ export function FigmaMapEditor({
     </div>
   );
 }
+
