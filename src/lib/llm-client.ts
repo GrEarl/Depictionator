@@ -41,8 +41,9 @@ export class LLMClient {
     const apiKey = process.env.GEMINI_API_KEY;
     if (apiKey) {
       this.gemini = new GoogleGenerativeAI(apiKey);
+      const defaultModel = process.env.GEMINI_MODEL ?? "gemini-3-flash-preview";
       this.geminiModel = this.gemini.getGenerativeModel({
-        model: 'gemini-2.0-flash-exp'
+        model: defaultModel
       });
     }
   }
