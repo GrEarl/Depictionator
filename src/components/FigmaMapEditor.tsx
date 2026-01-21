@@ -1237,7 +1237,7 @@ export function FigmaMapEditor({
           <div ref={containerRef} className="absolute inset-0" style={{ cursor: mode === "path" ? "crosshair" : mode === "pin" ? "crosshair" : "default" }} />
 
           {/* Mode indicator */}
-          <div className="map-mode-indicator absolute bottom-4 left-4 bg-panel border border-border rounded-lg px-3 py-2 text-xs font-medium text-ink shadow-lg pointer-events-none z-10">
+          <div className="map-mode-indicator absolute bottom-4 right-4 bg-panel border border-border rounded-lg px-3 py-2 text-xs font-medium text-ink shadow-lg pointer-events-none z-10">
             {mode === "select" && "Select Mode (V) - Click pins to edit, drag to move"}
             {mode === "pin" && "Pin Mode (P) - Click on map to place a pin"}
             {mode === "path" && `Path Mode (L) - ${pathPoints.length} point${pathPoints.length !== 1 ? "s" : ""} ${pathPoints.length < 2 ? "(need 2+ to create)" : "ready"}`}
