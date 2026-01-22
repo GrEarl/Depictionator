@@ -11,12 +11,14 @@ import { useGlobalFilters } from "@/components/GlobalFilterProvider";
 import { toWikiPath } from "@/lib/wiki";
 import { getProtectionLevel, type ProtectionLevel } from "@/lib/protection";
 import { autoLinkMarkdown, type AutoLinkTarget } from "@/lib/markdown";
+import { Backlinks, BacklinksCompact } from "@/components/Backlinks";
 
 type Entity = any;
 type Asset = { id: string; storageKey: string; mimeType: string } | null;
 type EntityRef = { id: string; title: string; type: string };
 type RelatedEntity = EntityRef & { relation: string; direction: 'to' | 'from' };
 type LocationPin = { id: string; map: { id: string; title: string } | null };
+type BacklinkEntity = { id: string; title: string; type: string };
 
 export function ArticleDetail({
   entity,
@@ -30,7 +32,8 @@ export function ArticleDetail({
   locations,
   searchQuery,
   isWatching,
-  linkTargets
+  linkTargets,
+  backlinks
 }: {
   entity: Entity;
   workspaceId: string;
@@ -44,6 +47,7 @@ export function ArticleDetail({
   searchQuery?: string;
   isWatching?: boolean;
   linkTargets?: AutoLinkTarget[];
+  backlinks?: BacklinkEntity[];
 }) {
   const [tab, setTab] = useState<"read" | "edit" | "history" | "relations">("read");
   const { mode, viewpointId, eraId, chapterId } = useGlobalFilters();
@@ -356,6 +360,13 @@ export function ArticleDetail({
                 </div>
               )}
 
+              {/* Backlinks - What Links Here */}
+              {backlinks && backlinks.length > 0 && (
+                <div className="article-section">
+                  <Backlinks backlinks={backlinks} currentTitle={displayTitle} />
+                </div>
+              )}
+
               {categoryTags.length > 0 && (
                 <div className="article-section">
                   <h2>Categories</h2>
@@ -650,6 +661,13 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
               )}
             </tbody>
           </table>
+
+          {/* Backlinks Section */}
+          {backlinks && backlinks.length > 0 && (
+            <div className="infobox-backlinks mt-4 pt-4 border-t border-border">
+              <BacklinksCompact backlinks={backlinks} />
+            </div>
+          )}
 
           {/* Quick Actions */}
           <div className="infobox-actions">

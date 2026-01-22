@@ -3852,3 +3852,126 @@ button[type="submit"]:hover {
   border-color: var(--accent);
   color: white;
 }
+
+/* ==========================================================================
+   Table of Contents (TOC) Styles - MediaWiki Compatible
+   ========================================================================== */
+
+.toc {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 24px 0;
+  max-width: 400px;
+}
+
+.toc-title {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.toc-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc-item {
+  margin: 4px 0;
+  line-height: 1.5;
+  transition: background 0.15s ease;
+}
+
+.toc-item:hover {
+  background: var(--bg-subtle);
+  border-radius: 4px;
+}
+
+/* Heading level styling - indentation handled via inline style */
+.toc-level-1 { font-weight: 600; }
+.toc-level-2 { font-weight: 500; }
+.toc-level-3 { font-weight: 400; }
+.toc-level-4 { font-weight: 400; opacity: 0.9; }
+.toc-level-5 { font-weight: 400; opacity: 0.8; }
+.toc-level-6 { font-weight: 400; opacity: 0.7; }
+
+.toc-link {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 8px;
+  color: var(--ink);
+  text-decoration: none;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.toc-link:hover {
+  color: var(--accent);
+}
+
+.toc-number {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  color: var(--muted);
+  min-width: 32px;
+}
+
+.toc-text {
+  font-size: 13px;
+}
+
+/* Compact TOC for sidebars */
+.toc-compact {
+  background: transparent;
+  padding: 8px 0;
+}
+
+.toc-compact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.toc-compact-item {
+  margin: 2px 0;
+}
+
+.toc-compact-item.level-0 {
+  font-weight: 600;
+}
+
+.toc-compact-item.level-1 {
+  padding-left: 12px;
+}
+
+.toc-compact-item.level-2 {
+  padding-left: 24px;
+  font-size: 12px;
+}
+
+.toc-compact-item a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 12px;
+  transition: color 0.15s ease;
+}
+
+.toc-compact-item a:hover {
+  color: var(--accent);
+}
+
+.toc-compact-more {
+  padding-left: 12px;
+  font-size: 11px;
+  color: var(--muted);
+  font-style: italic;
+}

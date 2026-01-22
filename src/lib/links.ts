@@ -133,3 +133,84 @@ export function extractTemplates(content: string): string[] {
   }
   return templates;
 }
+
+/**
+ * Find entities that link to a specific entity (backlinks)
+ * This queries the database for articles containing wiki links to the target
+ */
+export async function findBacklinks(
+  workspaceId: string,
+  title: string,
+  aliases: string[] = [],
+  limit: number = 50
+): Promise<{ id: string; title: string; type: string }[]> {
+  // Import prisma dynamically to avoid circular dependencies
+  const { prisma } = await import("@/lib/prisma");
+
+  // Build search patterns for [[Title]] and [[Alias]] style links
+  const searchTerms = [title, ...aliases].filter(Boolean);
+
+  // Get all entities with their article content
+  const entities = await prisma.entity.findMany({
+    where: {
+      workspaceId,
+      softDeletedAt: null,
+      title: { not: title }, // Exclude self
+      article: {
+        baseRevision: { isNot: null }
+      }
+    },
+    select: {
+      id: true,
+      title: true,
+      type: true,
+      article: {
+        select: {
+          baseRevision: {
+            select: {
+              bodyMd: true
+            }
+          }
+        }
+      }
+    },
+    take: 500 // Limit scan to 500 entities for performance
+  });
+
+  const backlinks: { id: string; title: string; type: string }[] = [];
+
+  for (const entity of entities) {
+    const content = entity.article?.baseRevision?.bodyMd ?? "";
+    if (!content) continue;
+
+    // Check if any of the search terms are linked in the content
+    const hasLink = searchTerms.some(term => {
+      // Check for [[Term]] or [[Term|Display]] style links
+      const wikiPattern = new RegExp(`\\[\\[${escapeRegex(term)}(?:\\|[^\\]]+)?\\]\\]`, "i");
+      // Check for [Text](/wiki/Term) style links
+      const encodedTerm = encodeURIComponent(term.replace(/ /g, "_"));
+      const mdPattern = new RegExp(`\\]\\(\\/wiki\\/${escapeRegex(encodedTerm)}\\)`, "i");
+
+      return wikiPattern.test(content) || mdPattern.test(content);
+    });
+
+    if (hasLink) {
+      backlinks.push({
+        id: entity.id,
+        title: entity.title,
+        type: entity.type
+      });
+
+      if (backlinks.length >= limit) break;
+    }
+  }
+
+  return backlinks;
+}
+
+/**
+ * Escape special regex characters in a string
+ */
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}

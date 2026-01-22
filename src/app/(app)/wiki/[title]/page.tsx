@@ -7,6 +7,7 @@ import { AutoMarkRead } from "@/components/AutoMarkRead";
 import { ArticleDetail } from "@/components/ArticleDetail";
 import { toWikiPath } from "@/lib/wiki";
 import { MarkdownView } from "@/components/MarkdownView";
+import { findBacklinks } from "@/lib/links";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -258,6 +259,9 @@ export default async function WikiResolvePage({ params, searchParams }: PageProp
         return entries;
       });
 
+    // Fetch backlinks (entities that link to this one)
+    const backlinks = await findBacklinks(workspace.id, entity.title, entity.aliases ?? []);
+
     return (
       <div className="layout-3-pane">
         <LlmContext
@@ -292,6 +296,7 @@ export default async function WikiResolvePage({ params, searchParams }: PageProp
           searchQuery={query}
           isWatching={Boolean(watch)}
           linkTargets={linkTargets}
+          backlinks={backlinks}
         />
       </div>
     );
