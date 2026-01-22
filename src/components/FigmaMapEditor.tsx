@@ -23,6 +23,7 @@ type MapPayload = {
   title: string;
   bounds: [[number, number], [number, number]] | null;
   imageUrl: string | null;
+  showPathOrder?: boolean | null;
   events?: {
     id: string;
     title: string;
@@ -203,21 +204,41 @@ export function FigmaMapEditor({
   const [pinDraft, setPinDraft] = useState<PinDraft>(createPinDraft());
   const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
   const [pathDraft, setPathDraft] = useState<PathDraft>(createPathDraft());
-  const [showPathOrder, setShowPathOrder] = useState(false);
-  const pathOrderStorageKey = useMemo(() => `depictionator:map:${map.id}:showPathOrder`, [map.id]);
+  const [showPathOrder, setShowPathOrder] = useState(Boolean(map.showPathOrder));
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const stored = window.localStorage.getItem(pathOrderStorageKey);
-    if (stored === null) return;
-    setShowPathOrder(stored === "true");
-  }, [pathOrderStorageKey]);
-
-  const handlePathOrderToggle = useCallback((value: boolean) => {
+  const handlePathOrderToggle = useCallback(async (value: boolean) => {
+    const previous = showPathOrder;
     setShowPathOrder(value);
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(pathOrderStorageKey, String(value));
-  }, [pathOrderStorageKey]);
+
+    const form = new FormData();
+    form.append("workspaceId", workspaceId);
+    form.append("mapId", map.id);
+    form.append("showPathOrder", String(value));
+
+    try {
+      const response = await fetch("/api/maps/settings", {
+        method: "POST",
+        body: form
+      });
+
+      if (!response.ok) {
+        let errorText = "";
+        try {
+          const data = await response.json();
+          errorText = data?.error ? String(data.error) : JSON.stringify(data);
+        } catch {
+          errorText = await response.text();
+        }
+        throw new Error(errorText || "Failed to update map settings");
+      }
+
+      addToast("Path order setting saved", "success");
+    } catch (error) {
+      console.error("Failed to update path order setting:", error);
+      setShowPathOrder(previous);
+      addToast("Failed to save path order setting", "error");
+    }
+  }, [addToast, map.id, showPathOrder, workspaceId]);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   // Zoom state

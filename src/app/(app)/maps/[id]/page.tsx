@@ -80,6 +80,7 @@ export default async function MapEditorPage({ params }: PageProps) {
     title: map.title,
     bounds: map.bounds as any,
     imageUrl: map.imageAssetId ? `/api/assets/file/${map.imageAssetId}` : null,
+    showPathOrder: map.showPathOrder ?? false,
     pins: map.pins.map((p) => {
       const { entity, markerStyle, ...rest } = p as typeof p & { entity?: { title?: string } | null };
       return {

@@ -547,6 +547,7 @@ model Map {
   imageAssetId String?
   crs         String   @default("simple")
   bounds      Json?
+  showPathOrder Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdById String?
