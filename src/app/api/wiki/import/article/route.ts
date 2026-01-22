@@ -34,6 +34,12 @@ type WikiSource = {
   page: WikiPage;
 };
 
+type ImportedAsset = {
+  id: string;
+  title: string;
+  mimeType: string;
+};
+
 function parseLangList(value: string): string[] {
   return Array.from(
     new Set(
@@ -184,6 +190,43 @@ function ensureMarkdown(body: string, targetLang: string, sources: WikiSource[])
     return `${trimmed}\n\n## Sources\n${sourceList}`.trim();
   }
   return trimmed;
+}
+
+function buildMediaSection(assets: ImportedAsset[]): string | null {
+  if (!assets.length) return null;
+  const imageLines = assets
+    .filter((asset) => asset.mimeType.startsWith("image/"))
+    .map((asset) => `![${asset.title}](/api/assets/file/${asset.id})`);
+  const fileLines = assets
+    .filter((asset) => !asset.mimeType.startsWith("image/"))
+    .map((asset) => `- [${asset.title}](/api/assets/file/${asset.id}) (${asset.mimeType})`);
+
+  if (imageLines.length === 0 && fileLines.length === 0) return null;
+
+  const sections: string[] = ["## Media"];
+  if (imageLines.length) {
+    sections.push("### Images", ...imageLines);
+  }
+  if (fileLines.length) {
+    sections.push("### Files", ...fileLines);
+  }
+  return sections.join("\n");
+}
+
+function appendMediaToMarkdown(body: string, assets: ImportedAsset[]): string {
+  const trimmed = body.trim();
+  if (!trimmed) return body;
+  if (/##\s*Media/i.test(trimmed)) return body;
+  const section = buildMediaSection(assets);
+  if (!section) return body;
+  const sourceMatch = trimmed.match(/##\s*Sources\b/i);
+  if (!sourceMatch || sourceMatch.index === undefined) {
+    return `${trimmed}\n\n${section}`.trim();
+  }
+  const insertIndex = sourceMatch.index;
+  const before = trimmed.slice(0, insertIndex).trimEnd();
+  const after = trimmed.slice(insertIndex).trimStart();
+  return `${before}\n\n${section}\n\n${after}`.trim();
 }
 
 async function importWikiAsset(
@@ -438,29 +481,7 @@ export async function POST(request: Request) {
     }
   });
 
-  const revision = await prisma.articleRevision.create({
-    data: {
-      workspaceId,
-      targetType: "base",
-      articleId: article.entityId,
-      bodyMd,
-      changeSummary: usedLlm
-        ? `Summarized from Wikipedia (${sources.length} sources)`
-        : `Imported from Wikipedia (${page.url})`,
-      createdById: session.userId,
-      status: publish ? "approved" : "draft",
-      approvedAt: publish ? new Date() : null,
-      approvedById: publish ? session.userId : null
-    }
-  });
-
-  if (publish) {
-    await prisma.article.update({
-      where: { entityId: entity.id },
-      data: { baseRevisionId: revision.id }
-    });
-  }
-
+  const importedAssets: ImportedAsset[] = [];
   if (importMedia) {
     const mediaEntries: Array<{ title: string; lang: string }> = [];
     const pageImageTitle = page.pageImageTitle?.replace(/^File:/i, "").trim();
@@ -502,6 +523,7 @@ export async function POST(request: Request) {
 
         const asset = await importWikiAsset(workspaceId, session.userId, info);
         if (!asset) continue;
+        importedAssets.push({ id: asset.id, title: info.title, mimeType: asset.mimeType });
         if (!mainImageId && info.mime.startsWith("image/")) {
           if (pageImageTitle && entry.title === pageImageTitle) {
             mainImageId = asset.id;
@@ -520,6 +542,33 @@ export async function POST(request: Request) {
         data: { mainImageId }
       });
     }
+  }
+
+  if (importedAssets.length) {
+    bodyMd = appendMediaToMarkdown(bodyMd, importedAssets);
+  }
+
+  const revision = await prisma.articleRevision.create({
+    data: {
+      workspaceId,
+      targetType: "base",
+      articleId: article.entityId,
+      bodyMd,
+      changeSummary: usedLlm
+        ? `Summarized from Wikipedia (${sources.length} sources)`
+        : `Imported from Wikipedia (${page.url})`,
+      createdById: session.userId,
+      status: publish ? "approved" : "draft",
+      approvedAt: publish ? new Date() : null,
+      approvedById: publish ? session.userId : null
+    }
+  });
+
+  if (publish) {
+    await prisma.article.update({
+      where: { entityId: entity.id },
+      data: { baseRevisionId: revision.id }
+    });
   }
 
   for (const source of sources) {
