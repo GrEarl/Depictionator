@@ -1,6 +1,7 @@
 ﻿import { prisma } from "@/lib/prisma";
 import { getCurrentSession, requireUser } from "@/lib/auth";
 import { LlmContext } from "@/components/LlmContext";
+import { QuickActions } from "@/components/QuickActions";
 import { getLocaleFromCookies } from "@/lib/locale";
 import { getUiCopy } from "@/lib/i18n";
 import { OnboardingModal } from "@/components/OnboardingModal";
@@ -171,6 +172,14 @@ export default async function DashboardPage() {
                 </div>
               </div>
             </>
+          )}
+
+          {/* Quick Actions - always show if workspace exists */}
+          {workspaceId && (
+            <div className="mt-8">
+              <h2 className="text-xl font-bold uppercase tracking-tight mb-4">{copy.dashboard.quickActions}</h2>
+              <QuickActions />
+            </div>
           )}
         </section>
       )}

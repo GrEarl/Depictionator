@@ -4,17 +4,18 @@ import { useEffect } from "react";
 
 export function useKeyboardShortcut(
   key: string,
-  callback: () => void,
-  options: { ctrl?: boolean; shift?: boolean; alt?: boolean; meta?: boolean } = {}
+  callback: (event?: KeyboardEvent) => void,
+  options: { ctrl?: boolean; shift?: boolean; alt?: boolean; meta?: boolean; allowInInput?: boolean } = {}
 ) {
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       // Ignore if user is typing in an input or textarea
       const target = event.target as HTMLElement;
       if (
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
-        target.isContentEditable
+        !options.allowInInput &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
       ) {
         return;
       }
@@ -26,7 +27,7 @@ export function useKeyboardShortcut(
 
       if (keyMatch && ctrlMatch && shiftMatch && altMatch) {
         event.preventDefault();
-        callback();
+        callback(event);
       }
     };
 

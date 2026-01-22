@@ -2,6 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
 import { Mermaid } from "@/components/Mermaid";
 import { createSlugger } from "@/lib/markdown";
 
@@ -24,7 +25,7 @@ export function MarkdownView({ value }: MarkdownViewProps) {
   return (
     <div className="markdown">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
         components={{
           img({ src, alt, ...props }) {
             const safeSrc = typeof src === "string" ? src : "";

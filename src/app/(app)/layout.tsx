@@ -1,5 +1,6 @@
 import { GlobalFilterProvider } from "@/components/GlobalFilterProvider";
 import { GlobalFilters } from "@/components/GlobalFilters";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { LlmPanel } from "@/components/LlmPanel";
 import { Sidebar } from "@/components/Sidebar";
 import { LocaleSwitcher } from "@/components/LocaleSwitcher";
@@ -93,6 +94,10 @@ export default async function AppLayout({
                labels={copy.filters}
              />
              <div className="topbar-actions">
+               <GlobalSearch
+                 workspaceId={workspaceId ?? undefined}
+                 placeholder={copy.search?.placeholder || "Search everything... (⌘K)"}
+               />
                <LocaleSwitcher
                  locale={locale}
                  workspaceId={workspaceId}

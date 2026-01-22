@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MarkdownView } from "@/components/MarkdownView";
 import { MarkdownToc } from "@/components/MarkdownToc";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
+import { Infobox } from "@/components/Infobox";
 import Link from "next/link";
 import Image from "next/image";
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
@@ -256,6 +257,34 @@ export function ArticleDetail({
         <div className="article-main-content">
           {tab === "read" && (
             <>
+              {/* Infobox with image */}
+              {mainImage && (
+                <Infobox
+                  title={displayTitle}
+                  image={{
+                    src: `/api/assets/file/${mainImage.id}`,
+                    alt: displayTitle,
+                    caption: entity.summaryMd?.split('\n')[0] || displayTitle
+                  }}
+                  rows={[
+                    { label: "Type", value: entity.type },
+                    { label: "Status", value: entity.status },
+                    ...(entity.worldExistFrom || entity.worldExistTo ? [{
+                      label: "Period",
+                      value: `${entity.worldExistFrom || '?'} - ${entity.worldExistTo || '?'}`
+                    }] : []),
+                    ...(parentEntity ? [{
+                      label: "Part of",
+                      value: <Link href={toWikiPath(parentEntity.title)} className="entity-link">{parentEntity.title}</Link>
+                    }] : []),
+                    ...(locations && locations.length > 0 ? [{
+                      label: "Locations",
+                      value: locations.length.toString()
+                    }] : []),
+                  ]}
+                />
+              )}
+
               {/* Summary/Lead section */}
               {entity.summaryMd && (
                 <div className="article-summary">

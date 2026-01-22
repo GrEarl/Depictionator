@@ -41,6 +41,9 @@ export type UiCopy = {
     recentActivity: string;
     quickActions: string;
   };
+  search: {
+    placeholder: string;
+  };
   locale: {
     label: string;
     english: string;
@@ -102,6 +105,9 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       recentActivity: "Recent Activity",
       quickActions: "Quick Actions"
     },
+    search: {
+      placeholder: "Search everything... (⌘K)"
+    },
     locale: {
       label: "Language",
       english: "English",
@@ -160,6 +166,9 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       openBoards: "ボードを開く",
       recentActivity: "最近の活動",
       quickActions: "クイックアクション"
+    },
+    search: {
+      placeholder: "すべてを検索... (⌘K)"
     },
     locale: {
       label: "表示言語",
