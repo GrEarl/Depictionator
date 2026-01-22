@@ -11,6 +11,7 @@ import {
   fetchWikiLangLinks,
   fetchWikiPage,
   fetchWikiPageMedia,
+  searchWiki,
   normalizeLang,
   resolveWikiPageWithFallback,
   safeFilename
@@ -24,6 +25,8 @@ const DEFAULT_LLM_PROVIDER = (process.env.WIKI_LLM_PROVIDER ?? process.env.LLM_D
 const DEFAULT_LANG_LIMIT = Number(process.env.WIKI_IMPORT_LANG_LIMIT ?? "10");
 const DEFAULT_MEDIA_LIMIT = Number(process.env.WIKI_IMPORT_MEDIA_LIMIT ?? "50");
 const DEFAULT_MEDIA_MAX_BYTES = Number(process.env.WIKI_IMPORT_MEDIA_MAX_BYTES ?? `${200 * 1024 * 1024}`);
+const DEFAULT_VERIFY_LIMIT = Number(process.env.WIKI_IMPORT_VERIFY_LIMIT ?? "3");
+const DEFAULT_MIN_BODY_CHARS = Number(process.env.WIKI_IMPORT_MIN_CHARS ?? "600");
 
 type WikiPage = NonNullable<Awaited<ReturnType<typeof fetchWikiPage>>>;
 type WikiSource = {
@@ -53,17 +56,42 @@ function pickSourceContent(page: WikiPage): string {
   return (page.wikitext ?? "").trim();
 }
 
+function normalizeTitle(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, "")
+    .replace(/[_\-–—]/g, " ")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isLikelySameTitle(base: string, candidate: string): boolean {
+  if (!base || !candidate) return false;
+  if (base === candidate) return true;
+  return base.includes(candidate) || candidate.includes(base);
+}
+
+function buildImportRules(targetLang: string): string {
+  return [
+    `IMPORT RULES (must follow):`,
+    `- Output Markdown only. No HTML, no wikitext, no templates.`,
+    `- Synthesize across all provided languages and verification sources.`,
+    `- Use only the provided sources; do not invent facts.`,
+    `- Remove subjective language; keep neutral, factual tone.`,
+    `- Add narrative context and relationships useful for worldbuilding, but stay factual and sourced.`,
+    `- If sources conflict or a fact is missing, state that explicitly.`,
+    `- Write in ${targetLang}.`
+  ].join("\n");
+}
+
 function buildSynthesisPrompt(targetLang: string, sources: WikiSource[]): string {
   const header = [
-    `You are a careful technical writer.`,
-    `Create a concise internal wiki article in ${targetLang}.`,
-    `Use only the provided sources. Do not invent facts.`,
-    `If sources conflict, note the conflict clearly.`,
-    `Output Markdown only (no HTML, no wikitext, no templates).`,
-    `Use proper Markdown headings (##), lists, and links.`,
+    buildImportRules(targetLang),
+    ``,
     `Structure:`,
     `- Summary section with 3-6 bullet points.`,
-    `- 2-6 sections with ## headings.`,
+    `- 2-6 sections with ## headings (Overview, Background, Relationships, Narrative Context as applicable).`,
     `- End with a "Sources" section listing each source as "- [lang] URL".`,
     `Keep paragraphs short and readable.`
   ].join("\n");
@@ -97,15 +125,65 @@ function renderPromptTemplate(template: string, targetLang: string, sources: Wik
     sources: bodies,
     source_count: String(sources.length)
   };
-  const rendered = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
+  const renderedBody = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
     if (key in replacements) return replacements[key];
     return match;
   });
+  const rendered = `${buildImportRules(targetLang)}\n\n${renderedBody}`.trim();
 
   if (!rendered.includes(sourceList) && !rendered.includes("SOURCE [")) {
     return `${rendered}\n\nSources:\n${sourceList}\n\n${bodies}`;
   }
   return rendered;
+}
+
+function buildFallbackMarkdown(targetLang: string, sources: WikiSource[]): string {
+  const combined = sources
+    .map((source) => {
+      const extract = pickSourceContent(source.page);
+      return `### ${source.page.title} (${source.lang})\n${truncateText(extract, 1200)}`;
+    })
+    .join("\n\n");
+  const sentences = combined
+    .replace(/#+\s*/g, "")
+    .split(/[。．.!?]\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  const summary = sentences.slice(0, 5).map((s) => `- ${s}`);
+  const sourceList = sources
+    .map((source) => `- [${source.lang}] ${source.page.url}`)
+    .join("\n");
+  return [
+    `## Summary`,
+    summary.length ? summary.join("\n") : "- Summary unavailable from sources.",
+    ``,
+    `## Overview`,
+    `This entry aggregates multi-language sources in ${targetLang}.`,
+    ``,
+    `## Details`,
+    combined || "_No source extract available._",
+    ``,
+    `## Sources`,
+    sourceList
+  ].join("\n");
+}
+
+function ensureMarkdown(body: string, targetLang: string, sources: WikiSource[]): string {
+  const trimmed = body.trim();
+  if (!trimmed) return buildFallbackMarkdown(targetLang, sources);
+  const hasHeading = /##\s+/.test(trimmed);
+  const hasSources = /##\s*Sources/i.test(trimmed);
+  const hasWikiSyntax = /\[\[.+?\]\]|\{\{.+?\}\}/.test(trimmed);
+  if (hasWikiSyntax || trimmed.length < DEFAULT_MIN_BODY_CHARS || !hasHeading) {
+    return buildFallbackMarkdown(targetLang, sources);
+  }
+  if (!hasSources) {
+    const sourceList = sources
+      .map((source) => `- [${source.lang}] ${source.page.url}`)
+      .join("\n");
+    return `${trimmed}\n\n## Sources\n${sourceList}`.trim();
+  }
+  return trimmed;
 }
 
 async function importWikiAsset(
@@ -249,6 +327,31 @@ export async function POST(request: Request) {
     }
 
     const outputLang = targetLang || preferredLang;
+    if (DEFAULT_VERIFY_LIMIT > 0) {
+      try {
+        const baseKey = normalizeTitle(page.title);
+        const existingPageIds = new Set(sources.map((source) => source.page.pageId));
+        const existingKeys = new Set(
+          sources.map((source) => `${source.lang}:${normalizeTitle(source.page.title)}`)
+        );
+        const results = await searchWiki(page.title, outputLang);
+        for (const result of results) {
+          if (sources.length >= DEFAULT_LANG_LIMIT + DEFAULT_VERIFY_LIMIT) break;
+          if (existingPageIds.has(String(result.pageId))) continue;
+          const candidateKey = normalizeTitle(result.title);
+          if (!isLikelySameTitle(baseKey, candidateKey)) continue;
+          if (existingKeys.has(`${outputLang}:${candidateKey}`)) continue;
+          const verificationPage = await fetchWikiPage(outputLang, { pageId: result.pageId });
+          if (!verificationPage) continue;
+          sources.push({ lang: outputLang, page: verificationPage });
+          existingPageIds.add(verificationPage.pageId);
+          existingKeys.add(`${outputLang}:${candidateKey}`);
+          if (sources.length >= DEFAULT_LANG_LIMIT + DEFAULT_VERIFY_LIMIT) break;
+        }
+      } catch {
+        // ignore verification search failures
+      }
+    }
     let templatePrompt = llmPrompt;
     if (!templatePrompt && llmPromptTemplateId) {
       const template = await prisma.llmPromptTemplate.findFirst({
@@ -266,13 +369,13 @@ export async function POST(request: Request) {
       });
       if (template) templatePrompt = template.prompt;
     }
-    const prompt = templatePrompt
+    const basePrompt = templatePrompt
       ? renderPromptTemplate(templatePrompt, outputLang, sources)
       : buildSynthesisPrompt(outputLang, sources);
     try {
       bodyMd = await generateText({
         provider: llmProvider,
-        prompt,
+        prompt: basePrompt,
         model: llmModel || undefined,
         codexAuthBase64
       });
@@ -281,13 +384,34 @@ export async function POST(request: Request) {
         bodyMd = pickSourceContent(page);
         usedLlm = false;
       }
+      const needsRetry =
+        bodyMd.trim().length < DEFAULT_MIN_BODY_CHARS ||
+        !/##\s+/.test(bodyMd) ||
+        /\[\[.+?\]\]|\{\{.+?\}\}/.test(bodyMd);
+      if (needsRetry) {
+        const retryPrompt = `${basePrompt}\n\nIMPORTANT: The output was too short or not valid Markdown. Expand to at least ${DEFAULT_MIN_BODY_CHARS} characters, include multiple sections with ## headings, and end with a Sources section.`;
+        const retryBody = await generateText({
+          provider: llmProvider,
+          prompt: retryPrompt,
+          model: llmModel || undefined,
+          codexAuthBase64
+        });
+        if (retryBody?.trim()) {
+          bodyMd = retryBody;
+        }
+      }
     } catch (error) {
       return apiError(`LLM synthesis failed: ${(error as Error).message}`, 502);
     }
+    bodyMd = ensureMarkdown(bodyMd, outputLang, sources);
   } else if (fallbackUsed && String(process.env.WIKI_IMPORT_REQUIRE_LLM ?? "true") === "true") {
     return apiError("LLM is required to synthesize non-target language sources", 400);
   } else {
     bodyMd = pickSourceContent(page);
+  }
+  if (!useLlm) {
+    const outputLang = targetLang || preferredLang;
+    bodyMd = ensureMarkdown(bodyMd, outputLang, sources);
   }
 
   const type = (Object.values(EntityType) as string[]).includes(typeValue)
@@ -301,7 +425,7 @@ export async function POST(request: Request) {
       title: page.title,
       aliases: [],
       tags: ["imported", "wikipedia"],
-      status: "draft",
+      status: publish ? "approved" : "draft",
       createdById: session.userId,
       updatedById: session.userId
     }
@@ -321,7 +445,7 @@ export async function POST(request: Request) {
       articleId: article.entityId,
       bodyMd,
       changeSummary: usedLlm
-        ? `Summarized from Wikipedia (${sources.length} languages)`
+        ? `Summarized from Wikipedia (${sources.length} sources)`
         : `Imported from Wikipedia (${page.url})`,
       createdById: session.userId,
       status: publish ? "approved" : "draft",
