@@ -530,7 +530,7 @@ button[type="submit"]:hover {
 }
 
 .pane-right-drawer {
-  width: 320px;
+  width: 280px;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -1646,7 +1646,7 @@ button[type="submit"]:hover {
 
 /* ==== ARTICLE DETAIL ==== */
 .article-header {
-  padding: 20px 24px;
+  padding: 16px 20px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);
 }
@@ -1700,12 +1700,32 @@ button[type="submit"]:hover {
   gap: 16px;
 }
 
+.article-title-row h1 {
+  text-transform: none;
+  letter-spacing: -0.01em;
+}
+
 .article-header-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
   justify-content: flex-end;
+}
+
+.article-action-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.article-action-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
 }
 
 .article-header-actions .btn-secondary {
@@ -1773,7 +1793,7 @@ button[type="submit"]:hover {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 20px 24px;
+  padding: 18px 20px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -1806,6 +1826,73 @@ button[type="submit"]:hover {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.markdown {
+  font-size: 15px;
+  line-height: 1.85;
+  color: var(--ink-secondary);
+}
+
+.markdown h1,
+.markdown h2,
+.markdown h3,
+.markdown h4,
+.markdown h5,
+.markdown h6 {
+  text-transform: none;
+  letter-spacing: -0.01em;
+  margin-top: 1.6em;
+  margin-bottom: 0.6em;
+  color: var(--ink);
+}
+
+.markdown h1:first-child,
+.markdown h2:first-child,
+.markdown h3:first-child {
+  margin-top: 0;
+}
+
+.markdown p {
+  margin: 0 0 1rem;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0 0 1rem 1.25rem;
+}
+
+.markdown li {
+  margin: 0.25rem 0;
+}
+
+.markdown a {
+  color: var(--accent-secondary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.markdown blockquote {
+  margin: 1rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid var(--border);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.markdown code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0 4px;
+  border-radius: 6px;
+  font-size: 0.95em;
+}
+
+.markdown pre {
+  background: var(--bg);
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
 }
 
 .talk-page {

@@ -238,6 +238,26 @@ export default async function WikiResolvePage({ params, searchParams }: PageProp
       }))
     ];
 
+    const linkTargetEntities = await prisma.entity.findMany({
+      where: {
+        workspaceId: workspace.id,
+        softDeletedAt: null,
+        status: "approved"
+      },
+      select: { id: true, title: true, aliases: true },
+      take: 500
+    });
+    const linkTargets = linkTargetEntities
+      .filter((target) => target.id !== entity.id)
+      .flatMap((target) => {
+        const entries = [{ title: target.title, url: toWikiPath(target.title) }];
+        (target.aliases ?? []).forEach((alias) => {
+          if (!alias || alias === target.title) return;
+          entries.push({ title: alias, url: toWikiPath(target.title) });
+        });
+        return entries;
+      });
+
     return (
       <div className="layout-3-pane">
         <LlmContext
@@ -271,6 +291,7 @@ export default async function WikiResolvePage({ params, searchParams }: PageProp
           locations={entity.pins}
           searchQuery={query}
           isWatching={Boolean(watch)}
+          linkTargets={linkTargets}
         />
       </div>
     );

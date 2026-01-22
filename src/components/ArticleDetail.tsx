@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MarkdownView } from "@/components/MarkdownView";
 import { MarkdownToc } from "@/components/MarkdownToc";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
@@ -9,6 +9,7 @@ import Image from "next/image";
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
 import { toWikiPath } from "@/lib/wiki";
 import { getProtectionLevel, type ProtectionLevel } from "@/lib/protection";
+import { autoLinkMarkdown, type AutoLinkTarget } from "@/lib/markdown";
 
 type Entity = any;
 type Asset = { id: string; storageKey: string; mimeType: string } | null;
@@ -27,7 +28,8 @@ export function ArticleDetail({
   relatedEntities,
   locations,
   searchQuery,
-  isWatching
+  isWatching,
+  linkTargets
 }: {
   entity: Entity;
   workspaceId: string;
@@ -40,6 +42,7 @@ export function ArticleDetail({
   locations?: LocationPin[];
   searchQuery?: string;
   isWatching?: boolean;
+  linkTargets?: AutoLinkTarget[];
 }) {
   const [tab, setTab] = useState<"read" | "edit" | "history" | "relations">("read");
   const { mode, viewpointId, eraId, chapterId } = useGlobalFilters();
@@ -85,6 +88,15 @@ export function ArticleDetail({
   const canEdit = !isProtectedAdmin || isAdmin;
   const manageDisabled = isProtectedAdmin && !isAdmin;
   const [renderBody, setRenderBody] = useState(displayBody);
+  const safeLinkTargets = useMemo(() => linkTargets ?? [], [linkTargets]);
+  const linkedBody = useMemo(
+    () => autoLinkMarkdown(renderBody, safeLinkTargets),
+    [renderBody, safeLinkTargets]
+  );
+  const linkedSummary = useMemo(
+    () => autoLinkMarkdown(entity.summaryMd ?? "", safeLinkTargets),
+    [entity.summaryMd, safeLinkTargets]
+  );
 
   // Compare Tab
   const currentIndex = relevantRevisions.findIndex((r: any) => r.id === currentRevision?.id);
@@ -213,28 +225,31 @@ export function ArticleDetail({
                   <span className={`badge protected-${protectionLevel}`}>Protected {protectionLevel}</span>
                 )}
               </div>
-              <Link
-                href={toWikiPath(`Talk:${displayTitle}`)}
-                className="btn-secondary"
-              >
-                Talk
-              </Link>
+              <div className="article-action-group">
+                <div className="article-action-tabs" role="tablist" aria-label="Article views">
+                  {(["read", "edit", "history", "relations"] as const).map((t) => (
+                    <button
+                      key={t}
+                      className={`tab-btn ${tab === t ? "active" : ""}`}
+                      aria-pressed={tab === t}
+                      disabled={t === "edit" && !canEdit}
+                      onClick={() => {
+                        if (t === "edit" && !canEdit) return;
+                        setTab(t);
+                      }}
+                    >
+                      {t === "relations" ? "Relations" : t.charAt(0).toUpperCase() + t.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <Link
+                  href={toWikiPath(`Talk:${displayTitle}`)}
+                  className="btn-link"
+                >
+                  Talk
+                </Link>
+              </div>
             </div>
-          </div>
-          <div className="article-tabs">
-            {(["read", "edit", "history", "relations"] as const).map((t) => (
-              <button
-                key={t}
-                className={`tab-btn ${tab === t ? "active" : ""}`}
-                disabled={t === "edit" && !canEdit}
-                onClick={() => {
-                  if (t === "edit" && !canEdit) return;
-                  setTab(t);
-                }}
-              >
-                {t === "relations" ? "Relations" : t.charAt(0).toUpperCase() + t.slice(1)}
-              </button>
-            ))}
           </div>
         </div>
 
@@ -244,7 +259,7 @@ export function ArticleDetail({
               {/* Summary/Lead section */}
               {entity.summaryMd && (
                 <div className="article-summary">
-                  <MarkdownView value={entity.summaryMd} />
+                  <MarkdownView value={linkedSummary} />
                 </div>
               )}
 
@@ -258,7 +273,7 @@ export function ArticleDetail({
               {/* Main Body */}
               <div className="read-view">
                 {hasRenderBody ? (
-                  <MarkdownView value={renderBody} />
+                  <MarkdownView value={linkedBody} />
                 ) : (
                   <div className="empty-content">
                     <p>This article has no content yet.</p>

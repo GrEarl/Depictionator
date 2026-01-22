@@ -4,12 +4,21 @@ export type HeadingInfo = {
   slug: string;
 };
 
+function stripMarkdown(text: string): string {
+  return text
+    .replace(/!\[(.*?)\]\(.*?\)/g, "$1")
+    .replace(/\[(.*?)\]\(.*?\)/g, "$1")
+    .replace(/\[\[(.*?)\]\]/g, "$1")
+    .replace(/[`*_~]/g, "")
+    .trim();
+}
+
 export function slugify(text: string): string {
   const cleaned = text
     .toLowerCase()
     .replace(/\[(.*?)\]\(.*?\)/g, "$1")
     .replace(/[`*_~]/g, "")
-    .replace(/[^a-z0-9\u00c0-\u024f]+/g, "-")
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
     .replace(/^-+|-+$/g, "");
   return cleaned || "section";
 }
@@ -47,9 +56,76 @@ export function extractHeadings(
     if (level < minLevel || level > maxLevel) continue;
     const rawText = match[2].replace(/\s+#*$/, "").trim();
     if (!rawText) continue;
-    const slug = slugger(rawText);
-    headings.push({ level, text: rawText, slug });
+    const cleanedText = stripMarkdown(rawText);
+    if (!cleanedText) continue;
+    const slug = slugger(cleanedText);
+    headings.push({ level, text: cleanedText, slug });
   }
 
   return headings;
+}
+
+export type AutoLinkTarget = {
+  title: string;
+  url: string;
+};
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function protectMarkdownLinks(input: string) {
+  const placeholders: string[] = [];
+  const text = input.replace(/!\[[^\]]*?\]\([^)]+\)|\[[^\]]+?\]\([^)]+\)/g, (match) => {
+    const key = `@@LINK_${placeholders.length}@@`;
+    placeholders.push(match);
+    return key;
+  });
+  return { text, placeholders };
+}
+
+function restoreMarkdownLinks(input: string, placeholders: string[]) {
+  return input.replace(/@@LINK_(\d+)@@/g, (match, index) => {
+    const value = placeholders[Number(index)];
+    return value ?? match;
+  });
+}
+
+export function autoLinkMarkdown(markdown: string, targets: AutoLinkTarget[]): string {
+  if (!markdown.trim() || targets.length === 0) return markdown;
+
+  const uniqueTargets = Array.from(
+    new Map(
+      targets
+        .filter((target) => target.title.trim().length >= 2)
+        .map((target) => [target.title, target])
+    ).values()
+  ).sort((a, b) => b.title.length - a.title.length);
+
+  let inFence = false;
+  const lines = markdown.split(/\r?\n/).map((line) => {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("```")) {
+      inFence = !inFence;
+      return line;
+    }
+    if (inFence) return line;
+
+    const segments = line.split(/(`[^`]*`)/g);
+    const processed = segments.map((segment) => {
+      if (segment.startsWith("`") && segment.endsWith("`")) return segment;
+      const protectedLinks = protectMarkdownLinks(segment);
+      let next = protectedLinks.text;
+      uniqueTargets.forEach((target) => {
+        const pattern = new RegExp(`(^|[^\\p{L}\\p{N}_])(${escapeRegExp(target.title)})(?=[^\\p{L}\\p{N}_]|$)`, "gu");
+        next = next.replace(pattern, (match, prefix, title) => {
+          return `${prefix}[${title}](${target.url})`;
+        });
+      });
+      return restoreMarkdownLinks(next, protectedLinks.placeholders);
+    });
+    return processed.join("");
+  });
+
+  return lines.join("\n");
 }
