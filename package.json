@@ -10,6 +10,10 @@
     "start": "next start",
     "start:custom": "NODE_ENV=production node server.js",
     "lint": "eslint .",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:studio": "prisma studio",
@@ -36,7 +40,8 @@
     "remark-gfm": "^4.0.1",
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
