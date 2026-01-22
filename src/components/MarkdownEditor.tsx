@@ -262,6 +262,7 @@ export function MarkdownEditor({
 
         const response = await fetch("/api/assets/upload", {
           method: "POST",
+          headers: { "Accept": "application/json" },
           body: formData,
         });
 
@@ -275,11 +276,11 @@ export function MarkdownEditor({
 
         if (assetId) {
           const caption = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
-          if (syntax === "wikitext") {
-            insertText(`\n[[File:asset:${assetId}|thumb|${caption}]]\n`);
-          } else {
-            insertText(`\n![${caption}](/api/assets/file/${assetId})\n`);
-          }
+          const snippet =
+            syntax === "wikitext"
+              ? `\n[[File:asset:${assetId}|thumb|${caption}]]\n`
+              : `\n![${caption}](/api/assets/file/${assetId})\n`;
+          setValue((prev) => `${prev}${snippet}`);
         }
       } catch (error) {
         console.error("Error uploading image:", error);

@@ -3,6 +3,8 @@
  * Converts WikiText to Markdown and handles internal links
  */
 
+import { processTemplates } from "@/lib/templates";
+
 export type WikiLink = {
   target: string;
   display: string;
@@ -181,8 +183,10 @@ export function wikiTextToMarkdown(wikitext: string): ParsedWikiText {
   // Clean up multiple blank lines
   result = result.replace(/\n{3,}/g, "\n\n");
 
+  const templateExpanded = processTemplates(result.trim());
+
   return {
-    markdown: result.trim(),
+    markdown: templateExpanded,
     links,
     images,
     categories,

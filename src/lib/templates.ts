@@ -152,7 +152,7 @@ ${rows}
   {
     name: "Stub",
     description: "Stub article notice",
-    render: () => `> ⚠️ *This article is a stub. You can help by expanding it.*`,
+    render: () => `> **Stub** — This article is a stub. You can help by expanding it.`,
   },
 
   {
@@ -161,7 +161,7 @@ ${rows}
     description: "Cleanup notice",
     render: (params) => {
       const reason = params["1"] || params.reason || "improve its quality";
-      return `> 🧹 *This article needs cleanup: ${reason}*`;
+      return `> **Cleanup** — This article needs cleanup: ${reason}`;
     },
   },
 
@@ -171,7 +171,7 @@ ${rows}
     description: "Spoiler warning",
     render: (params) => {
       const content = params["1"] || "";
-      return `> ⚠️ **Spoiler Warning**\n>\n> ${content || "This section contains spoilers."}`;
+      return `> **Spoiler Warning**\n>\n> ${content || "This section contains spoilers."}`;
     },
   },
 
@@ -179,7 +179,7 @@ ${rows}
     name: "WIP",
     aliases: ["Under construction", "Draft"],
     description: "Work in progress notice",
-    render: () => `> 🚧 *This article is a work in progress.*`,
+    render: () => `> **WIP** — This article is a work in progress.`,
   },
 
   // Date/Time templates

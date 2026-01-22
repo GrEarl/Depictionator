@@ -5,6 +5,7 @@ import { LlmContext } from "@/components/LlmContext";
 import { AutoMarkRead } from "@/components/AutoMarkRead";
 import { ArticleDetail } from "@/components/ArticleDetail";
 import { toWikiPath } from "@/lib/wiki";
+import { findBacklinks } from "@/lib/links";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -123,6 +124,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
       });
       return entries;
     });
+  const backlinks = await findBacklinks(workspace.id, entity.title, entity.aliases ?? []);
 
   return (
     <div className="layout-3-pane">
@@ -160,6 +162,7 @@ export default async function ArticleDetailPage({ params, searchParams }: PagePr
         searchQuery={query}
         isWatching={Boolean(watch)}
         linkTargets={linkTargets}
+        backlinks={backlinks}
       />
     </div>
   );

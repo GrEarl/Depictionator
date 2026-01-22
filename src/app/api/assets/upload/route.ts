@@ -66,7 +66,14 @@ export async function POST(request: Request) {
     meta: { storageKey }
   });
 
+  const wantsJson =
+    request.headers.get("accept")?.includes("application/json") ||
+    request.headers.get("x-requested-with") === "XMLHttpRequest";
+
+  if (wantsJson) {
+    return NextResponse.json({ asset });
+  }
+
   return NextResponse.redirect(toRedirectUrl(request, "/settings"));
 }
-
 
