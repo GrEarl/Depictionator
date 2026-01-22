@@ -27,6 +27,8 @@ const DEFAULT_AGGREGATE_LANGS = String(process.env.WIKI_IMPORT_AGGREGATE_LANGS ?
 const DEFAULT_LANG_LIMIT = Number(process.env.WIKI_IMPORT_LANG_LIMIT ?? "10");
 const DEFAULT_MEDIA_LIMIT = Number(process.env.WIKI_IMPORT_MEDIA_LIMIT ?? "50");
 const DEFAULT_MEDIA_MAX_BYTES = Number(process.env.WIKI_IMPORT_MEDIA_MAX_BYTES ?? `${200 * 1024 * 1024}`);
+const DEFAULT_MEDIA_MIN_DIM = Number(process.env.WIKI_IMPORT_MEDIA_MIN_DIM ?? "200");
+const DEFAULT_SKIP_UI_MEDIA = String(process.env.WIKI_IMPORT_SKIP_UI_MEDIA ?? "true") === "true";
 const DEFAULT_VERIFY_LIMIT = Number(process.env.WIKI_IMPORT_VERIFY_LIMIT ?? "3");
 const DEFAULT_MIN_BODY_CHARS = Number(process.env.WIKI_IMPORT_MIN_CHARS ?? "600");
 
@@ -97,7 +99,7 @@ function buildImportRules(targetLang: string): string {
     `- Remove subjective language; keep neutral, factual tone.`,
     `- Add narrative context and relationships useful for worldbuilding, but stay factual and sourced.`,
     `- If sources conflict or a fact is missing, state that explicitly.`,
-    `- Write in ${targetLang}.`
+    `- Write in ${targetLang} only. Translate any non-${targetLang} content.`
   ].join("\n");
 }
 
@@ -202,20 +204,69 @@ function ensureMarkdown(body: string, targetLang: string, sources: WikiSource[])
   return trimmed;
 }
 
+function shouldSkipMediaTitle(title: string): boolean {
+  const lower = title.toLowerCase();
+  const patterns = [
+    "wikipedia",
+    "wikimedia",
+    "commons",
+    "wikidata",
+    "wiktionary",
+    "wikisource",
+    "wikibooks",
+    "wikinews",
+    "wikiquote",
+    "wikivoyage",
+    "mediawiki",
+    "logo",
+    "icon",
+    "pictogram",
+    "question_book",
+    "speaker_icon",
+    "sound-icon",
+    "edit",
+    "magnify",
+    "searchtool",
+    "powered by",
+    "citation"
+  ];
+  return patterns.some((pattern) => lower.includes(pattern));
+}
+
+function shouldSkipMediaInfo(info: { mime?: string | null; width?: number | null; height?: number | null }) {
+  if (!DEFAULT_SKIP_UI_MEDIA) return false;
+  if (!info.mime || !info.mime.startsWith("image/")) return false;
+  const maxDim = Math.max(info.width ?? 0, info.height ?? 0);
+  if (!maxDim) return false;
+  return maxDim < DEFAULT_MEDIA_MIN_DIM;
+}
+
 function buildMediaSection(assets: ImportedAsset[]): string | null {
   if (!assets.length) return null;
   const imageLines = assets
     .filter((asset) => asset.mimeType.startsWith("image/"))
-    .map((asset) => `![${asset.title}](/api/assets/file/${asset.id})`);
+    .map((asset) => `### ${asset.title}\n![${asset.title}](/api/assets/file/${asset.id})`);
+  const audioLines = assets
+    .filter((asset) => asset.mimeType.startsWith("audio/"))
+    .map((asset) => `### ${asset.title}\n![audio:${asset.title}](/api/assets/file/${asset.id})`);
+  const videoLines = assets
+    .filter((asset) => asset.mimeType.startsWith("video/"))
+    .map((asset) => `### ${asset.title}\n![video:${asset.title}](/api/assets/file/${asset.id})`);
   const fileLines = assets
-    .filter((asset) => !asset.mimeType.startsWith("image/"))
+    .filter((asset) => !asset.mimeType.startsWith("image/") && !asset.mimeType.startsWith("audio/") && !asset.mimeType.startsWith("video/"))
     .map((asset) => `- [${asset.title}](/api/assets/file/${asset.id}) (${asset.mimeType})`);
 
-  if (imageLines.length === 0 && fileLines.length === 0) return null;
+  if (imageLines.length === 0 && audioLines.length === 0 && videoLines.length === 0 && fileLines.length === 0) return null;
 
   const sections: string[] = ["## Media"];
   if (imageLines.length) {
     sections.push("### Images", ...imageLines);
+  }
+  if (audioLines.length) {
+    sections.push("### Audio", ...audioLines);
+  }
+  if (videoLines.length) {
+    sections.push("### Video", ...videoLines);
   }
   if (fileLines.length) {
     sections.push("### Files", ...fileLines);
@@ -523,12 +574,16 @@ export async function POST(request: Request) {
 
     for (const entry of limited) {
       try {
+        if (DEFAULT_SKIP_UI_MEDIA && shouldSkipMediaTitle(entry.title)) {
+          continue;
+        }
         let info = await fetchWikiImageInfo(entry.lang, entry.title);
         if (!info && entry.lang !== "commons") {
           info = await fetchWikiImageInfo("commons", entry.title);
         }
         if (!info) continue;
         if (mediaMaxBytes && info.size && info.size > mediaMaxBytes) continue;
+        if (shouldSkipMediaInfo(info)) continue;
 
         const asset = await importWikiAsset(workspaceId, session.userId, info);
         if (!asset) continue;

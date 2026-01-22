@@ -26,6 +26,33 @@ export function MarkdownView({ value }: MarkdownViewProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          img({ src, alt, ...props }) {
+            const safeSrc = typeof src === "string" ? src : "";
+            const safeAlt = alt ?? "";
+            if (safeAlt.toLowerCase().startsWith("audio:")) {
+              const title = safeAlt.slice("audio:".length).trim();
+              return (
+                <div className="markdown-audio">
+                  {title && <div className="text-sm text-muted mb-1">{title}</div>}
+                  <audio controls src={safeSrc} className="w-full">
+                    Your browser does not support the audio element.
+                  </audio>
+                </div>
+              );
+            }
+            if (safeAlt.toLowerCase().startsWith("video:")) {
+              const title = safeAlt.slice("video:".length).trim();
+              return (
+                <div className="markdown-video">
+                  {title && <div className="text-sm text-muted mb-1">{title}</div>}
+                  <video controls src={safeSrc} className="w-full">
+                    Your browser does not support the video element.
+                  </video>
+                </div>
+              );
+            }
+            return <img src={safeSrc} alt={safeAlt} {...props} />;
+          },
           h1({ children, ...props }) {
             const text = extractText(children);
             const id = slugger(text);
