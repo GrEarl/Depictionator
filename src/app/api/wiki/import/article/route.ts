@@ -22,6 +22,8 @@ import { toWikiPath } from "@/lib/wiki";
 
 const DEFAULT_WIKI_LANG = process.env.WIKI_DEFAULT_LANG ?? "en";
 const DEFAULT_LLM_PROVIDER = (process.env.WIKI_LLM_PROVIDER ?? process.env.LLM_DEFAULT_PROVIDER ?? "gemini_ai") as LlmProvider;
+const DEFAULT_USE_LLM = String(process.env.WIKI_IMPORT_USE_LLM ?? "true") === "true";
+const DEFAULT_AGGREGATE_LANGS = String(process.env.WIKI_IMPORT_AGGREGATE_LANGS ?? "true") === "true";
 const DEFAULT_LANG_LIMIT = Number(process.env.WIKI_IMPORT_LANG_LIMIT ?? "10");
 const DEFAULT_MEDIA_LIMIT = Number(process.env.WIKI_IMPORT_MEDIA_LIMIT ?? "50");
 const DEFAULT_MEDIA_MAX_BYTES = Number(process.env.WIKI_IMPORT_MEDIA_MAX_BYTES ?? `${200 * 1024 * 1024}`);
@@ -54,6 +56,14 @@ function parseLangList(value: string): string[] {
 function truncateText(value: string, limit: number): string {
   if (value.length <= limit) return value;
   return value.slice(0, limit) + "\n\n[truncated]";
+}
+
+function parseBooleanValue(input: FormDataEntryValue | null, fallback: boolean) {
+  const normalized = String(input ?? "").trim().toLowerCase();
+  if (!normalized) return fallback;
+  if (["true", "1", "yes", "on"].includes(normalized)) return true;
+  if (["false", "0", "no", "off"].includes(normalized)) return false;
+  return fallback;
 }
 
 function pickSourceContent(page: WikiPage): string {
@@ -308,11 +318,10 @@ export async function POST(request: Request) {
   const pageId = String(form.get("pageId") ?? "").trim();
   const title = String(form.get("title") ?? "").trim();
   const typeValue = String(form.get("entityType") ?? "concept").trim().toLowerCase();
-  const publish = String(form.get("publish") ?? "false") === "true";
+  const publish = parseBooleanValue(form.get("publish"), false);
   const targetLang = String(form.get("targetLang") ?? "").trim();
-  const useLlm = String(form.get("useLlm") ?? process.env.WIKI_IMPORT_USE_LLM ?? "true") === "true";
-  const aggregateLangs =
-    String(form.get("aggregateLangs") ?? process.env.WIKI_IMPORT_AGGREGATE_LANGS ?? "true") === "true";
+  const useLlm = parseBooleanValue(form.get("useLlm"), DEFAULT_USE_LLM);
+  const aggregateLangs = parseBooleanValue(form.get("aggregateLangs"), DEFAULT_AGGREGATE_LANGS);
   const llmProviderRaw = String(form.get("llmProvider") ?? "").trim();
   const llmProvider = (llmProviderRaw || DEFAULT_LLM_PROVIDER) as LlmProvider;
   const llmModel = String(form.get("llmModel") ?? process.env.WIKI_LLM_MODEL ?? "").trim();
@@ -320,7 +329,7 @@ export async function POST(request: Request) {
   const llmPrompt = String(form.get("llmPrompt") ?? "").trim();
   const llmPromptTemplateId = String(form.get("llmPromptTemplateId") ?? "").trim();
   const llmPromptTemplateName = String(form.get("llmPromptTemplateName") ?? "").trim();
-  const importMedia = String(form.get("importMedia") ?? "true") === "true";
+  const importMedia = parseBooleanValue(form.get("importMedia"), true);
   const mediaLimitRaw = Number(form.get("mediaLimit") ?? DEFAULT_MEDIA_LIMIT);
   const mediaLimit = Math.min(
     Math.max(Number.isFinite(mediaLimitRaw) ? mediaLimitRaw : DEFAULT_MEDIA_LIMIT, 0),
