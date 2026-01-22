@@ -215,6 +215,80 @@ export function MarkdownEditor({
     setPickerMode(null);
   };
 
+  // Drag and drop handler for images
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.types.includes("Files")) {
+      setIsDragging(true);
+      e.dataTransfer.dropEffect = "copy";
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    if (!workspaceId) {
+      alert("Cannot upload: workspace not found");
+      return;
+    }
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFiles = files.filter(file => file.type.startsWith("image/"));
+
+    if (imageFiles.length === 0) {
+      return; // No images to upload
+    }
+
+    setIsUploading(true);
+
+    for (const file of imageFiles) {
+      try {
+        const formData = new FormData();
+        formData.append("workspaceId", workspaceId);
+        formData.append("file", file);
+        formData.append("displayName", file.name);
+
+        const response = await fetch("/api/assets/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!response.ok) {
+          console.error("Failed to upload image:", file.name);
+          continue;
+        }
+
+        const data = await response.json();
+        const assetId = data.asset?.id;
+
+        if (assetId) {
+          const caption = file.name.replace(/\.[^/.]+$/, ""); // Remove extension
+          if (syntax === "wikitext") {
+            insertText(`\n[[File:asset:${assetId}|thumb|${caption}]]\n`);
+          } else {
+            insertText(`\n![${caption}](/api/assets/file/${assetId})\n`);
+          }
+        }
+      } catch (error) {
+        console.error("Error uploading image:", error);
+      }
+    }
+
+    setIsUploading(false);
+  };
+
   return (
     <div className="flex flex-col gap-3 group">
       <div className="flex items-center justify-between">
@@ -355,7 +429,15 @@ export function MarkdownEditor({
         )}
 
         {(mode === "write" || mode === "split") && (
-          <div className="relative">
+          <div
+            className={cn(
+              "relative transition-all",
+              isDragging && "ring-2 ring-accent ring-offset-2 rounded-xl"
+            )}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
             <textarea
               ref={textareaRef}
               rows={rows}
@@ -364,6 +446,25 @@ export function MarkdownEditor({
               onChange={(event) => setValue(event.target.value)}
               className="w-full h-full p-4 rounded-xl bg-panel border border-border text-sm font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm placeholder:text-muted/50"
             />
+            {isDragging && (
+              <div className="absolute inset-0 bg-accent/10 border-2 border-dashed border-accent rounded-xl flex items-center justify-center pointer-events-none z-10">
+                <div className="text-accent font-bold text-sm flex items-center gap-2">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="17 8 12 3 7 8" />
+                    <line x1="12" y1="3" x2="12" y2="15" />
+                  </svg>
+                  Drop image to upload
+                </div>
+              </div>
+            )}
+            {isUploading && (
+              <div className="absolute inset-0 bg-bg/80 rounded-xl flex items-center justify-center pointer-events-none z-10">
+                <div className="text-accent font-bold text-sm animate-pulse">
+                  Uploading...
+                </div>
+              </div>
+            )}
             <div className="absolute bottom-3 right-4 text-[10px] text-muted opacity-50 pointer-events-none font-medium">
               {syntax === "wikitext" ? "Wiki Syntax Enabled" : "Markdown Enabled"}
             </div>
