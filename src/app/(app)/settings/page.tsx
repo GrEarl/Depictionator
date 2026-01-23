@@ -65,6 +65,18 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   if (!workspace) return <div className="p-8 text-center text-muted">Select a workspace.</div>;
 
+  const auditLogs = tab === "audit"
+    ? await prisma.auditLog.findMany({
+        where: { workspaceId: workspace.id },
+        include: { actorUser: { select: { name: true, email: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 200
+      })
+    : [];
+
+  const formatAuditDate = (date: Date) =>
+    date.toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" });
+
   const tabs = [
     {
       id: "members",
@@ -115,6 +127,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
           <path d="M12 2a2 2 0 0 1 2 2c0 .74.4 1.39 1 1.73 1.6.9 2.45 2.76 2.08 4.67-.3 1.54-1.64 2.7-3.2 2.7-1.55 0-2.89-1.16-3.19-2.7C10.29 6.49 11.14 4.63 12.74 3.73c.6-.34 1-.99 1-1.73a2 2 0 0 1 2-2" />
           <path d="M8.5 14.5A2.5 2.5 0 0 0 11 17c1.38 0 2.5-1.12 2.5-2.5" />
+        </svg>
+      )
+    },
+    { 
+      id: "audit", 
+      label: "Audit Log", 
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+          <path d="M3 3h18v18H3z" />
+          <path d="M7 7h10M7 11h10M7 15h6" />
         </svg>
       )
     },
@@ -278,6 +300,44 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                       </div>
                     );
                   })}
+                </div>
+              </section>
+
+              <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4">Role Capabilities</h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="p-4 bg-bg rounded-lg border border-border">
+                    <div className="text-xs uppercase tracking-widest text-muted mb-2">Viewer</div>
+                    <ul className="text-sm text-ink-secondary space-y-1">
+                      <li>Read-only access to content</li>
+                      <li>View maps, boards, and articles</li>
+                      <li>Cannot edit or approve changes</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-bg rounded-lg border border-border">
+                    <div className="text-xs uppercase tracking-widest text-muted mb-2">Editor</div>
+                    <ul className="text-sm text-ink-secondary space-y-1">
+                      <li>Create and edit entities, maps, boards</li>
+                      <li>Upload assets and manage references</li>
+                      <li>Cannot approve reviews</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-bg rounded-lg border border-border">
+                    <div className="text-xs uppercase tracking-widest text-muted mb-2">Reviewer</div>
+                    <ul className="text-sm text-ink-secondary space-y-1">
+                      <li>Review and approve pending changes</li>
+                      <li>All editor capabilities included</li>
+                      <li>Cannot manage workspace settings</li>
+                    </ul>
+                  </div>
+                  <div className="p-4 bg-bg rounded-lg border border-border">
+                    <div className="text-xs uppercase tracking-widest text-muted mb-2">Admin</div>
+                    <ul className="text-sm text-ink-secondary space-y-1">
+                      <li>Manage members and roles</li>
+                      <li>Change workspace configuration</li>
+                      <li>Full access including approvals</li>
+                    </ul>
+                  </div>
                 </div>
               </section>
             </div>
@@ -496,6 +556,34 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <span className="font-medium text-sm">Codex CLI (Enabled)</span>
                 </div>
               </div>
+            </div>
+          )}
+
+          {tab === "audit" && (
+            <div className="space-y-6">
+              <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-sm font-bold uppercase tracking-widest text-muted">Recent Activity Log</h4>
+                  <span className="text-xs text-muted">{auditLogs.length} entries</span>
+                </div>
+                <div className="audit-list">
+                  {auditLogs.map((log) => (
+                    <div key={log.id} className="audit-item">
+                      <div className="audit-primary">
+                        <div className="audit-action">{log.action}</div>
+                        <div className="audit-target">{log.targetType} · {log.targetId.slice(0, 8)}</div>
+                        <div className="audit-actor">
+                          {log.actorUser.name || log.actorUser.email}
+                        </div>
+                      </div>
+                      <div className="audit-meta">{formatAuditDate(log.createdAt)}</div>
+                    </div>
+                  ))}
+                  {auditLogs.length === 0 && (
+                    <div className="text-sm text-muted">No audit events yet.</div>
+                  )}
+                </div>
+              </section>
             </div>
           )}
 

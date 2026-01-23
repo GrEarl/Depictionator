@@ -206,7 +206,10 @@ export default async function DashboardPage() {
       </section>
 
       <section className="panel">
-        <h2>{copy.dashboard.notifications}</h2>
+        <div className="section-header">
+          <h2>{copy.dashboard.notifications}</h2>
+          <Link href="/notifications" className="btn-link">View all</Link>
+        </div>
         <ul>
           {notifications.map((note) => (
             <li key={note.id} className="list-row">
