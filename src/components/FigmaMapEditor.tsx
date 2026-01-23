@@ -164,7 +164,7 @@ export function FigmaMapEditor({
   const guidesLayerRef = useRef<LayerGroup | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  const { eraId, chapterId, viewpointId, mode, setFilters } = useGlobalFilters();
+  const { eraId, chapterId, viewpointId, mode: displayMode, setFilters } = useGlobalFilters();
   const { toasts, addToast, removeToast } = useToast();
 
   const [mode, setMode] = useState<ToolMode>("select");
@@ -1169,7 +1169,7 @@ export function FigmaMapEditor({
         eraId,
         chapterId,
         viewpointId,
-        mode
+        mode: displayMode
       }
     };
   }, [
@@ -1183,7 +1183,7 @@ export function FigmaMapEditor({
     eraId,
     chapterId,
     viewpointId,
-    mode
+    displayMode
   ]);
 
   const applySceneState = useCallback(
