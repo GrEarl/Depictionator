@@ -65,7 +65,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
       ? prisma.evidenceBoard.findMany({ where: { id: { in: Array.from(boardIds) } }, select: { id: true, name: true } })
       : [],
     timelineIds.size
-      ? prisma.timeline.findMany({ where: { id: { in: Array.from(timelineIds) } }, select: { id: true, title: true } })
+      ? prisma.timeline.findMany({ where: { id: { in: Array.from(timelineIds) } }, select: { id: true, name: true } })
       : [],
     eventIds.size
       ? prisma.event.findMany({ where: { id: { in: Array.from(eventIds) } }, select: { id: true, title: true } })
@@ -104,7 +104,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
     }
     if (payload.timelineId && timelineMap.has(payload.timelineId)) {
       const timeline = timelineMap.get(payload.timelineId)!;
-      return { title: timeline.title, subtitle: "Timeline", href: `/timeline?timeline=${timeline.id}` };
+      return { title: timeline.name, subtitle: "Timeline", href: `/timeline?timeline=${timeline.id}` };
     }
     if (payload.eventId && eventMap.has(payload.eventId)) {
       const event = eventMap.get(payload.eventId)!;

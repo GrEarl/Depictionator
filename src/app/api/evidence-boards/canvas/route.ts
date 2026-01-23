@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
@@ -46,9 +47,11 @@ export async function POST(request: Request) {
     return apiError("Board not found", 404);
   }
 
+  const nextCanvasState = payload.canvasState ?? Prisma.DbNull;
+
   await prisma.evidenceBoard.update({
     where: { id: boardId, workspaceId },
-    data: { canvasState: payload.canvasState ?? null }
+    data: { canvasState: nextCanvasState }
   });
 
   if (!autosave) {

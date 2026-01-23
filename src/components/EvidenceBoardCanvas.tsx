@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { DragEvent } from "react";
+import type { DragEvent as ReactDragEvent } from "react";
 import {
   Tldraw,
   createTLStore,
@@ -12,12 +12,30 @@ import {
   toRichText,
   useTldrawUser,
   type Editor,
-  type TLCreateShapePartial
+  type TLCreateShapePartial,
+  type TLUserPreferences
 } from "tldraw";
 import { toWikiPath } from "@/lib/wiki";
 
 const NOTE_WIDTH = 220;
 const NOTE_HEIGHT = 140;
+
+type TldrawColor =
+  | "blue"
+  | "green"
+  | "yellow"
+  | "violet"
+  | "orange"
+  | "light-blue"
+  | "grey"
+  | "black"
+  | "light-green"
+  | "light-red"
+  | "light-violet"
+  | "red"
+  | "white";
+
+type TldrawDash = "solid" | "dashed" | "dotted" | "draw";
 
 type BoardItem = {
   id: string;
@@ -63,7 +81,7 @@ type Props = {
   references: Reference[];
 };
 
-const itemColorByType: Record<string, string> = {
+const itemColorByType: Record<string, TldrawColor> = {
   entity: "blue",
   reference: "green",
   note: "yellow",
@@ -73,14 +91,14 @@ const itemColorByType: Record<string, string> = {
   frame: "grey"
 };
 
-const linkDashByStyle: Record<string, string> = {
+const linkDashByStyle: Record<string, TldrawDash> = {
   line: "solid",
   arrow: "solid",
   dashed: "dashed",
   dotted: "dotted"
 };
 
-function getItemColor(item: BoardItem) {
+function getItemColor(item: BoardItem): TldrawColor {
   return itemColorByType[item.type] ?? "grey";
 }
 
@@ -179,8 +197,9 @@ function buildLegacyShapes(board: Board) {
 
     const from = getItemCenter(fromItem);
     const to = getItemCenter(toItem);
-    const dash = linkDashByStyle[link.style] ?? "solid";
-    const arrowheadEnd = link.style === "arrow" ? "arrow" : "none";
+    const dash: TldrawDash = linkDashByStyle[link.style] ?? "solid";
+      const arrowheadEnd = link.style === "arrow" ? "arrow" : "none";
+      const arrowColor: TldrawColor = "grey";
 
     shapes.push({
       id: createShapeId(`link-${link.id}`),
@@ -194,7 +213,7 @@ function buildLegacyShapes(board: Board) {
         arrowheadStart: "none",
         arrowheadEnd,
         richText: toRichText(link.label ?? ""),
-        color: "grey"
+        color: arrowColor
       },
       meta: {
         source: "evidence",
@@ -224,7 +243,7 @@ export function EvidenceBoardCanvas({ board, workspaceId, entities, references }
     return createTLStore(options);
   }, [board.id, board.name]);
 
-  const userPreferences = useMemo(() => {
+  const userPreferences = useMemo<TLUserPreferences>(() => {
     return {
       id: `board-${board.id}`,
       name: "Board",
@@ -326,7 +345,7 @@ export function EvidenceBoardCanvas({ board, workspaceId, entities, references }
     return () => document.removeEventListener("dragstart", handleDragStart);
   }, []);
 
-  const handleDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+  const handleDrop = useCallback((event: ReactDragEvent<HTMLDivElement>) => {
     const editor = editorRef.current;
     if (!editor) return;
 
@@ -341,7 +360,8 @@ export function EvidenceBoardCanvas({ board, workspaceId, entities, references }
     try {
       const payload = JSON.parse(raw) as { type: string; id: string; title?: string };
       const pagePoint = editor.screenToPage({ x: event.clientX, y: event.clientY });
-      const color = payload.type === "entity" ? "blue" : payload.type === "reference" ? "green" : "grey";
+      const color: TldrawColor =
+        payload.type === "entity" ? "blue" : payload.type === "reference" ? "green" : "grey";
       const title = payload.title || payload.id;
 
       editor.createShape({
@@ -368,7 +388,7 @@ export function EvidenceBoardCanvas({ board, workspaceId, entities, references }
     }
   }, []);
 
-  const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+  const handleDragOver = useCallback((event: ReactDragEvent<HTMLDivElement>) => {
     const hasCustom = Array.from(event.dataTransfer.types).includes("application/x-depictionator");
     if (!hasCustom) return;
     event.preventDefault();
