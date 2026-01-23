@@ -10,6 +10,7 @@ type SidebarLabels = {
   maps: string;
   timeline: string;
   reviews: string;
+  references: string;
   settings: string;
   signOut: string;
   workspaceFallback: string;
@@ -36,6 +37,7 @@ export function Sidebar({
     { href: "/maps", label: labels.maps },
     { href: "/boards", label: labels.boards },
     { href: "/timeline", label: labels.timeline },
+    { href: "/references", label: labels.references },
     { href: "/reviews", label: labels.reviews },
     { href: "/settings", label: labels.settings }
   ];

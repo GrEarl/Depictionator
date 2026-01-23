@@ -8,6 +8,7 @@ export type UiCopy = {
     maps: string;
     boards: string;
     timeline: string;
+    references: string;
     reviews: string;
     settings: string;
     signOut: string;
@@ -72,6 +73,7 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       maps: "Atlas",
       boards: "Boards",
       timeline: "Chronicle",
+      references: "Sources",
       reviews: "Approvals",
       settings: "Settings",
       signOut: "Log out"
@@ -134,6 +136,7 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       maps: "地図・アトラス",
       boards: "ボード",
       timeline: "年代記",
+      references: "参考文献",
       reviews: "承認待ち",
       settings: "システム設定",
       signOut: "ログアウト"
