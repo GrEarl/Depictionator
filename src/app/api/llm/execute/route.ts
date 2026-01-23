@@ -509,18 +509,28 @@ export async function POST(request: Request) {
         controller.enqueue(encoder.encode(`\n\n[Error: ${error}]`));
       } finally {
         const finalStatus = error ? "error" : "ok";
-        await prisma.llmLog.update({
-          where: { id: log.id },
-          data: { status: finalStatus, output: { data: { text: fullText }, error } }
-        });
-        await logAudit({
-            workspaceId: workspaceId || "system",
-            actorUserId: session.userId,
-            action: "llm_execute",
-            targetType: "llm_log",
-            targetId: log.id,
-            meta: { provider, status: finalStatus }
-        });
+        try {
+          await prisma.llmLog.update({
+            where: { id: log.id },
+            data: { status: finalStatus, output: { data: { text: fullText }, error } }
+          });
+        } catch (logError) {
+          console.error("Failed to update LLM log:", logError);
+        }
+        if (workspaceId) {
+          try {
+            await logAudit({
+              workspaceId,
+              actorUserId: session.userId,
+              action: "llm_execute",
+              targetType: "llm_log",
+              targetId: log.id,
+              meta: { provider, status: finalStatus }
+            });
+          } catch (auditError) {
+            console.error("Failed to write LLM audit log:", auditError);
+          }
+        }
         controller.close();
       }
     }
