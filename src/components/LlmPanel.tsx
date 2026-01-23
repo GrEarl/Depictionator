@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { diffLines } from "diff";
 import { MarkdownView } from "@/components/MarkdownView";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -60,9 +61,112 @@ export function LlmPanel({
   const [response, setResponse] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [context, setContext] = useState<any>(null);
+  const [diffParts, setDiffParts] = useState<ReturnType<typeof diffLines> | null>(null);
+  const [diffLoading, setDiffLoading] = useState(false);
+  const [applyMessage, setApplyMessage] = useState<string | null>(null);
+  const [draftId, setDraftId] = useState<string | null>(null);
+  const [changeSummary, setChangeSummary] = useState("LLM draft");
 
   const [geminiModel, setGeminiModel] = useState(defaultGeminiModel ?? "gemini-3-flash-preview");
   const [geminiSearch, setGeminiSearch] = useState(false);
+
+  useEffect(() => {
+    const el = document.getElementById("llm-context");
+    if (!el?.textContent) return;
+    try {
+      const parsed = JSON.parse(el.textContent);
+      setContext(parsed);
+    } catch {
+      setContext(null);
+    }
+  }, []);
+
+  useEffect(() => {
+    setDiffParts(null);
+    setDraftId(null);
+    setApplyMessage(null);
+  }, [response]);
+
+  const canApply = Boolean(
+    response.trim() &&
+    workspaceId &&
+    context &&
+    context.type === "entity" &&
+    context.entityId
+  );
+
+  const handlePreviewDiff = async () => {
+    if (!canApply) return;
+    setDiffLoading(true);
+    setApplyMessage(null);
+    try {
+      const res = await fetch("/api/articles/body", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspaceId,
+          entityId: context.entityId
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setApplyMessage(data?.error || "Failed to load current article body.");
+        return;
+      }
+      const before = String(data?.bodyMd ?? "");
+      const after = response;
+      setDiffParts(diffLines(before, after));
+    } catch {
+      setApplyMessage("Failed to load current article body.");
+    } finally {
+      setDiffLoading(false);
+    }
+  };
+
+  const handleCreateDraft = async () => {
+    if (!canApply) return;
+    setApplyMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append("workspaceId", String(workspaceId));
+      formData.append("articleId", String(context.entityId));
+      formData.append("bodyMd", response);
+      formData.append("changeSummary", changeSummary.trim() || "LLM draft");
+
+      const res = await fetch("/api/revisions/draft", { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) {
+        setApplyMessage(data?.error || "Failed to create draft.");
+        return;
+      }
+      if (data?.revisionId) {
+        setDraftId(data.revisionId);
+        setApplyMessage("Draft created. Review or submit for approval.");
+      }
+    } catch {
+      setApplyMessage("Failed to create draft.");
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!draftId || !workspaceId) return;
+    setApplyMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append("workspaceId", String(workspaceId));
+      formData.append("revisionId", draftId);
+      const res = await fetch("/api/revisions/submit", { method: "POST", body: formData });
+      if (!res.ok) {
+        const text = await res.text();
+        setApplyMessage(text || "Failed to submit review.");
+        return;
+      }
+      window.location.href = "/reviews";
+    } catch {
+      setApplyMessage("Failed to submit review.");
+    }
+  };
   
   // ... (keep state variables)
   const handleSubmit = async () => {
@@ -261,6 +365,70 @@ export function LlmPanel({
               )}
             </div>
           </div>
+
+          {canApply && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-border pb-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Safe Apply</label>
+                <span className="text-[10px] text-muted uppercase tracking-widest">Diff → Review → Apply</span>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Change Summary</label>
+                <input
+                  value={changeSummary}
+                  onChange={(e) => setChangeSummary(e.target.value)}
+                  className="w-full bg-bg border border-border rounded-lg px-3 py-2 text-xs outline-none focus:ring-2 focus:ring-accent"
+                  placeholder="Summarize the changes"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={handlePreviewDiff}
+                  disabled={diffLoading}
+                >
+                  {diffLoading ? "Loading diff..." : "Preview Diff"}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={handleCreateDraft}
+                >
+                  Create Draft
+                </button>
+                {draftId && (
+                  <>
+                    <button type="button" className="btn-secondary" onClick={handleSubmitReview}>
+                      Request Review
+                    </button>
+                    <a href={`/revisions/${draftId}`} className="btn-link">
+                      Open Draft
+                    </a>
+                  </>
+                )}
+              </div>
+              {applyMessage && <div className="text-xs text-muted">{applyMessage}</div>}
+              {diffParts && (
+                <div className="diff-preview">
+                  <div className="diff-stats">
+                    <span className="diff-added">+ Added</span>
+                    <span className="diff-removed">- Removed</span>
+                  </div>
+                  <pre className="diff-block">
+                    {diffParts.map((part, index) => (
+                      <span
+                        key={index}
+                        className={part.added ? "diff-line-added" : part.removed ? "diff-line-removed" : "diff-line-context"}
+                      >
+                        {part.value}
+                      </span>
+                    ))}
+                  </pre>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
