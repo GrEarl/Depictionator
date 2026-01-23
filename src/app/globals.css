@@ -2725,6 +2725,135 @@ button[type="submit"]:hover {
   background: var(--bg);
 }
 
+.editor-blocks {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.editor-block {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.06);
+}
+
+.editor-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.editor-block-type-select {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.editor-block-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.editor-block-actions button {
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.editor-block-actions button:hover {
+  border-color: rgba(255, 0, 51, 0.35);
+  color: var(--accent);
+}
+
+.editor-block-input,
+.editor-block-textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 12px;
+  transition: border-color 0.2s ease;
+}
+
+.editor-block-textarea {
+  resize: vertical;
+  min-height: 88px;
+}
+
+.editor-block-input:focus,
+.editor-block-textarea:focus {
+  outline: none;
+  border-color: rgba(255, 0, 51, 0.35);
+  box-shadow: 0 0 0 2px rgba(255, 0, 51, 0.08);
+}
+
+.editor-block-divider {
+  height: 1px;
+  border-top: 1px dashed var(--border);
+}
+
+.editor-block-footer {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+}
+
+.editor-block-add {
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.editor-block-add button {
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+  transition: all 0.2s ease;
+}
+
+.editor-block-add button:hover {
+  border-color: rgba(255, 0, 51, 0.45);
+  color: var(--accent);
+  background: rgba(255, 0, 51, 0.08);
+}
+
 .edit-view {
   display: flex;
   flex-direction: column;

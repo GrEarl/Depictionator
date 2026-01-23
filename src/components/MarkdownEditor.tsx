@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MarkdownView } from "@/components/MarkdownView";
@@ -17,6 +17,81 @@ type MarkdownEditorProps = {
   showToolbar?: boolean;
 };
 
+type BlockType = "paragraph" | "heading" | "list" | "quote" | "divider";
+
+type EditorBlock = {
+  id: string;
+  type: BlockType;
+  text: string;
+};
+
+const createBlockId = () => `block-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+
+const parseBlocks = (source: string, syntax: "markdown" | "wikitext"): EditorBlock[] => {
+  const normalized = source.replace(/\r\n/g, "\n").trim();
+  if (!normalized) {
+    return [{ id: createBlockId(), type: "paragraph", text: "" }];
+  }
+
+  const chunks = normalized.split(/\n{2,}/).map((chunk) => chunk.trim()).filter(Boolean);
+  const blocks = chunks.map((chunk) => {
+    if (/^(-{3,}|={4,})$/.test(chunk)) {
+      return { id: createBlockId(), type: "divider" as const, text: "" };
+    }
+
+    if (syntax === "wikitext") {
+      const headingMatch = chunk.match(/^={2,}\s*(.*?)\s*={2,}$/);
+      if (headingMatch) {
+        return { id: createBlockId(), type: "heading" as const, text: headingMatch[1] ?? "" };
+      }
+    } else {
+      const headingMatch = chunk.match(/^#{1,6}\s+(.*)$/);
+      if (headingMatch) {
+        return { id: createBlockId(), type: "heading" as const, text: headingMatch[1] ?? "" };
+      }
+    }
+
+    if (/^>/.test(chunk)) {
+      const lines = chunk.split("\n").map((line) => line.replace(/^>\s?/, ""));
+      return { id: createBlockId(), type: "quote" as const, text: lines.join("\n") };
+    }
+
+    if (/^[-*#]\s+/.test(chunk)) {
+      const lines = chunk.split("\n").map((line) => line.replace(/^[-*#]\s+/, ""));
+      return { id: createBlockId(), type: "list" as const, text: lines.join("\n") };
+    }
+
+    return { id: createBlockId(), type: "paragraph" as const, text: chunk };
+  });
+
+  return blocks.length > 0 ? blocks : [{ id: createBlockId(), type: "paragraph", text: "" }];
+};
+
+const serializeBlocks = (blocks: EditorBlock[], syntax: "markdown" | "wikitext") => {
+  const parts = blocks.map((block) => {
+    switch (block.type) {
+      case "heading":
+        return syntax === "wikitext" ? `== ${block.text.trim() || "Heading"} ==` : `## ${block.text.trim() || "Heading"}`;
+      case "list": {
+        const items = block.text.split("\n").filter(Boolean);
+        const prefix = syntax === "wikitext" ? "* " : "- ";
+        return items.length ? items.map((item) => `${prefix}${item}`).join("\n") : `${prefix}Item`;
+      }
+      case "quote": {
+        const lines = block.text.split("\n").filter(Boolean);
+        return lines.length ? lines.map((line) => `> ${line}`).join("\n") : "> Quote";
+      }
+      case "divider":
+        return syntax === "wikitext" ? "----" : "---";
+      case "paragraph":
+      default:
+        return block.text.trim();
+    }
+  });
+
+  return parts.filter(Boolean).join("\n\n");
+};
+
 export function MarkdownEditor({
   name,
   label,
@@ -31,6 +106,8 @@ export function MarkdownEditor({
   const [value, setValue] = useState(defaultValue);
   const [mode, setMode] = useState<"split" | "write" | "preview">(defaultMode);
   const [syntax, setSyntax] = useState<"markdown" | "wikitext">(defaultSyntax);
+  const [editorLayout, setEditorLayout] = useState<"text" | "blocks">("text");
+  const [blocks, setBlocks] = useState<EditorBlock[]>(() => parseBlocks(defaultValue, defaultSyntax));
   const [pickerMode, setPickerMode] = useState<"article" | "image" | null>(null);
   const [pickerQuery, setPickerQuery] = useState("");
   const [pickerCaption, setPickerCaption] = useState("");
@@ -43,10 +120,26 @@ export function MarkdownEditor({
   const [categoryDraft, setCategoryDraft] = useState("");
   const [redirectDraft, setRedirectDraft] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const blockSyncRef = useRef(false);
 
   useEffect(() => {
     setValue(defaultValue);
   }, [defaultValue]);
+
+  useEffect(() => {
+    if (editorLayout !== "blocks") return;
+    if (blockSyncRef.current) {
+      blockSyncRef.current = false;
+      return;
+    }
+    setBlocks(parseBlocks(value, syntax));
+  }, [value, syntax, editorLayout]);
+
+  useEffect(() => {
+    if (editorLayout !== "blocks") return;
+    blockSyncRef.current = true;
+    setValue(serializeBlocks(blocks, syntax));
+  }, [blocks, syntax, editorLayout]);
 
   const wikiMeta = useMemo(() => {
     if (syntax !== "wikitext") return null;
@@ -58,6 +151,55 @@ export function MarkdownEditor({
   const wikiTemplates = wikiMeta ? wikiMeta.templates.join(",") : "";
 
   const previewValue = normalizedValue;
+
+  const updateBlock = (id: string, patch: Partial<EditorBlock>) => {
+    setBlocks((prev) =>
+      prev.map((block) => (block.id === id ? { ...block, ...patch } : block))
+    );
+  };
+
+  const moveBlock = (index: number, direction: number) => {
+    setBlocks((prev) => {
+      const next = [...prev];
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= next.length) return prev;
+      const [item] = next.splice(index, 1);
+      next.splice(targetIndex, 0, item);
+      return next;
+    });
+  };
+
+  const removeBlock = (id: string) => {
+    setBlocks((prev) => {
+      const next = prev.filter((block) => block.id !== id);
+      return next.length ? next : [{ id: createBlockId(), type: "paragraph", text: "" }];
+    });
+  };
+
+  const addBlock = (type: BlockType, index?: number) => {
+    const newBlock: EditorBlock = { id: createBlockId(), type, text: "" };
+    setBlocks((prev) => {
+      if (index === undefined) return [...prev, newBlock];
+      const next = [...prev];
+      next.splice(index + 1, 0, newBlock);
+      return next;
+    });
+  };
+
+  const blockTypeLabel = (type: BlockType) => {
+    switch (type) {
+      case "heading":
+        return "Heading";
+      case "list":
+        return "List";
+      case "quote":
+        return "Quote";
+      case "divider":
+        return "Divider";
+      default:
+        return "Paragraph";
+    }
+  };
 
   const withSelection = (updater: (args: { start: number; end: number; selected: string }) => { next: string; cursorStart: number; cursorEnd: number }) => {
     const target = textareaRef.current;
@@ -369,6 +511,23 @@ export function MarkdownEditor({
             </button>
           ))}
         </div>
+        <div className="flex items-center p-1 bg-bg border border-border rounded-lg shadow-sm ml-2">
+          {(["text", "blocks"] as const).map((layout) => (
+            <button
+              key={layout}
+              type="button"
+              onClick={() => setEditorLayout(layout)}
+              className={cn(
+                "px-3 py-1 text-[10px] font-bold uppercase tracking-wider rounded-md transition-all",
+                editorLayout === layout
+                  ? "bg-panel text-ink shadow-sm border border-border/50"
+                  : "text-muted hover:text-ink hover:bg-black/5 dark:hover:bg-white/5"
+              )}
+            >
+              {layout === "text" ? "Text" : "Blocks"}
+            </button>
+          ))}
+        </div>
       </div>
 
       {showToolbar && (
@@ -539,7 +698,7 @@ export function MarkdownEditor({
             )}
           </div>
           <div className="editor-picker-results">
-            {pickerLoading && <div className="muted text-xs">Loading…</div>}
+            {pickerLoading && <div className="muted text-xs">Loading...</div>}
             {!pickerLoading && pickerResults.length === 0 && (
               <div className="muted text-xs">No results.</div>
             )}
@@ -599,14 +758,76 @@ export function MarkdownEditor({
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-            <textarea
-              ref={textareaRef}
-              rows={rows}
-              value={value}
-              placeholder={placeholder}
-              onChange={(event) => setValue(event.target.value)}
-              className="w-full h-full p-4 rounded-xl bg-panel border border-border text-sm font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm placeholder:text-muted/50"
-            />
+            {editorLayout === "blocks" ? (
+              <div className="editor-blocks">
+                {blocks.map((block, index) => (
+                  <div key={block.id} className={`editor-block editor-block-${block.type}`}>
+                    <div className="editor-block-header">
+                      <select
+                        className="editor-block-type-select"
+                        value={block.type}
+                        onChange={(event) => updateBlock(block.id, { type: event.target.value as BlockType })}
+                      >
+                        <option value="paragraph">Paragraph</option>
+                        <option value="heading">Heading</option>
+                        <option value="list">List</option>
+                        <option value="quote">Quote</option>
+                        <option value="divider">Divider</option>
+                      </select>
+                      <div className="editor-block-actions">
+                        <button type="button" onClick={() => moveBlock(index, -1)} title="Move up">Up</button>
+                        <button type="button" onClick={() => moveBlock(index, 1)} title="Move down">Down</button>
+                        <button type="button" onClick={() => addBlock("paragraph", index)} title="Add below">Add</button>
+                        <button type="button" onClick={() => removeBlock(block.id)} title="Remove">Remove</button>
+                      </div>
+                    </div>
+                    {block.type === "divider" ? (
+                      <div className="editor-block-divider" />
+                    ) : block.type === "heading" ? (
+                      <input
+                        className="editor-block-input"
+                        value={block.text}
+                        onChange={(event) => updateBlock(block.id, { text: event.target.value })}
+                        placeholder="Heading"
+                      />
+                    ) : (
+                      <textarea
+                        className="editor-block-textarea"
+                        rows={block.type === "list" ? 3 : 4}
+                        value={block.text}
+                        onChange={(event) => updateBlock(block.id, { text: event.target.value })}
+                        placeholder={
+                          block.type === "list"
+                            ? "Item 1\nItem 2"
+                            : block.type === "quote"
+                              ? "Quote"
+                              : "Write here..."
+                        }
+                      />
+                    )}
+                    <div className="editor-block-footer">
+                      <span>{blockTypeLabel(block.type)}</span>
+                    </div>
+                  </div>
+                ))}
+                <div className="editor-block-add">
+                  <button type="button" onClick={() => addBlock("paragraph")}>Paragraph</button>
+                  <button type="button" onClick={() => addBlock("heading")}>Heading</button>
+                  <button type="button" onClick={() => addBlock("list")}>List</button>
+                  <button type="button" onClick={() => addBlock("quote")}>Quote</button>
+                  <button type="button" onClick={() => addBlock("divider")}>Divider</button>
+                </div>
+              </div>
+            ) : (
+              <textarea
+                ref={textareaRef}
+                rows={rows}
+                value={value}
+                placeholder={placeholder}
+                onChange={(event) => setValue(event.target.value)}
+                className="w-full h-full p-4 rounded-xl bg-panel border border-border text-sm font-mono leading-relaxed resize-y focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-all shadow-sm placeholder:text-muted/50"
+              />
+            )}
             {isDragging && (
               <div className="absolute inset-0 bg-accent/10 border-2 border-dashed border-accent rounded-xl flex items-center justify-center pointer-events-none z-10">
                 <div className="text-accent font-bold text-sm flex items-center gap-2">
@@ -651,3 +872,4 @@ export function MarkdownEditor({
     </div>
   );
 }
+
