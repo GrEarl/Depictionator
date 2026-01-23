@@ -376,6 +376,53 @@ button[type="submit"]:hover {
   transform: translateY(-2px);
 }
 
+.form-card {
+  @apply p-6 rounded-lg bg-panel border border-border space-y-6;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.form-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.form-input,
+.form-textarea,
+.form-select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.form-hint {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
 /* ==== RESPONSIVE ==== */
 @media (max-width: 1024px) {
   .app-sidebar {
@@ -4175,6 +4222,87 @@ button[type="submit"]:hover {
 /* ==========================================================================
    Reference Library Styles
    ========================================================================== */
+
+.reference-import-panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.reference-import-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.reference-import-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--ink);
+}
+
+.reference-import-subtitle {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.reference-import-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.reference-import-tabs button {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  transition: all 0.2s ease;
+}
+
+.reference-import-tabs button.active {
+  border-color: rgba(255, 0, 51, 0.4);
+  color: var(--accent);
+  background: rgba(255, 0, 51, 0.1);
+}
+
+.reference-import-body textarea {
+  min-height: 120px;
+}
+
+.reference-import-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.reference-import-status {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.reference-import-status.success {
+  color: #22c55e;
+}
+
+.reference-import-status.error {
+  color: #ef4444;
+}
 
 .reference-list {
   display: grid;
