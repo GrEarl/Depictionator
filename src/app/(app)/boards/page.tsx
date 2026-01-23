@@ -88,6 +88,7 @@ export default async function BoardsPage({ searchParams }: PageProps) {
             board={{
               id: activeBoard.id,
               name: activeBoard.name,
+              canvasState: activeBoard.canvasState,
               items: activeBoard.items.map((item) => ({
                 id: item.id,
                 type: item.type,

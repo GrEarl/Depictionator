@@ -1,5 +1,6 @@
 @config "../../tailwind.config.js";
 @import "tailwindcss";
+@import "tldraw/tldraw.css";
 
 :root {
   color-scheme: dark;
@@ -3747,6 +3748,51 @@ button[type="submit"]:hover {
 }
 
 /* ==== EVIDENCE BOARD ==== */
+.evidence-board-surface {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 680px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+}
+
+.evidence-board-tldraw {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.evidence-board-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.evidence-board-empty h4 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.evidence-board-empty p {
+  margin: 0;
+  max-width: 360px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 .evidence-canvas {
   position: relative;
   width: 100%;

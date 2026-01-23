@@ -48,6 +48,7 @@ export async function GET(request: Request) {
       name: board.name,
       description: board.description ?? undefined
     },
+    canvasState: board.canvasState ?? undefined,
     items: board.items.map((item) => ({
       id: item.id,
       type: item.type,

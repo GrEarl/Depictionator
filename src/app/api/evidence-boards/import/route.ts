@@ -10,6 +10,7 @@ type ImportPayload = {
   board?: { name?: string; description?: string };
   name?: string;
   description?: string;
+  canvasState?: unknown;
   items?: any[];
   links?: any[];
 };
@@ -223,7 +224,8 @@ export async function POST(request: Request) {
       data: {
         workspaceId,
         name: nameOverride || `${sourceBoard.name}（コピー）`,
-        description: sourceBoard.description ?? null
+        description: sourceBoard.description ?? null,
+        canvasState: sourceBoard.canvasState ?? undefined
       }
     });
 
@@ -340,7 +342,8 @@ export async function POST(request: Request) {
     data: {
       workspaceId,
       name: boardName,
-      description
+      description,
+      canvasState: payload.canvasState ?? undefined
     }
   });
 

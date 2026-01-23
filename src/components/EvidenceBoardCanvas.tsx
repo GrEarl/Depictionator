@@ -1,7 +1,23 @@
-"use client";
+﻿"use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useRef, useState, type MouseEvent, type DragEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import type { DragEvent } from "react";
+import {
+  Tldraw,
+  createTLStore,
+  defaultBindingUtils,
+  defaultShapeUtils,
+  createShapeId,
+  getSnapshot,
+  toRichText,
+  useTldrawUser,
+  type Editor,
+  type TLCreateShapePartial
+} from "tldraw";
+import { toWikiPath } from "@/lib/wiki";
+
+const NOTE_WIDTH = 220;
+const NOTE_HEIGHT = 140;
 
 type BoardItem = {
   id: string;
@@ -31,11 +47,13 @@ type BoardLink = {
 type Board = {
   id: string;
   name: string;
+  canvasState?: unknown | null;
   items: BoardItem[];
   links: BoardLink[];
 };
 
 type Entity = { id: string; title: string; type: string };
+
 type Reference = { id: string; title: string; type: string };
 
 type Props = {
@@ -45,230 +63,331 @@ type Props = {
   references: Reference[];
 };
 
+const itemColorByType: Record<string, string> = {
+  entity: "blue",
+  reference: "green",
+  note: "yellow",
+  url: "violet",
+  quote: "orange",
+  asset: "light-blue",
+  frame: "grey"
+};
+
+const linkDashByStyle: Record<string, string> = {
+  line: "solid",
+  arrow: "solid",
+  dashed: "dashed",
+  dotted: "dotted"
+};
+
+function getItemColor(item: BoardItem) {
+  return itemColorByType[item.type] ?? "grey";
+}
+
+function getItemTitle(item: BoardItem) {
+  if (item.entity?.title) return item.entity.title;
+  if (item.reference?.title) return item.reference.title;
+  return item.title || "Untitled";
+}
+
+function getItemSubtitle(item: BoardItem) {
+  if (item.entity?.type) return item.entity.type;
+  if (item.reference) return "Reference";
+  if (item.type) return item.type;
+  return "";
+}
+
+function buildItemText(item: BoardItem) {
+  const lines: string[] = [];
+  const title = getItemTitle(item);
+  if (title) lines.push(title);
+  const subtitle = getItemSubtitle(item);
+  if (subtitle && subtitle !== title) lines.push(subtitle);
+  if (item.content) lines.push(item.content);
+  if (item.url) lines.push(item.url);
+  return lines.join("\n");
+}
+
+function buildItemUrl(item: BoardItem) {
+  if (item.entity?.title) return toWikiPath(item.entity.title);
+  if (item.url) return item.url;
+  return "";
+}
+
+function getItemCenter(item: BoardItem) {
+  const w = item.width ?? NOTE_WIDTH;
+  const h = item.height ?? NOTE_HEIGHT;
+  return { x: item.x + w / 2, y: item.y + h / 2 };
+}
+
+function buildLegacyShapes(board: Board) {
+  const shapes: TLCreateShapePartial[] = [];
+  const itemIds = new Map<string, string>();
+
+  for (const item of board.items) {
+    const id = createShapeId(item.id);
+    itemIds.set(item.id, id);
+    const color = getItemColor(item);
+
+    if (item.type === "frame") {
+      const width = item.width ?? 420;
+      const height = item.height ?? 300;
+      shapes.push({
+        id,
+        type: "frame",
+        x: item.x,
+        y: item.y,
+        props: {
+          w: width,
+          h: height,
+          name: item.title || "Frame",
+          color
+        },
+        meta: {
+          source: "evidence",
+          itemId: item.id,
+          kind: item.type
+        }
+      });
+      continue;
+    }
+
+    shapes.push({
+      id,
+      type: "note",
+      x: item.x,
+      y: item.y,
+      props: {
+        richText: toRichText(buildItemText(item)),
+        color,
+        url: buildItemUrl(item)
+      },
+      meta: {
+        source: "evidence",
+        itemId: item.id,
+        kind: item.type,
+        entityId: item.entityId ?? undefined,
+        referenceId: item.referenceId ?? undefined
+      }
+    });
+  }
+
+  for (const link of board.links) {
+    const fromItem = board.items.find((item) => item.id === link.fromItemId);
+    const toItem = board.items.find((item) => item.id === link.toItemId);
+    if (!fromItem || !toItem) continue;
+
+    const from = getItemCenter(fromItem);
+    const to = getItemCenter(toItem);
+    const dash = linkDashByStyle[link.style] ?? "solid";
+    const arrowheadEnd = link.style === "arrow" ? "arrow" : "none";
+
+    shapes.push({
+      id: createShapeId(`link-${link.id}`),
+      type: "arrow",
+      x: 0,
+      y: 0,
+      props: {
+        start: from,
+        end: to,
+        dash,
+        arrowheadStart: "none",
+        arrowheadEnd,
+        richText: toRichText(link.label ?? ""),
+        color: "grey"
+      },
+      meta: {
+        source: "evidence",
+        linkId: link.id
+      }
+    });
+  }
+
+  return shapes;
+}
+
 export function EvidenceBoardCanvas({ board, workspaceId, entities, references }: Props) {
-  const router = useRouter();
-  const canvasRef = useRef<HTMLDivElement>(null);
-  const [items, setItems] = useState<BoardItem[]>(board.items);
-  const [links] = useState<BoardLink[]>(board.links);
-  const [draggingId, setDraggingId] = useState<string | null>(null);
-  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [connectingFrom, setConnectingFrom] = useState<string | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const editorRef = useRef<Editor | null>(null);
+  const lastSavedRef = useRef<string | null>(null);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const bootstrappedRef = useRef(false);
 
-  // Handle card drag start
-  const handleCardMouseDown = useCallback((e: MouseEvent, item: BoardItem) => {
-    e.preventDefault();
-    const rect = (e.target as HTMLElement).closest(".board-card")?.getBoundingClientRect();
-    if (!rect) return;
-    setDraggingId(item.id);
-    setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    setSelectedId(item.id);
+  const store = useMemo(() => {
+    const options: Parameters<typeof createTLStore>[0] = {
+      shapeUtils: defaultShapeUtils,
+      bindingUtils: defaultBindingUtils,
+      defaultName: board.name
+    };
+    if (board.canvasState) {
+      options.snapshot = board.canvasState as any;
+    }
+    return createTLStore(options);
+  }, [board.id, board.name]);
+
+  const userPreferences = useMemo(() => {
+    return {
+      id: `board-${board.id}`,
+      name: "Board",
+      color: "#ff0033",
+      colorScheme: "dark"
+    };
+  }, [board.id]);
+
+  const user = useTldrawUser({ userPreferences });
+
+  const persistSnapshot = useCallback(
+    async (autosave = true) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+
+      try {
+        const snapshot = getSnapshot(editor.store);
+        const serialized = JSON.stringify(snapshot);
+        if (autosave && serialized === lastSavedRef.current) return;
+
+        const response = await fetch("/api/evidence-boards/canvas", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            boardId: board.id,
+            canvasState: snapshot,
+            autosave
+          })
+        });
+
+        if (response.ok) {
+          lastSavedRef.current = serialized;
+        }
+      } catch (error) {
+        console.warn("Failed to save board canvas", error);
+      }
+    },
+    [workspaceId, board.id]
+  );
+
+  const scheduleSave = useCallback(() => {
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+    saveTimerRef.current = setTimeout(() => {
+      void persistSnapshot(true);
+    }, 900);
+  }, [persistSnapshot]);
+
+  const handleMount = useCallback(
+    (editor: Editor) => {
+      editorRef.current = editor;
+
+      if (!board.canvasState && !bootstrappedRef.current && board.items.length) {
+        bootstrappedRef.current = true;
+        const shapes = buildLegacyShapes(board);
+        if (shapes.length) {
+          editor.createShapes(shapes);
+          editor.setCurrentTool("select");
+          setTimeout(() => void persistSnapshot(true), 300);
+        }
+      }
+    },
+    [board, persistSnapshot]
+  );
+
+  useEffect(() => {
+    const unsubscribe = store.listen(() => {
+      scheduleSave();
+    }, { source: "user", scope: "document" });
+
+    return () => {
+      unsubscribe();
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [store, scheduleSave]);
+
+  useEffect(() => {
+    const handleDragStart = (event: DragEvent) => {
+      const target = (event.target as HTMLElement | null)?.closest(".draggable-item") as HTMLElement | null;
+      if (!target || !event.dataTransfer) return;
+      const type = target.dataset.type;
+      const id = target.dataset.id;
+      const title = target.dataset.title;
+      if (!type || !id) return;
+
+      const payload = { type, id, title };
+      event.dataTransfer.setData("application/x-depictionator", JSON.stringify(payload));
+      event.dataTransfer.setData("type", type);
+      event.dataTransfer.setData("id", id);
+      if (title) event.dataTransfer.setData("title", title);
+      event.dataTransfer.effectAllowed = "copy";
+    };
+
+    document.addEventListener("dragstart", handleDragStart);
+    return () => document.removeEventListener("dragstart", handleDragStart);
   }, []);
 
-  // Handle card drag
-  const handleCanvasMouseMove = useCallback((e: MouseEvent) => {
-    if (!draggingId || !canvasRef.current) return;
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const newX = e.clientX - canvasRect.left - dragOffset.x;
-    const newY = e.clientY - canvasRect.top - dragOffset.y;
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === draggingId ? { ...item, x: Math.max(0, newX), y: Math.max(0, newY) } : item
-      )
-    );
-  }, [draggingId, dragOffset]);
+  const handleDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
+    const editor = editorRef.current;
+    if (!editor) return;
 
-  // Handle card drag end - save to server
-  const handleCanvasMouseUp = useCallback(async () => {
-    if (!draggingId) return;
-    const item = items.find((i) => i.id === draggingId);
-    if (item) {
-      const form = new FormData();
-      form.append("workspaceId", workspaceId);
-      form.append("itemId", item.id);
-      form.append("x", String(Math.round(item.x)));
-      form.append("y", String(Math.round(item.y)));
-      await fetch("/api/evidence-items/update", { method: "POST", body: form });
+    const hasCustom = Array.from(event.dataTransfer.types).includes("application/x-depictionator");
+    if (!hasCustom) return;
+
+    event.preventDefault();
+
+    const raw = event.dataTransfer.getData("application/x-depictionator");
+    if (!raw) return;
+
+    try {
+      const payload = JSON.parse(raw) as { type: string; id: string; title?: string };
+      const pagePoint = editor.screenToPage({ x: event.clientX, y: event.clientY });
+      const color = payload.type === "entity" ? "blue" : payload.type === "reference" ? "green" : "grey";
+      const title = payload.title || payload.id;
+
+      editor.createShape({
+        type: "note",
+        x: pagePoint.x,
+        y: pagePoint.y,
+        props: {
+          richText: toRichText(title),
+          color,
+          url: payload.type === "entity"
+            ? toWikiPath(title)
+            : ""
+        },
+        meta: {
+          source: "evidence",
+          kind: payload.type,
+          entityId: payload.type === "entity" ? payload.id : undefined,
+          referenceId: payload.type === "reference" ? payload.id : undefined
+        }
+      });
+      editor.setCurrentTool("select");
+    } catch (error) {
+      console.warn("Failed to drop item", error);
     }
-    setDraggingId(null);
-  }, [draggingId, items, workspaceId]);
-
-  // Handle drop from sidebar
-  const handleDrop = useCallback(async (e: DragEvent) => {
-    e.preventDefault();
-    const type = e.dataTransfer.getData("type");
-    const id = e.dataTransfer.getData("id");
-    const title = e.dataTransfer.getData("title");
-
-    if (!type || !id || !canvasRef.current) return;
-
-    const canvasRect = canvasRef.current.getBoundingClientRect();
-    const x = e.clientX - canvasRect.left;
-    const y = e.clientY - canvasRect.top;
-
-    const form = new FormData();
-    form.append("workspaceId", workspaceId);
-    form.append("boardId", board.id);
-    form.append("type", type);
-    form.append("title", title);
-    form.append("x", String(Math.round(x)));
-    form.append("y", String(Math.round(y)));
-
-    if (type === "entity") {
-      form.append("entityId", id);
-    } else if (type === "reference") {
-      form.append("referenceId", id);
-    }
-
-    const response = await fetch("/api/evidence-items/create", { method: "POST", body: form });
-    if (response.ok) {
-      router.refresh();
-    }
-  }, [workspaceId, board.id, router]);
-
-  const handleDragOver = useCallback((e: DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
   }, []);
 
-  // Start connection mode
-  const startConnection = useCallback((itemId: string) => {
-    setConnectingFrom(itemId);
+  const handleDragOver = useCallback((event: DragEvent<HTMLDivElement>) => {
+    const hasCustom = Array.from(event.dataTransfer.types).includes("application/x-depictionator");
+    if (!hasCustom) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
   }, []);
-
-  // Complete connection
-  const completeConnection = useCallback(async (toItemId: string) => {
-    if (!connectingFrom || connectingFrom === toItemId) {
-      setConnectingFrom(null);
-      return;
-    }
-
-    const form = new FormData();
-    form.append("workspaceId", workspaceId);
-    form.append("boardId", board.id);
-    form.append("fromItemId", connectingFrom);
-    form.append("toItemId", toItemId);
-    form.append("style", "arrow");
-
-    await fetch("/api/evidence-links/create", { method: "POST", body: form });
-    setConnectingFrom(null);
-    router.refresh();
-  }, [connectingFrom, workspaceId, board.id, router]);
-
-  // Get card display info
-  const getCardDisplay = (item: BoardItem) => {
-    if (item.entity) {
-      return { title: item.entity.title, subtitle: item.entity.type, className: "bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800" };
-    }
-    if (item.reference) {
-      return { title: item.reference.title, subtitle: "Reference", className: "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800" };
-    }
-    if (item.type === "note") {
-      return { title: item.title || "Note", subtitle: item.content?.slice(0, 50), className: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800" };
-    }
-    if (item.type === "url") {
-      return { title: item.title || item.url || "Link", subtitle: item.url, className: "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800" };
-    }
-    return { title: item.title || "Item", subtitle: item.type, className: "bg-panel border-border" };
-  };
-
-  // Calculate link line positions
-  const getLinkPath = (link: BoardLink) => {
-    const fromItem = items.find((i) => i.id === link.fromItemId);
-    const toItem = items.find((i) => i.id === link.toItemId);
-    if (!fromItem || !toItem) return null;
-
-    const fromX = fromItem.x + 100; // card center
-    const fromY = fromItem.y + 40;
-    const toX = toItem.x + 100;
-    const toY = toItem.y + 40;
-
-    return { fromX, fromY, toX, toY };
-  };
 
   return (
-    <div
-      ref={canvasRef}
-      className="evidence-canvas"
-      onMouseMove={handleCanvasMouseMove}
-      onMouseUp={handleCanvasMouseUp}
-      onMouseLeave={handleCanvasMouseUp}
-      onDrop={handleDrop}
-      onDragOver={handleDragOver}
-    >
-      {/* Connection Lines (SVG) */}
-      <svg className="evidence-links-layer">
-        <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" fill="#888" />
-          </marker>
-        </defs>
-        {links.map((link) => {
-          const path = getLinkPath(link);
-          if (!path) return null;
-          return (
-            <line
-              key={link.id}
-              x1={path.fromX}
-              y1={path.fromY}
-              x2={path.toX}
-              y2={path.toY}
-              stroke="#888"
-              strokeWidth={2}
-              markerEnd={link.style === "arrow" ? "url(#arrowhead)" : undefined}
-              strokeDasharray={link.style === "dashed" ? "6 4" : undefined}
-            />
-          );
-        })}
-      </svg>
-
-      {/* Cards */}
-      {items.map((item) => {
-        const display = getCardDisplay(item);
-        const isSelected = selectedId === item.id;
-        const isConnecting = connectingFrom === item.id;
-
-        return (
-          <div
-            key={item.id}
-            className={`board-card border shadow-sm transition-all hover:shadow-md ${display.className} ${isSelected ? "ring-2 ring-accent border-accent shadow-lg" : ""} ${isConnecting ? "ring-2 ring-amber-500 animate-pulse" : ""}`}
-            style={{
-              left: item.x,
-              top: item.y,
-              zIndex: item.zIndex || 1
-            }}
-            onMouseDown={(e) => handleCardMouseDown(e, item)}
-            onClick={() => connectingFrom ? completeConnection(item.id) : setSelectedId(item.id)}
-          >
-            <div className="card-title font-bold text-sm text-ink mb-1">{display.title}</div>
-            {display.subtitle && <div className="card-subtitle text-[10px] uppercase font-semibold text-muted opacity-80">{display.subtitle}</div>}
-            <div className="card-actions">
-              <button
-                className="card-action-btn w-6 h-6 rounded-full bg-white dark:bg-slate-800 border border-border shadow-sm flex items-center justify-center hover:bg-accent hover:text-white transition-colors"
-                title="Connect to another card"
-                onClick={(e) => { e.stopPropagation(); startConnection(item.id); }}
-              >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
-                  <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71" />
-                  <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71" />
-                </svg>
-              </button>
-            </div>
-          </div>
-        );
-      })}
-
-      {/* Empty State */}
-      {items.length === 0 && (
-        <div className="canvas-empty-hint">
-          Drag entities and references here, or add notes using the panel on the right.
-        </div>
-      )}
-
-      {/* Connection Mode Indicator */}
-      {connectingFrom && (
-        <div className="connection-hint">
-          Click another card to connect, or click canvas to cancel
+    <div className="evidence-board-surface" onDrop={handleDrop} onDragOver={handleDragOver}>
+      <Tldraw
+        key={board.id}
+        store={store}
+        user={user}
+        onMount={handleMount}
+        className="evidence-board-tldraw"
+      />
+      {board.items.length === 0 && !board.canvasState && (
+        <div className="evidence-board-empty">
+          <h4>Start building your evidence wall</h4>
+          <p>Drag entities or references here, or use the toolbar to add notes, frames, and media.</p>
         </div>
       )}
     </div>
