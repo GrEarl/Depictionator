@@ -14,6 +14,7 @@ type SearchResult = {
   entityType?: string;
   tags?: string[];
   updatedAt?: string;
+  score?: number;
 };
 
 type SearchResponse = {
@@ -32,6 +33,7 @@ export function GlobalSearch({ workspaceId, placeholder = "Search everything... 
   const [results, setResults] = useState<SearchResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [useSemanticSearch, setUseSemanticSearch] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
@@ -66,16 +68,45 @@ export function GlobalSearch({ workspaceId, placeholder = "Search everything... 
     const timeoutId = setTimeout(async () => {
       setIsLoading(true);
       try {
-        const params = new URLSearchParams({
-          workspaceId,
-          q: query.trim(),
-          limit: "20"
-        });
-        const res = await fetch(`/api/search/global?${params}`);
-        if (res.ok) {
-          const data: SearchResponse = await res.json();
-          setResults(data.results);
-          setSelectedIndex(0);
+        if (useSemanticSearch) {
+          // Use semantic search API
+          const res = await fetch("/api/ai/semantic-search", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              workspaceId,
+              query: query.trim(),
+              limit: 20
+            })
+          });
+          if (res.ok) {
+            const data = await res.json();
+            // Transform semantic results to match SearchResult format
+            const semanticResults: SearchResult[] = (data.results || []).map((r: any) => ({
+              id: r.id,
+              type: "entity" as const,
+              title: r.title,
+              excerpt: r.excerpt || r.summary,
+              url: `/wiki/${encodeURIComponent(r.title.replace(/ /g, "_"))}`,
+              entityType: r.type,
+              score: r.score
+            }));
+            setResults(semanticResults);
+            setSelectedIndex(0);
+          }
+        } else {
+          // Use regular keyword search
+          const params = new URLSearchParams({
+            workspaceId,
+            q: query.trim(),
+            limit: "20"
+          });
+          const res = await fetch(`/api/search/global?${params}`);
+          if (res.ok) {
+            const data: SearchResponse = await res.json();
+            setResults(data.results);
+            setSelectedIndex(0);
+          }
         }
       } catch (error) {
         console.error("Search error:", error);
@@ -85,7 +116,7 @@ export function GlobalSearch({ workspaceId, placeholder = "Search everything... 
     }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [query, workspaceId]);
+  }, [query, workspaceId, useSemanticSearch]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -141,7 +172,7 @@ export function GlobalSearch({ workspaceId, placeholder = "Search everything... 
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={placeholder}
+            placeholder={useSemanticSearch ? "Semantic search... (meaning-based)" : placeholder}
             className="search-input"
           />
           {isLoading && (
@@ -149,6 +180,25 @@ export function GlobalSearch({ workspaceId, placeholder = "Search everything... 
               <div className="spinner" />
             </div>
           )}
+          <button
+            type="button"
+            onClick={() => setUseSemanticSearch(!useSemanticSearch)}
+            className={`search-mode-toggle ${useSemanticSearch ? "active" : ""}`}
+            title={useSemanticSearch ? "Switch to keyword search" : "Switch to semantic search (AI)"}
+          >
+            {useSemanticSearch ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <path d="M12 2a10 10 0 1010 10A10 10 0 0012 2z" />
+                <path d="M12 8v4M12 16h.01" />
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
+              </svg>
+            )}
+            <span className="toggle-label">{useSemanticSearch ? "AI" : "Keyword"}</span>
+          </button>
         </div>
 
         {/* Results */}
@@ -194,6 +244,11 @@ export function GlobalSearch({ workspaceId, placeholder = "Search everything... 
                 </div>
                 <div className="result-meta">
                   <span className="result-type">{result.type}</span>
+                  {result.score !== undefined && useSemanticSearch && (
+                    <span className="result-score" title="Similarity score">
+                      {Math.round(result.score * 100)}%
+                    </span>
+                  )}
                 </div>
               </Link>
             ))}
