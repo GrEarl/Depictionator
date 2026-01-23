@@ -80,6 +80,8 @@ type MapPayload = {
   }[];
 };
 
+type MapPath = MapPayload["paths"][number];
+
 type Entity = { id: string; title: string; type: string; tags?: string[] };
 type EraOption = { id: string; name: string };
 type ChapterOption = { id: string; name: string; orderIndex: number };
@@ -586,6 +588,47 @@ export function FigmaMapEditor({
     return map.paths.find((path) => path.id === selectedPathId) ?? null;
   }, [map.paths, selectedPathId]);
 
+  const pathOptions = useMemo(() => {
+    return map.paths.map((path, index) => {
+      const from = path.worldFrom?.trim();
+      const to = path.worldTo?.trim();
+      if (from || to) {
+        return { id: path.id, label: `${from || "Start"} → ${to || "End"}` };
+      }
+      const count = path.polyline?.length ?? 0;
+      return { id: path.id, label: `Path ${index + 1} (${count})` };
+    });
+  }, [map.paths]);
+
+  const openPathEditor = useCallback(
+    (path: MapPath) => {
+      setMode("select");
+      clearPinSelection();
+      setSelectedPathId(path.id);
+      setIsEditingPathPoints(false);
+      setPathPoints([]);
+      draftLayerRef.current?.clearLayers();
+      setShowRightPanel(true);
+      setPathDraft(
+        createPathDraft({
+          arrowStyle: path.arrowStyle ?? "arrow",
+          strokeColor: path.strokeColor ?? "",
+          strokeWidth: path.strokeWidth ? String(path.strokeWidth) : "",
+          markerStyleId: path.markerStyleId ?? "",
+          truthFlag: path.truthFlag ?? "canonical",
+          viewpointId: path.viewpointId ?? "",
+          worldFrom: path.worldFrom ?? "",
+          worldTo: path.worldTo ?? "",
+          storyFromChapterId: path.storyFromChapterId ?? "",
+          storyToChapterId: path.storyToChapterId ?? "",
+          relatedEventId: path.relatedEventId ?? "",
+          relatedEntityIds: Array.isArray(path.relatedEntityIds) ? path.relatedEntityIds.join(\",\") : \"\"
+        })
+      );
+    },
+    [clearPinSelection, createPathDraft]
+  );
+
   // Helper function to convert Leaflet LatLng to map coordinates
   const latLngToMapCoords = useCallback((latlng: LatLng): { x: number; y: number } => {
     // In Leaflet CRS.Simple, lng = x and lat = y
@@ -925,27 +968,7 @@ export function FigmaMapEditor({
 
           polylineLayer.on("click", (event: any) => {
             L.DomEvent.stopPropagation(event);
-            setMode("select");
-            clearPinSelection();
-            setSelectedPathId(path.id);
-            setIsEditingPathPoints(false);
-            setPathPoints([]);
-            draftLayerRef.current?.clearLayers();
-            setShowRightPanel(true);
-            setPathDraft(createPathDraft({
-              arrowStyle: path.arrowStyle ?? "arrow",
-              strokeColor: path.strokeColor ?? "",
-              strokeWidth: path.strokeWidth ? String(path.strokeWidth) : "",
-              markerStyleId: path.markerStyleId ?? "",
-              truthFlag: path.truthFlag ?? "canonical",
-              viewpointId: path.viewpointId ?? "",
-              worldFrom: path.worldFrom ?? "",
-              worldTo: path.worldTo ?? "",
-              storyFromChapterId: path.storyFromChapterId ?? "",
-              storyToChapterId: path.storyToChapterId ?? "",
-              relatedEventId: path.relatedEventId ?? "",
-              relatedEntityIds: Array.isArray(path.relatedEntityIds) ? path.relatedEntityIds.join(",") : ""
-            }));
+            openPathEditor(path);
           });
 
         if (showPathOrder) {
@@ -961,7 +984,7 @@ export function FigmaMapEditor({
         }
       });
       });
-    }, [mapReady, visiblePaths, showPaths, showPathOrder, createPathDraft, clearPinSelection]);
+    }, [mapReady, visiblePaths, showPaths, showPathOrder, openPathEditor]);
 
   // Update Draft Layer (Path Drawing)
   useEffect(() => {
@@ -1909,6 +1932,35 @@ export function FigmaMapEditor({
             >
               {sceneFormOpen ? "Close" : "New scene"}
             </Button>
+            {pathOptions.length > 0 && (
+              <div className="flex items-center gap-2 min-w-[180px]">
+                <span className="map-filter-label">Paths</span>
+                <select
+                  value={selectedPathId}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    if (!nextId) {
+                      setSelectedPathId("");
+                      setIsEditingPathPoints(false);
+                      setPathPoints([]);
+                      setPathDraft(createPathDraft());
+                      setShowRightPanel(false);
+                      return;
+                    }
+                    const path = map.paths.find((p) => p.id === nextId);
+                    if (path) {
+                      openPathEditor(path);
+                    }
+                  }}
+                  className="bg-bg border border-border rounded-lg px-2 py-1 text-xs min-w-[180px]"
+                >
+                  <option value="">Select path</option>
+                  {pathOptions.map((path) => (
+                    <option key={path.id} value={path.id}>{path.label}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           {selectedScene && (
             <span className="text-xs text-muted">
