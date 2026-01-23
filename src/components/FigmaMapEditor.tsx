@@ -121,11 +121,11 @@ type PathDraft = {
   relatedEntityIds: string;
 };
 
-function createIcon(L: any, shape: string, color: string) {
+function createIcon(L: any, shape: string, color: string, selected = false) {
   const safeShape = shape || "circle";
-  const html = `<span class="marker-shape marker-${safeShape}" style="--marker-color:${color}; background-color: ${color}"></span>`;
+  const html = `<span class="marker-shape marker-${safeShape} ${selected ? "marker-selected" : ""}" style="--marker-color:${color}; background-color: ${color}"></span>`;
   return L.divIcon({
-    className: "marker-icon",
+    className: `marker-icon${selected ? " marker-icon-selected" : ""}`,
     html,
     iconSize: [24, 24],
     iconAnchor: [12, 12]
@@ -152,9 +152,10 @@ export function FigmaMapEditor({
   const pinsLayerRef = useRef<LayerGroup | null>(null);
   const pathsLayerRef = useRef<LayerGroup | null>(null);
   const draftLayerRef = useRef<LayerGroup | null>(null);
+  const guidesLayerRef = useRef<LayerGroup | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  const { eraId, chapterId, viewpointId } = useGlobalFilters();
+  const { eraId, chapterId, viewpointId, setFilters } = useGlobalFilters();
   const { toasts, addToast, removeToast } = useToast();
 
   const [mode, setMode] = useState<ToolMode>("select");
@@ -162,6 +163,7 @@ export function FigmaMapEditor({
   const [filtersExpanded, setFiltersExpanded] = useState(true);
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [selectedPinId, setSelectedPinId] = useState("");
+  const [selectedPinIds, setSelectedPinIds] = useState<string[]>([]);
   const [selectedPathId, setSelectedPathId] = useState("");
   const [isEditingPathPoints, setIsEditingPathPoints] = useState(false);
 
@@ -409,19 +411,41 @@ export function FigmaMapEditor({
   }, [map.events, addToast]);
 
   // Keyboard shortcuts
-  useKeyboardShortcut("v", () => setMode("select"));
-  useKeyboardShortcut("p", () => setMode("pin"));
-  useKeyboardShortcut("l", () => setMode("path"));
+  useKeyboardShortcut("v", () => {
+    setMode("select");
+    clearPinSelection();
+    setSelectedPathId("");
+    setIsEditingPathPoints(false);
+    setShowRightPanel(false);
+  });
+  useKeyboardShortcut("p", () => {
+    setMode("pin");
+    clearPinSelection();
+    setSelectedPathId("");
+    setIsEditingPathPoints(false);
+    setPathPoints([]);
+    setPinDraft(createPinDraft());
+    setShowRightPanel(true);
+  });
+  useKeyboardShortcut("l", () => {
+    setMode("path");
+    clearPinSelection();
+    setSelectedPathId("");
+    setIsEditingPathPoints(false);
+    setPathPoints([]);
+    setPathDraft(createPathDraft());
+    setShowRightPanel(false);
+  });
   useKeyboardShortcut("c", () => {
     setMode("card");
-    setSelectedPinId("");
+    clearPinSelection();
     setShowRightPanel(false);
     draftLayerRef.current?.clearLayers();
   });
   useKeyboardShortcut("s", () => saveCardsToDatabase(), { ctrl: true });
   useKeyboardShortcut("Escape", () => {
     setMode("select");
-    setSelectedPinId("");
+    clearPinSelection();
     setSelectedPathId("");
     setIsEditingPathPoints(false);
     setPinDraft(createPinDraft());
@@ -498,6 +522,18 @@ export function FigmaMapEditor({
     });
   }, [map.pins, viewpointId, chapterId, chapterOrderMap, hiddenLocationTypes]);
 
+  const selectedPinSet = useMemo(() => new Set(selectedPinIds), [selectedPinIds]);
+
+  useEffect(() => {
+    setSelectedPinIds((prev) => prev.filter((id) => visiblePins.some((pin) => pin.id === id)));
+  }, [visiblePins]);
+
+  useEffect(() => {
+    if (selectedPinId && !selectedPinSet.has(selectedPinId)) {
+      setSelectedPinId(selectedPinIds[0] ?? "");
+    }
+  }, [selectedPinId, selectedPinSet, selectedPinIds]);
+
   const visiblePaths = useMemo(() => {
     return map.paths.filter((path) => {
       const truthFlag = path.truthFlag ?? "canonical";
@@ -564,10 +600,17 @@ export function FigmaMapEditor({
       const pinsLayer = L.layerGroup().addTo(mapInstance);
       const pathsLayer = L.layerGroup().addTo(mapInstance);
       const draftLayer = L.layerGroup().addTo(mapInstance);
+      const guidesPane = mapInstance.createPane("guides");
+      if (guidesPane) {
+        guidesPane.style.zIndex = "450";
+        guidesPane.style.pointerEvents = "none";
+      }
+      const guidesLayer = L.layerGroup().addTo(mapInstance);
 
       pinsLayerRef.current = pinsLayer;
       pathsLayerRef.current = pathsLayer;
       draftLayerRef.current = draftLayer;
+      guidesLayerRef.current = guidesLayer;
       mapRef.current = mapInstance;
 
       // Image Overlay (fetch-first to avoid auth/caching issues)
@@ -642,7 +685,7 @@ export function FigmaMapEditor({
         } else if (currentMode === "path") {
           setPathPoints((prev) => [...prev, coords]);
         } else if (currentMode === "select") {
-          setSelectedPinId("");
+          clearPinSelection();
           setSelectedPathId("");
           setIsEditingPathPoints(false);
           setPinDraft(createPinDraft());
@@ -668,7 +711,7 @@ export function FigmaMapEditor({
         overlayObjectUrlRef.current = null;
       }
     };
-  }, [map.id, latLngToMapCoords, createPinDraft]);
+  }, [map.id, latLngToMapCoords, createPinDraft, createPathDraft, clearPinSelection]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -700,7 +743,7 @@ export function FigmaMapEditor({
       visiblePins.forEach((pin) => {
         const color = pin.markerColor ?? pin.markerStyle?.color ?? "#1f4b99";
         const shape = pin.markerShape ?? pin.markerStyle?.shape ?? "circle";
-        const icon = createIcon(L, shape, color);
+        const icon = createIcon(L, shape, color, selectedPinSet.has(pin.id));
 
         // In CRS.Simple: marker position is [lat, lng] which maps to [y, x]
         const marker = L.marker([pin.y, pin.x], {
@@ -712,15 +755,23 @@ export function FigmaMapEditor({
           marker.bindTooltip(pin.label, { direction: "top", offset: [0, -10] });
         }
 
-          marker.on("click", (e: any) => {
-            L.DomEvent.stopPropagation(e);
-            if (modeRef.current === "select") {
-              setSelectedPinId(pin.id);
-              setSelectedPathId("");
-              setIsEditingPathPoints(false);
-              setShowRightPanel(true);
-              setPinDraft(createPinDraft({
-                x: pin.x,
+        marker.on("click", (e: any) => {
+          L.DomEvent.stopPropagation(e);
+          if (modeRef.current !== "select") return;
+          const originalEvent = e?.originalEvent as MouseEvent | undefined;
+          const multi = Boolean(originalEvent?.shiftKey || originalEvent?.metaKey || originalEvent?.ctrlKey);
+          if (multi) {
+            togglePinSelection(pin.id);
+            setSelectedPathId("");
+            setIsEditingPathPoints(false);
+            setShowRightPanel(false);
+          } else {
+            selectSinglePin(pin.id);
+            setSelectedPathId("");
+            setIsEditingPathPoints(false);
+            setShowRightPanel(true);
+            setPinDraft(createPinDraft({
+              x: pin.x,
               y: pin.y,
               label: pin.label ?? "",
               locationType: pin.locationType ?? defaultLocationType,
@@ -738,16 +789,80 @@ export function FigmaMapEditor({
           }
         });
 
-        marker.on("dragend", (event: any) => {
+        marker.on("drag", (event: any) => {
           const latlng = event.target.getLatLng();
           const coords = latLngToMapCoords(latlng);
-          updatePinPosition(pin.id, coords.x, coords.y);
+          const bounds = map.bounds ?? [[0, 0], [1000, 1000]];
+          const [[minY, minX], [maxY, maxX]] = bounds as [[number, number], [number, number]];
+          const otherPins = visiblePins.filter((p) => p.id !== pin.id);
+          const threshold = 6;
+          let snapX = coords.x;
+          let snapY = coords.y;
+          let guideX: number | null = null;
+          let guideY: number | null = null;
+          let minDx = threshold + 1;
+          let minDy = threshold + 1;
+
+          otherPins.forEach((p) => {
+            const dx = Math.abs(p.x - coords.x);
+            if (dx <= threshold && dx < minDx) {
+              minDx = dx;
+              guideX = p.x;
+              snapX = p.x;
+            }
+            const dy = Math.abs(p.y - coords.y);
+            if (dy <= threshold && dy < minDy) {
+              minDy = dy;
+              guideY = p.y;
+              snapY = p.y;
+            }
+          });
+
+          if (guidesLayerRef.current) {
+            guidesLayerRef.current.clearLayers();
+            if (guideX !== null) {
+              L.polyline(
+                [[minY, guideX], [maxY, guideX]],
+                { color: "#ff0033", weight: 1, dashArray: "4,4", opacity: 0.6, pane: "guides" }
+              ).addTo(guidesLayerRef.current);
+            }
+            if (guideY !== null) {
+              L.polyline(
+                [[guideY, minX], [guideY, maxX]],
+                { color: "#ff0033", weight: 1, dashArray: "4,4", opacity: 0.6, pane: "guides" }
+              ).addTo(guidesLayerRef.current);
+            }
+          }
+
+          if (guideX !== null || guideY !== null) {
+            event.target.setLatLng([snapY, snapX]);
+          }
+        });
+
+        marker.on("dragend", (event: any) => {
+          guidesLayerRef.current?.clearLayers();
+          const latlng = event.target.getLatLng();
+          const coords = latLngToMapCoords(latlng);
+          updatePinPosition(pin.id, coords.x, coords.y, { silent: true });
         });
 
         marker.addTo(layerGroup);
       });
     });
-  }, [mapReady, visiblePins, showPins, mode, defaultLocationType, createPinDraft, latLngToMapCoords]);
+  }, [
+    mapReady,
+    visiblePins,
+    showPins,
+    mode,
+    defaultLocationType,
+    createPinDraft,
+    latLngToMapCoords,
+    selectedPinSet,
+    togglePinSelection,
+    selectSinglePin,
+    map.bounds,
+    selectedPinId
+  ]);
 
   // Update Paths Layer
   useEffect(() => {
@@ -779,7 +894,7 @@ export function FigmaMapEditor({
             L.DomEvent.stopPropagation(event);
             if (modeRef.current !== "select") return;
             setMode("select");
-            setSelectedPinId("");
+            clearPinSelection();
             setSelectedPathId(path.id);
             setIsEditingPathPoints(false);
             setPathPoints([]);
@@ -813,7 +928,7 @@ export function FigmaMapEditor({
         }
       });
       });
-    }, [mapReady, visiblePaths, showPaths, showPathOrder, createPathDraft]);
+    }, [mapReady, visiblePaths, showPaths, showPathOrder, createPathDraft, clearPinSelection]);
 
   // Update Draft Layer (Path Drawing)
   useEffect(() => {
@@ -1038,7 +1153,7 @@ export function FigmaMapEditor({
         throw new Error(response.statusText);
       }
 
-      setSelectedPinId("");
+      clearPinSelection();
       setPinDraft(createPinDraft());
       setMode("select");
       setShowRightPanel(false);
@@ -1051,7 +1166,7 @@ export function FigmaMapEditor({
     }
   }
 
-  async function updatePinPosition(pinId: string, x: number, y: number) {
+  async function updatePinPosition(pinId: string, x: number, y: number, options?: { silent?: boolean }) {
     try {
       const form = new FormData();
       form.append("workspaceId", workspaceId);
@@ -1070,10 +1185,40 @@ export function FigmaMapEditor({
         setPinDraft((prev) => ({ ...prev, x, y }));
       }
 
-      addToast("Pin position updated", "success");
+      if (!options?.silent) {
+        addToast("Pin position updated", "success");
+      }
     } catch (error) {
       console.error("Error updating pin position:", error);
-      addToast("Failed to update pin position", "error");
+      if (!options?.silent) {
+        addToast("Failed to update pin position", "error");
+      }
+    }
+  }
+
+  async function alignSelectedPins(axis: "x" | "y") {
+    const selectedPins = visiblePins.filter((pin) => selectedPinSet.has(pin.id));
+    if (selectedPins.length < 2) return;
+    const total = selectedPins.reduce((sum, pin) => sum + (axis === "x" ? pin.x : pin.y), 0);
+    const target = Number((total / selectedPins.length).toFixed(1));
+
+    try {
+      await Promise.all(
+        selectedPins.map((pin) =>
+          updatePinPosition(
+            pin.id,
+            axis === "x" ? target : pin.x,
+            axis === "y" ? target : pin.y,
+            { silent: true }
+          )
+        )
+      );
+      addToast(`Aligned ${selectedPins.length} pins`, "success");
+      clearPinSelection();
+      router.refresh();
+    } catch (error) {
+      console.error("Error aligning pins:", error);
+      addToast("Failed to align pins", "error");
     }
   }
 
@@ -1137,7 +1282,7 @@ export function FigmaMapEditor({
         throw new Error(response.statusText);
       }
 
-      setSelectedPinId("");
+      clearPinSelection();
       setPinDraft(createPinDraft());
       setShowRightPanel(false);
       draftLayerRef.current?.clearLayers();
@@ -1309,12 +1454,28 @@ export function FigmaMapEditor({
     }));
   };
 
+  const clearPinSelection = useCallback(() => {
+    setSelectedPinId("");
+    setSelectedPinIds([]);
+  }, []);
+
+  const selectSinglePin = useCallback((pinId: string) => {
+    setSelectedPinId(pinId);
+    setSelectedPinIds([pinId]);
+  }, []);
+
+  const togglePinSelection = useCallback((pinId: string) => {
+    setSelectedPinId(pinId);
+    setSelectedPinIds((prev) => {
+      if (prev.includes(pinId)) {
+        return prev.filter((id) => id !== pinId);
+      }
+      return [...prev, pinId];
+    });
+  }, []);
+
   const filterPillClass = (active: boolean) =>
-    `inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] leading-none font-semibold transition-colors whitespace-nowrap h-6 ${
-      active
-        ? "bg-accent text-white border-accent shadow-sm"
-        : "bg-bg text-muted border-border hover:text-ink hover:border-accent"
-    }`;
+    `map-filter-pill ${active ? "is-active" : "is-inactive"}`;
 
   return (
     <div className="map-editor-root h-full min-h-0 w-full flex flex-col bg-bg overflow-hidden">
@@ -1338,12 +1499,13 @@ export function FigmaMapEditor({
               <button
               onClick={() => {
                 setMode("select");
+                clearPinSelection();
                 setShowRightPanel(false);
                 setSelectedPathId("");
                 setIsEditingPathPoints(false);
                 draftLayerRef.current?.clearLayers();
               }}
-                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
                   mode === "select" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
                 }`}
                 title="Select/Move Mode (V)"
@@ -1356,13 +1518,13 @@ export function FigmaMapEditor({
               <button
               onClick={() => {
                 setMode("pin");
-                setSelectedPinId("");
+                clearPinSelection();
                 setSelectedPathId("");
                 setIsEditingPathPoints(false);
                 setPathPoints([]);
                 setPinDraft(createPinDraft());
               }}
-                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
                   mode === "pin" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
                 }`}
                 title="Place Pin Mode (P)"
@@ -1376,14 +1538,14 @@ export function FigmaMapEditor({
               <button
               onClick={() => {
                 setMode("path");
-                setSelectedPinId("");
+                clearPinSelection();
                 setSelectedPathId("");
                 setIsEditingPathPoints(false);
                 setPathPoints([]);
                 setPathDraft(createPathDraft());
                 setShowRightPanel(false);
               }}
-                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
                   mode === "path" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
                 }`}
                 title="Draw Path Mode (L)"
@@ -1396,13 +1558,13 @@ export function FigmaMapEditor({
               <button
               onClick={() => {
                 setMode("card");
-                setSelectedPinId("");
+                clearPinSelection();
                 setSelectedPathId("");
                 setIsEditingPathPoints(false);
                 setShowRightPanel(false);
                 draftLayerRef.current?.clearLayers();
               }}
-                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
+                className={`px-3 py-1 rounded text-sm font-medium transition-colors flex items-center gap-1 ${
                   mode === "card" ? "bg-accent text-white" : "text-muted hover:bg-bg-elevated"
                 }`}
                 title="Place Card Mode (C)"
@@ -1447,6 +1609,32 @@ export function FigmaMapEditor({
                   )}
                 </button>
               </div>
+              {selectedPinIds.length > 1 && (
+                <div className="flex items-center gap-1 bg-bg border border-border rounded-lg p-1">
+                  <button
+                    onClick={() => alignSelectedPins("x")}
+                    className="px-2 py-1 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors text-xs font-semibold"
+                    title="Align vertical (same X)"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                      <line x1="12" y1="4" x2="12" y2="20" />
+                      <rect x="5" y="6" width="5" height="4" rx="1" />
+                      <rect x="14" y="14" width="5" height="4" rx="1" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => alignSelectedPins("y")}
+                    className="px-2 py-1 text-muted hover:text-ink hover:bg-bg-elevated rounded transition-colors text-xs font-semibold"
+                    title="Align horizontal (same Y)"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                      <line x1="4" y1="12" x2="20" y2="12" />
+                      <rect x="6" y="5" width="4" height="5" rx="1" />
+                      <rect x="14" y="13" width="4" height="5" rx="1" />
+                    </svg>
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-1 text-xs text-muted bg-bg border border-border rounded px-2 py-1">
                 <button
                   onClick={() => mapRef.current?.zoomOut()}
@@ -1491,32 +1679,36 @@ export function FigmaMapEditor({
           <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-3 ${filtersExpanded ? "py-2 space-y-2" : "py-1.5"}`}>
             {filtersExpanded ? (
               <>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Layers</span>
-                  <label className={filterPillClass(showImage)}>
-                    <input type="checkbox" className="sr-only" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
-                    Map Image
-                  </label>
-                  <label className={filterPillClass(showPins)}>
-                    <input type="checkbox" className="sr-only" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
-                    Pins ({visiblePins.length})
-                  </label>
-                  <label className={filterPillClass(showPaths)}>
-                    <input type="checkbox" className="sr-only" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
-                    Paths ({visiblePaths.length})
-                  </label>
+                <div className="space-y-2">
+                  <div className="map-filter-label">Layers</div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className={filterPillClass(showImage)}>
+                      <input type="checkbox" className="sr-only" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
+                      Map Image
+                    </label>
+                    <label className={filterPillClass(showPins)}>
+                      <input type="checkbox" className="sr-only" checked={showPins} onChange={(e) => setShowPins(e.target.checked)} />
+                      Pins ({visiblePins.length})
+                    </label>
+                    <label className={filterPillClass(showPaths)}>
+                      <input type="checkbox" className="sr-only" checked={showPaths} onChange={(e) => setShowPaths(e.target.checked)} />
+                      Paths ({visiblePaths.length})
+                    </label>
+                  </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 max-h-24 overflow-y-auto pr-1">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Location Types</span>
-                  {locationTypes.map((type) => {
-                    const active = !hiddenLocationTypes.has(type);
-                    return (
-                      <label key={type} className={filterPillClass(active)}>
-                        <input type="checkbox" className="sr-only" checked={active} onChange={() => toggleLocationType(type)} />
-                        <span className="capitalize">{type}</span>
-                      </label>
-                    );
-                  })}
+                <div className="space-y-2">
+                  <div className="map-filter-label">Location Types</div>
+                  <div className="flex flex-wrap items-center gap-2 max-h-24 overflow-y-auto pr-1">
+                    {locationTypes.map((type) => {
+                      const active = !hiddenLocationTypes.has(type);
+                      return (
+                        <label key={type} className={filterPillClass(active)}>
+                          <input type="checkbox" className="sr-only" checked={active} onChange={() => toggleLocationType(type)} />
+                          <span className="capitalize">{type}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
                 </div>
               </>
             ) : (
@@ -1532,7 +1724,7 @@ export function FigmaMapEditor({
           </div>
           <button
             onClick={() => setFiltersExpanded((prev) => !prev)}
-            className="px-2.5 py-1.5 rounded-lg border border-border bg-bg text-[10px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-ink hover:border-accent transition-colors"
+            className="px-2 py-1 rounded-lg border border-border bg-bg text-[10px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-ink hover:border-accent transition-colors leading-none"
             title="Toggle filter layout"
           >
             {filtersExpanded ? "2段" : "1段"}
@@ -1965,7 +2157,7 @@ export function FigmaMapEditor({
               <button
                 onClick={() => {
                   setShowRightPanel(false);
-                  setSelectedPinId("");
+                  clearPinSelection();
                   setSelectedPathId("");
                   setIsEditingPathPoints(false);
                   setPathPoints([]);

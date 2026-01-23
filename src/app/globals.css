@@ -1240,6 +1240,44 @@ button[type="submit"]:hover {
   cursor: pointer;
 }
 
+.map-filter-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+
+.map-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--muted);
+  background: var(--bg);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.map-filter-pill.is-active {
+  color: var(--accent);
+  border-color: rgba(255, 0, 51, 0.45);
+  background: rgba(255, 0, 51, 0.12);
+  box-shadow: 0 0 0 1px rgba(255, 0, 51, 0.2);
+}
+
+.map-filter-pill.is-inactive:hover {
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .map-legend.floating {
   position: absolute;
   left: 16px;
@@ -1419,6 +1457,10 @@ button[type="submit"]:hover {
   border: none;
 }
 
+.marker-icon-selected {
+  z-index: 900;
+}
+
 .marker-shape {
   display: block;
   width: 16px;
@@ -1427,6 +1469,14 @@ button[type="submit"]:hover {
   border: 2px solid white;
   box-shadow: 0 2px 4px rgba(0,0,0,0.5);
   transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.marker-icon-selected .marker-shape,
+.marker-shape.marker-selected {
+  box-shadow:
+    0 0 0 3px rgba(255, 0, 51, 0.35),
+    0 0 12px rgba(255, 0, 51, 0.4),
+    0 2px 4px rgba(0,0,0,0.5);
 }
 
 .marker-shape:hover {
