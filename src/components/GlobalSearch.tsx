@@ -81,18 +81,10 @@ export function GlobalSearch({ workspaceId, placeholder = "Search everything... 
           });
           if (res.ok) {
             const data = await res.json();
-            // Transform semantic results to match SearchResult format
-            const semanticResults: SearchResult[] = (data.results || []).map((r: any) => ({
-              id: r.id,
-              type: "entity" as const,
-              title: r.title,
-              excerpt: r.excerpt || r.summary,
-              url: `/wiki/${encodeURIComponent(r.title.replace(/ /g, "_"))}`,
-              entityType: r.type,
-              score: r.score
-            }));
-            setResults(semanticResults);
+            setResults(data.results || []);
             setSelectedIndex(0);
+          } else {
+            setResults([]);
           }
         } else {
           // Use regular keyword search

@@ -1,26 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { llmClient } from '@/lib/llm-client';
+import { apiError, requireApiSession, requireWorkspaceAccess } from "@/lib/api";
 
 interface SearchResult {
   id: string;
-  type: 'entity' | 'article' | 'event' | 'map';
+  type: 'entity' | 'map' | 'board' | 'event' | 'timeline';
   title: string;
-  snippet: string;
+  excerpt?: string;
+  url: string;
+  entityType?: string;
+  tags?: string[];
   score: number;
-  metadata?: any;
 }
 
 export async function POST(req: NextRequest) {
   try {
+    let session;
+    try {
+      session = await requireApiSession();
+    } catch {
+      return apiError("Unauthorized", 401);
+    }
+
     const body = await req.json();
     const { workspaceId, query, limit = 20 } = body;
 
     if (!workspaceId || !query) {
-      return NextResponse.json(
-        { error: 'workspaceId and query required' },
-        { status: 400 }
-      );
+      return apiError("workspaceId and query required", 400);
+    }
+
+    try {
+      await requireWorkspaceAccess(session.userId, workspaceId, "viewer");
+    } catch {
+      return apiError("Forbidden", 403);
     }
 
     // Generate embedding for query
@@ -107,38 +120,48 @@ export async function POST(req: NextRequest) {
     ]);
 
     // Format results
+    const entityIdSet = new Set<string>(entities.map((e: any) => e.id));
+
     const results: SearchResult[] = [
-      ...entities.map((e: any) => ({
-        id: e.id,
-        type: 'entity' as const,
-        title: e.title,
-        snippet: `[${e.type}] ${e.aliases?.join(', ') || ''} | Tags: ${e.tags?.join(', ') || ''}`,
-        score: e.score || 0.5,
-        metadata: { type: e.type, aliases: e.aliases, tags: e.tags }
-      })),
-      ...articles.map((a: any) => ({
-        id: a.id,
-        type: 'article' as const,
-        title: a.title,
-        snippet: a.bodyMd?.slice(0, 200) + '...',
-        score: a.score || 0.5,
-        metadata: { entityId: a.entityId }
-      })),
+      ...entities.map((e: any) => {
+        const aliasText = e.aliases?.length ? `Aliases: ${e.aliases.join(", ")}` : "";
+        const tagText = e.tags?.length ? `Tags: ${e.tags.join(", ")}` : "";
+        const excerpt = [aliasText, tagText].filter(Boolean).join(" · ");
+        return {
+          id: e.id,
+          type: "entity" as const,
+          title: e.title,
+          excerpt: excerpt || undefined,
+          url: `/wiki/${encodeURIComponent(e.title)}`,
+          entityType: e.type,
+          tags: e.tags || [],
+          score: e.score || 0.5
+        };
+      }),
+      ...articles
+        .filter((a: any) => !a.entityId || !entityIdSet.has(a.entityId))
+        .map((a: any) => ({
+          id: a.entityId || a.id,
+          type: "entity" as const,
+          title: a.title,
+          excerpt: a.bodyMd ? `${a.bodyMd.slice(0, 200)}...` : undefined,
+          url: `/wiki/${encodeURIComponent(a.title)}`,
+          score: a.score || 0.5
+        })),
       ...events.map((e: any) => ({
         id: e.id,
-        type: 'event' as const,
+        type: "event" as const,
         title: e.title,
-        snippet: `${e.worldStart || 'unknown date'}: ${e.summaryMd?.slice(0, 150) || ''}...`,
-        score: e.score || 0.5,
-        metadata: { worldStart: e.worldStart, worldEnd: e.worldEnd }
+        excerpt: e.summaryMd ? `${e.summaryMd.slice(0, 150)}...` : undefined,
+        url: `/timeline?event=${e.id}`,
+        score: e.score || 0.5
       })),
       ...maps.map((m: any) => ({
         id: m.id,
-        type: 'map' as const,
+        type: "map" as const,
         title: m.title,
-        snippet: m.summaryMd?.slice(0, 200) || '',
-        score: m.score || 0.5,
-        metadata: {}
+        url: `/maps/${m.id}`,
+        score: m.score || 0.5
       }))
     ];
 

@@ -35,12 +35,12 @@ export default async function NewReferencePage() {
         <div className="form-group">
           <label className="form-label required">Reference Type</label>
           <select name="type" required className="form-select">
-            <option value="webpage">Webpage</option>
+            <option value="url">URL</option>
             <option value="book">Book</option>
-            <option value="article">Journal Article</option>
-            <option value="document">Document</option>
+            <option value="pdf">PDF</option>
             <option value="image">Image</option>
-            <option value="video">Video</option>
+            <option value="file">File</option>
+            <option value="internal">Internal</option>
             <option value="other">Other</option>
           </select>
         </div>
@@ -73,24 +73,16 @@ export default async function NewReferencePage() {
 
         {/* URL */}
         <div className="form-group">
-          <label className="form-label">URL</label>
+          <label className="form-label">Source URL / DOI</label>
           <input
             type="url"
-            name="url"
-            placeholder="https://..."
+            name="sourceUrl"
+            placeholder="https://... or https://doi.org/..."
             className="form-input"
           />
-        </div>
-
-        {/* DOI */}
-        <div className="form-group">
-          <label className="form-label">DOI</label>
-          <input
-            type="text"
-            name="doi"
-            placeholder="10.xxxx/..."
-            className="form-input"
-          />
+          <span className="form-hint">
+            Paste the URL or a doi.org URL.
+          </span>
         </div>
 
         {/* Publisher / Website */}
@@ -110,7 +102,7 @@ export default async function NewReferencePage() {
             <label className="form-label">Published Year</label>
             <input
               type="number"
-              name="publishedYear"
+              name="year"
               min="1000"
               max="2100"
               placeholder="2024"
@@ -121,7 +113,7 @@ export default async function NewReferencePage() {
             <label className="form-label">Access Date</label>
             <input
               type="date"
-              name="accessedAt"
+              name="retrievedAt"
               defaultValue={new Date().toISOString().split("T")[0]}
               className="form-input"
             />
@@ -131,7 +123,7 @@ export default async function NewReferencePage() {
         {/* License */}
         <div className="form-group">
           <label className="form-label">License</label>
-          <select name="license" className="form-select">
+          <select name="licenseId" className="form-select">
             <option value="">Unknown / Not specified</option>
             <option value="CC0">CC0 (Public Domain)</option>
             <option value="CC BY">CC BY (Attribution)</option>
@@ -168,17 +160,28 @@ export default async function NewReferencePage() {
           />
         </div>
 
-        {/* Citation Text */}
+        {/* Summary */}
         <div className="form-group">
-          <label className="form-label">Citation Text (Optional)</label>
+          <label className="form-label">Summary (Optional)</label>
           <textarea
-            name="citationText"
+            name="summary"
             rows={3}
-            placeholder="Pre-formatted citation in your preferred style..."
+            placeholder="Short summary or abstract..."
+            className="form-textarea"
+          />
+        </div>
+
+        {/* Attribution Text */}
+        <div className="form-group">
+          <label className="form-label">Attribution Text (Optional)</label>
+          <textarea
+            name="attributionText"
+            rows={3}
+            placeholder="Preferred citation or attribution text..."
             className="form-textarea"
           />
           <span className="form-hint">
-            If left empty, citation will be auto-generated from the fields above
+            If left empty, a citation will be auto-generated from the fields above
           </span>
         </div>
 

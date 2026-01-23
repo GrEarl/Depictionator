@@ -2,12 +2,46 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { prisma } from "@/lib/prisma";
+import { CopyCitationButton } from "@/components/CopyCitationButton";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 type PageProps = {
   searchParams: Promise<SearchParams>;
 };
+
+const TYPE_LABELS: Record<string, string> = {
+  url: "URL",
+  book: "Book",
+  pdf: "PDF",
+  image: "Image",
+  file: "File",
+  internal: "Internal",
+  other: "Other",
+};
+
+function formatReferenceType(value: string) {
+  return TYPE_LABELS[value] || value;
+}
+
+function buildCitationText(ref: {
+  attributionText?: string | null;
+  author?: string | null;
+  year?: string | null;
+  title?: string | null;
+  publisher?: string | null;
+  sourceUrl?: string | null;
+}) {
+  if (ref.attributionText?.trim()) return ref.attributionText.trim();
+  const parts = [
+    ref.author?.trim(),
+    ref.year ? `(${ref.year.trim()})` : undefined,
+    ref.title?.trim(),
+    ref.publisher?.trim(),
+    ref.sourceUrl?.trim()
+  ].filter(Boolean);
+  return parts.join(" ").replace(/\s+/g, " ").trim();
+}
 
 /**
  * Reference Library Page
@@ -37,8 +71,9 @@ export default async function ReferencesPage({ searchParams }: PageProps) {
       { title: { contains: query, mode: "insensitive" } },
       { author: { contains: query, mode: "insensitive" } },
       { publisher: { contains: query, mode: "insensitive" } },
-      { doi: { contains: query, mode: "insensitive" } },
-      { url: { contains: query, mode: "insensitive" } },
+      { sourceUrl: { contains: query, mode: "insensitive" } },
+      { summary: { contains: query, mode: "insensitive" } },
+      { notes: { contains: query, mode: "insensitive" } },
     ];
   }
 
@@ -53,27 +88,54 @@ export default async function ReferencesPage({ searchParams }: PageProps) {
   } else if (sortBy === "author") {
     orderBy = { author: "asc" };
   } else if (sortBy === "year") {
-    orderBy = { publishedYear: "desc" };
+    orderBy = { year: "desc" };
   }
 
-  const references = await prisma.reference.findMany({
-    where,
-    orderBy,
-    take: 100,
-    include: {
-      citations: {
-        take: 5,
-        include: {
-          entity: {
-            select: { id: true, title: true, type: true }
+  const [references, totalCount] = await Promise.all([
+    prisma.reference.findMany({
+      where,
+      orderBy,
+      take: 100,
+      include: {
+        citations: {
+          where: { targetType: "entity" },
+          take: 5,
+          select: {
+            id: true,
+            targetId: true
           }
+        },
+        _count: {
+          select: { citations: true }
         }
-      },
-      _count: {
-        select: { citations: true }
       }
-    }
-  });
+    }),
+    prisma.reference.count({
+      where: {
+        workspaceId: workspace.id,
+        softDeletedAt: null
+      }
+    })
+  ]);
+
+  const linkedEntityIds = Array.from(
+    new Set(
+      references.flatMap((ref) => ref.citations.map((citation) => citation.targetId))
+    )
+  );
+
+  const linkedEntities = linkedEntityIds.length > 0
+    ? await prisma.entity.findMany({
+        where: {
+          workspaceId: workspace.id,
+          softDeletedAt: null,
+          id: { in: linkedEntityIds }
+        },
+        select: { id: true, title: true, type: true }
+      })
+    : [];
+
+  const linkedEntityMap = new Map(linkedEntities.map((entity) => [entity.id, entity]));
 
   // Get reference type counts for filter
   const typeCounts = await prisma.reference.groupBy({
@@ -86,10 +148,10 @@ export default async function ReferencesPage({ searchParams }: PageProps) {
   });
 
   const typeOptions = [
-    { value: "all", label: "All Types", count: references.length },
+    { value: "all", label: "All Types", count: totalCount },
     ...typeCounts.map((tc) => ({
       value: tc.type,
-      label: tc.type.charAt(0).toUpperCase() + tc.type.slice(1),
+      label: formatReferenceType(tc.type),
       count: tc._count,
     })),
   ];
@@ -125,7 +187,7 @@ export default async function ReferencesPage({ searchParams }: PageProps) {
               name="q"
               type="text"
               defaultValue={query}
-              placeholder="Search by title, author, DOI..."
+              placeholder="Search by title, author, URL..."
               className="search-input"
             />
           </div>
@@ -170,11 +232,18 @@ export default async function ReferencesPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <div className="reference-list">
-          {references.map((ref) => (
+          {references.map((ref) => {
+            const citationText = buildCitationText(ref);
+            const doiMatch = ref.sourceUrl?.match(/^https?:\/\/doi\.org\/(.+)/i);
+            const entityLinks = ref.citations
+              .map((citation) => linkedEntityMap.get(citation.targetId))
+              .filter(Boolean);
+
+            return (
             <div key={ref.id} className="reference-card">
               <div className="reference-header">
                 <span className={`reference-type type-${ref.type}`}>
-                  {ref.type}
+                  {formatReferenceType(ref.type)}
                 </span>
                 <span className="reference-citations">
                   {ref._count.citations} citation{ref._count.citations !== 1 ? "s" : ""}
@@ -193,52 +262,51 @@ export default async function ReferencesPage({ searchParams }: PageProps) {
 
               <div className="reference-meta">
                 {ref.publisher && <span>{ref.publisher}</span>}
-                {ref.publishedYear && <span>{ref.publishedYear}</span>}
-                {ref.doi && (
+                {ref.year && <span>{ref.year}</span>}
+                {ref.sourceUrl && (
                   <a
-                    href={`https://doi.org/${ref.doi}`}
+                    href={ref.sourceUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="reference-doi"
+                    className={doiMatch ? "reference-doi" : "reference-url"}
                   >
-                    DOI: {ref.doi}
-                  </a>
-                )}
-                {ref.url && !ref.doi && (
-                  <a
-                    href={ref.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="reference-url"
-                  >
-                    View Source
+                    {doiMatch ? `DOI: ${doiMatch[1]}` : "View Source"}
                   </a>
                 )}
               </div>
 
               {/* License info */}
-              {ref.license && (
+              {(ref.licenseId || ref.licenseUrl) && (
                 <div className="reference-license">
-                  <span className="license-badge">{ref.license}</span>
+                  {ref.licenseUrl ? (
+                    <a
+                      href={ref.licenseUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="license-badge"
+                    >
+                      {ref.licenseId || "License"}
+                    </a>
+                  ) : (
+                    <span className="license-badge">{ref.licenseId}</span>
+                  )}
                 </div>
               )}
 
               {/* Linked entities */}
-              {ref.citations.length > 0 && (
+              {entityLinks.length > 0 && (
                 <div className="reference-linked">
                   <span className="linked-label">Used in:</span>
                   <div className="linked-entities">
-                    {ref.citations.map((citation) =>
-                      citation.entity ? (
-                        <Link
-                          key={citation.id}
-                          href={`/wiki/${encodeURIComponent(citation.entity.title.replace(/ /g, "_"))}`}
-                          className="linked-entity-chip"
-                        >
-                          {citation.entity.title}
-                        </Link>
-                      ) : null
-                    )}
+                    {entityLinks.map((entity) => (
+                      <Link
+                        key={entity!.id}
+                        href={`/wiki/${encodeURIComponent(entity!.title.replace(/ /g, "_"))}`}
+                        className="linked-entity-chip"
+                      >
+                        {entity!.title}
+                      </Link>
+                    ))}
                     {ref._count.citations > 5 && (
                       <span className="linked-more">
                         +{ref._count.citations - 5} more
@@ -255,16 +323,14 @@ export default async function ReferencesPage({ searchParams }: PageProps) {
                 <Link href={`/references/${ref.id}/edit`} className="btn-link">
                   Edit
                 </Link>
-                <button
-                  type="button"
+                <CopyCitationButton
+                  text={citationText || ref.title || ""}
                   className="btn-link"
-                  onClick={() => navigator.clipboard.writeText(ref.citationText || ref.title || "")}
-                >
-                  Copy Citation
-                </button>
+                />
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -273,7 +339,7 @@ export default async function ReferencesPage({ searchParams }: PageProps) {
         <h4>Library Stats</h4>
         <div className="stats-grid">
           <div className="stat-item">
-            <span className="stat-value">{references.length}</span>
+            <span className="stat-value">{totalCount}</span>
             <span className="stat-label">Total References</span>
           </div>
           {typeCounts.map((tc) => (

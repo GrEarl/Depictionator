@@ -4016,11 +4016,13 @@ button[type="submit"]:hover {
   color: var(--muted);
 }
 
+.reference-type.type-url { background: #fff3e0; color: #ef6c00; }
 .reference-type.type-book { background: #e8f5e9; color: #2e7d32; }
-.reference-type.type-article { background: #e3f2fd; color: #1565c0; }
-.reference-type.type-webpage { background: #fff3e0; color: #ef6c00; }
+.reference-type.type-pdf { background: #e3f2fd; color: #1565c0; }
 .reference-type.type-image { background: #fce4ec; color: #c2185b; }
-.reference-type.type-video { background: #f3e5f5; color: #7b1fa2; }
+.reference-type.type-file { background: #f3e5f5; color: #7b1fa2; }
+.reference-type.type-internal { background: #ede7f6; color: #5e35b1; }
+.reference-type.type-other { background: #eceff1; color: #455a64; }
 
 .reference-citations {
   font-size: 11px;
