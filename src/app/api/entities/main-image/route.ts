@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireApiSession } from "@/lib/auth";
-import { requireWorkspaceAccess, logAudit } from "@/lib/rbac";
+import { requireApiSession, requireWorkspaceAccess } from "@/lib/api";
+import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 
 /**
  * POST /api/entities/main-image
@@ -39,19 +41,24 @@ export async function POST(request: NextRequest) {
 
     // If a file is provided, upload it first
     if (file && file.size > 0) {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      // Save to filesystem
+      const storageDir = path.join(process.cwd(), "storage", workspaceId);
+      await mkdir(storageDir, { recursive: true });
+      const storageKey = `entity-main-${entityId}-${Date.now()}-${file.name}`;
+      await writeFile(path.join(storageDir, storageKey), buffer);
 
       // Create asset record
       const asset = await prisma.asset.create({
         data: {
           workspaceId,
-          uploadedById: session.userId,
+          kind: file.type.startsWith("image/") ? "image" : "file",
+          storageKey,
           mimeType: file.type,
-          storageKey: `entity-main-${entityId}-${Date.now()}`,
-          displayName: file.name,
-          sizeBytes: file.size,
-          fileData: buffer,
+          size: buffer.length,
+          createdById: session.userId,
         },
       });
 
@@ -66,12 +73,12 @@ export async function POST(request: NextRequest) {
 
     await logAudit({
       workspaceId,
-      userId: session.userId,
-      action: newAssetId ? "entity.main_image.set" : "entity.main_image.remove",
+      actorUserId: session.userId,
+      action: newAssetId ? "update" : "delete",
       targetType: "entity",
       targetId: entityId,
-      metadata: {
-        entityTitle: entity.title,
+      meta: {
+        field: "mainImage",
         previousImageId: entity.mainImageId,
         newImageId: newAssetId,
       },
@@ -126,13 +133,14 @@ export async function DELETE(request: NextRequest) {
 
     await logAudit({
       workspaceId,
-      userId: session.userId,
-      action: "entity.main_image.remove",
+      actorUserId: session.userId,
+      action: "update",
       targetType: "entity",
       targetId: entityId,
-      metadata: {
-        entityTitle: entity.title,
+      meta: {
+        field: "mainImage",
         previousImageId: entity.mainImageId,
+        newImageId: null,
       },
     });
 

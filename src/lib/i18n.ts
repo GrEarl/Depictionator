@@ -9,6 +9,7 @@ export type UiCopy = {
     boards: string;
     timeline: string;
     references: string;
+    pdfBuilder: string;
     reviews: string;
     settings: string;
     signOut: string;
@@ -74,6 +75,7 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       boards: "Boards",
       timeline: "Chronicle",
       references: "Sources",
+      pdfBuilder: "PDF Export",
       reviews: "Approvals",
       settings: "Settings",
       signOut: "Log out"
@@ -137,6 +139,7 @@ export const UI_COPY: Record<UiLocale, UiCopy> = {
       boards: "ボード",
       timeline: "年代記",
       references: "参考文献",
+      pdfBuilder: "PDF出力",
       reviews: "承認待ち",
       settings: "システム設定",
       signOut: "ログアウト"

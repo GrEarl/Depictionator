@@ -16,6 +16,7 @@ type SidebarLabels = {
   workspaceFallback: string;
   ai: string;
   boards: string;
+  pdfBuilder: string;
 };
 
 export function Sidebar({
@@ -38,6 +39,7 @@ export function Sidebar({
     { href: "/boards", label: labels.boards },
     { href: "/timeline", label: labels.timeline },
     { href: "/references", label: labels.references },
+    { href: "/pdf-builder", label: labels.pdfBuilder },
     { href: "/reviews", label: labels.reviews },
     { href: "/settings", label: labels.settings }
   ];

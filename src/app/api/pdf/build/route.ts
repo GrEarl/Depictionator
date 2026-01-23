@@ -51,24 +51,62 @@ export async function POST(request: Request) {
     return apiError("Unauthorized", 401);
   }
 
-  const form = await request.formData();
-  const workspaceId = String(form.get("workspaceId") ?? "").trim();
-  const entityIds = String(form.get("entityIds") ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const mapIds = String(form.get("mapIds") ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const timelineIds = String(form.get("timelineIds") ?? "")
-    .split(",")
-    .map((value) => value.trim())
-    .filter(Boolean);
-  const entityQuery = String(form.get("entityQuery") ?? "").trim();
-  const mapQuery = String(form.get("mapQuery") ?? "").trim();
-  const timelineQuery = String(form.get("timelineQuery") ?? "").trim();
-  const includeCredits = String(form.get("includeCredits") ?? "false") === "true";
+  const contentType = request.headers.get("content-type") || "";
+  let workspaceId = "";
+  let entityIds: string[] = [];
+  let mapIds: string[] = [];
+  let timelineIds: string[] = [];
+  let boardIds: string[] = [];
+  let entityQuery = "";
+  let mapQuery = "";
+  let timelineQuery = "";
+  let includeCredits = false;
+  let includeToc = true;
+  let pageNumbers = true;
+  let template = "default";
+
+  // Support both JSON and FormData
+  if (contentType.includes("application/json")) {
+    const body = await request.json();
+    workspaceId = String(body.workspaceId ?? "").trim();
+
+    // Handle items array from new UI
+    const items = body.items ?? [];
+    entityIds = items.filter((i: any) => i.type === "entity").map((i: any) => i.id);
+    mapIds = items.filter((i: any) => i.type === "map").map((i: any) => i.id);
+    boardIds = items.filter((i: any) => i.type === "board").map((i: any) => i.id);
+    timelineIds = items.filter((i: any) => i.type === "timeline").map((i: any) => i.id);
+
+    // Also support direct ID arrays
+    if (body.entityIds) entityIds = [...entityIds, ...body.entityIds];
+    if (body.mapIds) mapIds = [...mapIds, ...body.mapIds];
+    if (body.timelineIds) timelineIds = [...timelineIds, ...body.timelineIds];
+
+    const options = body.options ?? {};
+    includeCredits = options.includeCredits ?? body.includeCredits ?? false;
+    includeToc = options.includeToc ?? true;
+    pageNumbers = options.pageNumbers ?? true;
+    template = options.template ?? "default";
+  } else {
+    const form = await request.formData();
+    workspaceId = String(form.get("workspaceId") ?? "").trim();
+    entityIds = String(form.get("entityIds") ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    mapIds = String(form.get("mapIds") ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    timelineIds = String(form.get("timelineIds") ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+    entityQuery = String(form.get("entityQuery") ?? "").trim();
+    mapQuery = String(form.get("mapQuery") ?? "").trim();
+    timelineQuery = String(form.get("timelineQuery") ?? "").trim();
+    includeCredits = String(form.get("includeCredits") ?? "false") === "true";
+  }
 
   if (!workspaceId) {
     return apiError("Workspace required", 400);
