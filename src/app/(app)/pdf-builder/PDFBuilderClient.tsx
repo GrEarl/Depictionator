@@ -30,13 +30,15 @@ export function PDFBuilderClient({
   const [pageNumbers, setPageNumbers] = useState(true);
 
   const addItem = (item: ExportItem) => {
-    if (!selectedItems.find((i) => i.id === item.id && i.type === item.type)) {
-      setSelectedItems([...selectedItems, item]);
-    }
+    setSelectedItems((prev) =>
+      prev.find((i) => i.id === item.id && i.type === item.type)
+        ? prev
+        : [...prev, item]
+    );
   };
 
   const removeItem = (id: string, type: string) => {
-    setSelectedItems(selectedItems.filter((i) => !(i.id === id && i.type === type)));
+    setSelectedItems((prev) => prev.filter((i) => !(i.id === id && i.type === type)));
   };
 
   const moveItem = (index: number, direction: "up" | "down") => {
@@ -45,6 +47,30 @@ export function PDFBuilderClient({
     if (newIndex < 0 || newIndex >= newItems.length) return;
     [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
     setSelectedItems(newItems);
+  };
+
+  const handleDragStart = (item: ExportItem) => (event: React.DragEvent) => {
+    event.dataTransfer.setData("application/json", JSON.stringify(item));
+    event.dataTransfer.effectAllowed = "copy";
+  };
+
+  const handleDrop = (event: React.DragEvent) => {
+    event.preventDefault();
+    const payload = event.dataTransfer.getData("application/json");
+    if (!payload) return;
+    try {
+      const item = JSON.parse(payload) as ExportItem;
+      if (item?.id && item?.type && item?.title) {
+        addItem(item);
+      }
+    } catch (error) {
+      console.error("Failed to parse dropped item", error);
+    }
+  };
+
+  const handleDragOver = (event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
   };
 
   const handleExport = async () => {
@@ -99,20 +125,19 @@ export function PDFBuilderClient({
         <div className="sidebar-section">
           <h3>Entities ({entities.length})</h3>
           <div className="item-list">
-            {entities.slice(0, 20).map((entity) => (
+            {entities.map((entity) => (
               <button
                 key={entity.id}
                 className="item-chip"
                 onClick={() => addItem({ id: entity.id, type: "entity", title: entity.title })}
+                draggable
+                onDragStart={handleDragStart({ id: entity.id, type: "entity", title: entity.title })}
               >
                 <span className="item-type">{entity.type.slice(0, 3)}</span>
                 <span className="item-title">{entity.title}</span>
                 <span className="item-add">+</span>
               </button>
             ))}
-            {entities.length > 20 && (
-              <div className="muted text-xs">...and {entities.length - 20} more</div>
-            )}
           </div>
         </div>
 
@@ -124,6 +149,8 @@ export function PDFBuilderClient({
                 key={map.id}
                 className="item-chip"
                 onClick={() => addItem({ id: map.id, type: "map", title: map.title })}
+                draggable
+                onDragStart={handleDragStart({ id: map.id, type: "map", title: map.title })}
               >
                 <span className="item-type">MAP</span>
                 <span className="item-title">{map.title}</span>
@@ -141,6 +168,8 @@ export function PDFBuilderClient({
                 key={board.id}
                 className="item-chip"
                 onClick={() => addItem({ id: board.id, type: "board", title: board.name })}
+                draggable
+                onDragStart={handleDragStart({ id: board.id, type: "board", title: board.name })}
               >
                 <span className="item-type">BRD</span>
                 <span className="item-title">{board.name}</span>
@@ -152,7 +181,7 @@ export function PDFBuilderClient({
       </aside>
 
       {/* Center: Export Queue */}
-      <main className="pdf-builder-main">
+      <main className="pdf-builder-main" onDrop={handleDrop} onDragOver={handleDragOver}>
         <div className="export-queue-header">
           <h2>Export Queue ({selectedItems.length} items)</h2>
           {selectedItems.length > 0 && (
@@ -185,21 +214,32 @@ export function PDFBuilderClient({
                     className="btn-icon"
                     onClick={() => moveItem(index, "up")}
                     disabled={index === 0}
+                    aria-label="Move up"
                   >
-                    ↑
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 5l-7 7h14l-7-7z" />
+                    </svg>
                   </button>
                   <button
                     className="btn-icon"
                     onClick={() => moveItem(index, "down")}
                     disabled={index === selectedItems.length - 1}
+                    aria-label="Move down"
                   >
-                    ↓
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M12 19l7-7H5l7 7z" />
+                    </svg>
                   </button>
                   <button
                     className="btn-icon btn-danger"
                     onClick={() => removeItem(item.id, item.type)}
+                    aria-label="Remove"
                   >
-                    ×
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M3 6h18" />
+                      <path d="M8 6V4h8v2" />
+                      <path d="M6 6l1 14h10l1-14" />
+                    </svg>
                   </button>
                 </div>
               </div>

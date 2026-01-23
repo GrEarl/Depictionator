@@ -98,6 +98,10 @@ export async function POST(request: Request) {
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean);
+    boardIds = String(form.get("boardIds") ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
     timelineIds = String(form.get("timelineIds") ?? "")
       .split(",")
       .map((value) => value.trim())
@@ -106,6 +110,9 @@ export async function POST(request: Request) {
     mapQuery = String(form.get("mapQuery") ?? "").trim();
     timelineQuery = String(form.get("timelineQuery") ?? "").trim();
     includeCredits = String(form.get("includeCredits") ?? "false") === "true";
+    includeToc = String(form.get("includeToc") ?? "true") === "true";
+    pageNumbers = String(form.get("pageNumbers") ?? "true") === "true";
+    template = String(form.get("template") ?? "default");
   }
 
   if (!workspaceId) {
@@ -130,6 +137,7 @@ export async function POST(request: Request) {
   const entityIdsResolved = new Set(entityIds);
   const mapIdsResolved = new Set(mapIds);
   const timelineIdsResolved = new Set(timelineIds);
+  const boardIdsResolved = new Set(boardIds);
 
   const unresolvedEntities: string[] = [];
   const unresolvedMaps: string[] = [];
@@ -214,6 +222,7 @@ export async function POST(request: Request) {
   const finalEntityIds = Array.from(entityIdsResolved);
   const finalMapIds = Array.from(mapIdsResolved);
   const finalTimelineIds = Array.from(timelineIdsResolved);
+  const finalBoardIds = Array.from(boardIdsResolved);
 
   if (finalEntityIds.length > 0) {
     const entities: EntitySummary[] = await prisma.entity.findMany({
@@ -230,7 +239,7 @@ export async function POST(request: Request) {
         return `<article><h3>${escapeHtml(entity.title)}</h3><pre>${escapeHtml(body)}</pre></article>`;
       })
       .join("");
-    sections.push(`<section><h2>Articles</h2>${items || "<p>No articles.</p>"}</section>`);
+    sections.push(`<section id="section-articles"><h2>Articles</h2>${items || "<p>No articles.</p>"}</section>`);
   }
 
   if (finalMapIds.length > 0) {
@@ -259,7 +268,7 @@ export async function POST(request: Request) {
         return `<article><h3>${escapeHtml(map.title)}</h3>${imageHtml}</article>`;
       })
     );
-    sections.push(`<section><h2>Maps</h2>${items.join("")}</section>`);
+    sections.push(`<section id="section-maps"><h2>Maps</h2>${items.join("")}</section>`);
   }
 
   if (finalTimelineIds.length > 0) {
@@ -275,10 +284,60 @@ export async function POST(request: Request) {
         return `<article><h3>${escapeHtml(timeline.name)}</h3><ul>${events || "<li>No events.</li>"}</ul></article>`;
       })
       .join("");
-    sections.push(`<section><h2>Timelines</h2>${items}</section>`);
+    sections.push(`<section id="section-timelines"><h2>Timelines</h2>${items}</section>`);
   }
 
-  let html = `<html><body>${sections.join("") || "<p>No content selected.</p>"}</body></html>`;
+  if (finalBoardIds.length > 0) {
+    const boards = await prisma.evidenceBoard.findMany({
+      where: { workspaceId, id: { in: finalBoardIds } },
+      include: {
+        items: {
+          where: { softDeletedAt: null },
+          orderBy: { createdAt: "asc" },
+          take: 100,
+          include: {
+            entity: { select: { title: true } }
+          }
+        }
+      }
+    });
+    const items = boards
+      .map((board) => {
+        const boardItems = board.items
+          .map((item) => {
+            const label = item.entity?.title ?? item.title ?? item.content ?? item.url ?? "";
+            const typeLabel = item.type ? `(${item.type})` : "";
+            return `<li>${escapeHtml(`${label} ${typeLabel}`.trim())}</li>`;
+          })
+          .join("");
+        return `<article><h3>${escapeHtml(board.name)}</h3><p>${escapeHtml(board.description ?? "")}</p><ul>${boardItems || "<li>No items.</li>"}</ul></article>`;
+      })
+      .join("");
+    sections.push(`<section id="section-boards"><h2>Boards</h2>${items}</section>`);
+  }
+
+  const tocItems = [
+    finalEntityIds.length > 0 ? { label: "Articles", anchor: "section-articles" } : null,
+    finalMapIds.length > 0 ? { label: "Maps", anchor: "section-maps" } : null,
+    finalBoardIds.length > 0 ? { label: "Boards", anchor: "section-boards" } : null,
+    finalTimelineIds.length > 0 ? { label: "Timelines", anchor: "section-timelines" } : null
+  ].filter(Boolean) as { label: string; anchor: string }[];
+
+  const tocHtml = includeToc
+    ? `<section class="toc"><h2>Table of Contents</h2><ol>${tocItems.map((item) => `<li><a href="#${item.anchor}">${item.label}</a></li>`).join("")}</ol></section>`
+    : "";
+
+  const templateStyles: Record<string, string> = {
+    default: "body{font-family:Arial,sans-serif;font-size:12px;line-height:1.6;color:#111;} h2{margin-top:24px;border-bottom:1px solid #ddd;padding-bottom:6px;} h3{margin-top:16px;} article{margin-bottom:16px;}",
+    compact: "body{font-family:Arial,sans-serif;font-size:11px;line-height:1.4;color:#111;} h2{margin-top:18px;border-bottom:1px solid #eee;padding-bottom:4px;} h3{margin-top:12px;} article{margin-bottom:12px;}",
+    presentation: "body{font-family:Arial,sans-serif;font-size:14px;line-height:1.8;color:#111;} h2{margin-top:28px;border-bottom:2px solid #222;padding-bottom:8px;} h3{margin-top:18px;} article{margin-bottom:20px;}",
+    wiki: "body{font-family:Georgia,serif;font-size:12px;line-height:1.6;color:#111;} h2{margin-top:22px;border-bottom:1px solid #999;padding-bottom:6px;} h3{margin-top:14px;} article{margin-bottom:16px;}"
+  };
+
+  const styleBlock = `<style>${templateStyles[template] ?? templateStyles.default} pre{white-space:pre-wrap;word-break:break-word;} .toc ol{padding-left:18px;}</style>`;
+
+  const sectionHtml = sections.join("") || "<p>No content selected.</p>";
+  let html = `<html><head>${styleBlock}</head><body>${tocHtml}${sectionHtml}</body></html>`;
 
   if (includeCredits) {
     const assets: AssetSummary[] = await prisma.asset.findMany({
@@ -321,7 +380,18 @@ export async function POST(request: Request) {
   });
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "networkidle0" });
-  const pdf = await page.pdf({ format: "A4", printBackground: true });
+  const pdfOptions: any = { format: "A4", printBackground: true };
+  if (pageNumbers) {
+    pdfOptions.displayHeaderFooter = true;
+    pdfOptions.headerTemplate = "<span></span>";
+    pdfOptions.footerTemplate = `
+      <div style="width:100%;font-size:10px;color:#666;padding:0 16px 8px;text-align:right;">
+        <span class="pageNumber"></span> / <span class="totalPages"></span>
+      </div>
+    `;
+    pdfOptions.margin = { top: "20mm", bottom: "20mm", left: "15mm", right: "15mm" };
+  }
+  const pdf = await page.pdf(pdfOptions);
   await browser.close();
 
   const pdfBuffer = Buffer.from(pdf);
@@ -337,6 +407,3 @@ export async function POST(request: Request) {
     }
   });
 }
-
-
-

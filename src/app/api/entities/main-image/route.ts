@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
 
     const workspaceId = formData.get("workspaceId") as string;
     const entityId = formData.get("entityId") as string;
-    const assetId = formData.get("assetId") as string | null;
+    const assetIdRaw = formData.get("assetId");
+    const assetId = typeof assetIdRaw === "string" ? assetIdRaw.trim() : "";
     const file = formData.get("file") as File | null;
 
     if (!workspaceId || !entityId) {
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Entity not found" }, { status: 404 });
     }
 
-    let newAssetId: string | null = assetId;
+    let newAssetId: string | null = assetId || null;
 
     // If a file is provided, upload it first
     if (file && file.size > 0) {
@@ -63,6 +64,15 @@ export async function POST(request: NextRequest) {
       });
 
       newAssetId = asset.id;
+    }
+
+    if (newAssetId) {
+      const asset = await prisma.asset.findFirst({
+        where: { id: newAssetId, workspaceId, softDeletedAt: null }
+      });
+      if (!asset) {
+        return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+      }
     }
 
     // Update entity with new main image
