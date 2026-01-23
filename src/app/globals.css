@@ -1800,7 +1800,6 @@ button[type="submit"]:hover {
 }
 
 .article-summary,
-.article-toc-inline,
 .read-view {
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -1808,9 +1807,16 @@ button[type="submit"]:hover {
   padding: 16px;
 }
 
+/* TOC inline - Wikipedia style, no heavy border */
 .article-toc-inline {
-  border-left: 4px solid var(--accent);
+  float: right;
+  margin: 0 0 16px 24px;
+  max-width: 280px;
   background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px 16px;
+  font-size: 13px;
 }
 
 .empty-content {
@@ -3858,24 +3864,24 @@ button[type="submit"]:hover {
    ========================================================================== */
 
 .toc {
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px 20px;
-  margin: 24px 0;
-  max-width: 400px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0;
+  max-width: none;
 }
 
 .toc-title {
   display: block;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   color: var(--ink);
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+  padding-bottom: 0;
+  border-bottom: none;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .toc-list {
@@ -4373,4 +4379,51 @@ button[type="submit"]:hover {
   color: white;
   border-radius: 10px;
   margin-left: 8px;
+}
+
+/* ==========================================================================
+   File Input Styling
+   ========================================================================== */
+
+.file-input {
+  display: block;
+  width: 100%;
+  padding: 8px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.file-input:hover {
+  border-color: var(--accent);
+}
+
+.file-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  border-style: solid;
+}
+
+.file-input::file-selector-button {
+  padding: 6px 12px;
+  margin-right: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.file-input::file-selector-button:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
 }

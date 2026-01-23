@@ -674,6 +674,47 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
             <details className="action-details">
                <summary>Manage</summary>
                <div className="p-4 space-y-4">
+                  {/* Main Image Upload */}
+                  <form
+                    action="/api/entities/main-image"
+                    method="post"
+                    encType="multipart/form-data"
+                    className="form-grid"
+                  >
+                    <input type="hidden" name="workspaceId" value={workspaceId} />
+                    <input type="hidden" name="entityId" value={entity.id} />
+                    <label>
+                      Main Image
+                      <input
+                        type="file"
+                        name="file"
+                        accept="image/*"
+                        disabled={manageDisabled}
+                        className="file-input"
+                      />
+                    </label>
+                    <button type="submit" className="btn-secondary" disabled={manageDisabled}>
+                      {mainImage ? "Replace Image" : "Upload Image"}
+                    </button>
+                  </form>
+
+                  {mainImage && (
+                    <form action="/api/entities/main-image" method="post" className="form-grid">
+                      <input type="hidden" name="workspaceId" value={workspaceId} />
+                      <input type="hidden" name="entityId" value={entity.id} />
+                      <input type="hidden" name="assetId" value="" />
+                      <button
+                        type="submit"
+                        className="btn-link text-xs text-muted"
+                        disabled={manageDisabled}
+                      >
+                        Remove current image
+                      </button>
+                    </form>
+                  )}
+
+                  <hr className="border-border" />
+
                   <form action="/api/articles/rename" method="post" className="form-grid">
                     <input type="hidden" name="workspaceId" value={workspaceId} />
                     <input type="hidden" name="entityId" value={entity.id} />
