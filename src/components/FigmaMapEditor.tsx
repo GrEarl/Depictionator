@@ -24,6 +24,15 @@ type MapPayload = {
   bounds: [[number, number], [number, number]] | null;
   imageUrl: string | null;
   showPathOrder?: boolean | null;
+  scenes?: {
+    id: string;
+    name: string;
+    description?: string | null;
+    chapterId?: string | null;
+    eraId?: string | null;
+    viewpointId?: string | null;
+    state?: any;
+  }[];
   events?: {
     id: string;
     title: string;
@@ -155,7 +164,7 @@ export function FigmaMapEditor({
   const guidesLayerRef = useRef<LayerGroup | null>(null);
   const [mapReady, setMapReady] = useState(false);
 
-  const { eraId, chapterId, viewpointId, setFilters } = useGlobalFilters();
+  const { eraId, chapterId, viewpointId, mode, setFilters } = useGlobalFilters();
   const { toasts, addToast, removeToast } = useToast();
 
   const [mode, setMode] = useState<ToolMode>("select");
@@ -207,6 +216,9 @@ export function FigmaMapEditor({
   const [pathPoints, setPathPoints] = useState<{ x: number; y: number }[]>([]);
   const [pathDraft, setPathDraft] = useState<PathDraft>(createPathDraft());
   const [showPathOrder, setShowPathOrder] = useState(Boolean(map.showPathOrder));
+  useEffect(() => {
+    setShowPathOrder(Boolean(map.showPathOrder));
+  }, [map.showPathOrder]);
 
   const handlePathOrderToggle = useCallback(async (value: boolean) => {
     const previous = showPathOrder;
@@ -235,12 +247,13 @@ export function FigmaMapEditor({
       }
 
       addToast("Path order setting saved", "success");
+      router.refresh();
     } catch (error) {
       console.error("Failed to update path order setting:", error);
       setShowPathOrder(previous);
       addToast("Failed to save path order setting", "error");
     }
-  }, [addToast, map.id, showPathOrder, workspaceId]);
+  }, [addToast, map.id, showPathOrder, workspaceId, router]);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
 
   // Zoom state
@@ -1116,6 +1129,188 @@ export function FigmaMapEditor({
     });
   }, [safeEntities, entityTypeFilter, entityGenreFilter, entityGenreMap]);
 
+  const scenes = map.scenes ?? [];
+  const [selectedSceneId, setSelectedSceneId] = useState("");
+  const [sceneFormOpen, setSceneFormOpen] = useState(false);
+  const [sceneSaving, setSceneSaving] = useState(false);
+  const [sceneForm, setSceneForm] = useState({
+    name: "",
+    description: "",
+    eraId: "",
+    chapterId: "",
+    viewpointId: ""
+  });
+
+  const resolveSceneFilterId = useCallback((value: string, options: { id: string }[]) => {
+    return options.some((option) => option.id === value) ? value : "";
+  }, []);
+
+  const selectedScene = useMemo(
+    () => scenes.find((scene) => scene.id === selectedSceneId) ?? null,
+    [scenes, selectedSceneId]
+  );
+
+  const captureSceneState = useCallback(() => {
+    const mapInstance = mapRef.current;
+    const center = mapInstance?.getCenter();
+    return {
+      zoom: mapInstance?.getZoom() ?? null,
+      center: center
+        ? { x: Number(center.lng.toFixed(2)), y: Number(center.lat.toFixed(2)) }
+        : null,
+      showImage,
+      showPins,
+      showPaths,
+      showPathOrder,
+      hiddenLocationTypes: Array.from(hiddenLocationTypes),
+      entityTypeFilter,
+      entityGenreFilter,
+      filters: {
+        eraId,
+        chapterId,
+        viewpointId,
+        mode
+      }
+    };
+  }, [
+    showImage,
+    showPins,
+    showPaths,
+    showPathOrder,
+    hiddenLocationTypes,
+    entityTypeFilter,
+    entityGenreFilter,
+    eraId,
+    chapterId,
+    viewpointId,
+    mode
+  ]);
+
+  const applySceneState = useCallback(
+    (scene: NonNullable<MapPayload["scenes"]>[number]) => {
+      const state = (scene.state ?? {}) as any;
+      if (mapRef.current && state?.center && typeof state.zoom === "number") {
+        mapRef.current.setView([state.center.y, state.center.x], state.zoom, { animate: false });
+      }
+      if (typeof state?.showImage === "boolean") setShowImage(state.showImage);
+      if (typeof state?.showPins === "boolean") setShowPins(state.showPins);
+      if (typeof state?.showPaths === "boolean") setShowPaths(state.showPaths);
+      if (typeof state?.showPathOrder === "boolean") setShowPathOrder(state.showPathOrder);
+      if (Array.isArray(state?.hiddenLocationTypes)) {
+        setHiddenLocationTypes(new Set(state.hiddenLocationTypes));
+      }
+      if (typeof state?.entityTypeFilter === "string") {
+        setEntityTypeFilter(state.entityTypeFilter);
+      }
+      if (typeof state?.entityGenreFilter === "string") {
+        setEntityGenreFilter(state.entityGenreFilter);
+      }
+
+      const storedFilters = state?.filters ?? {};
+      const nextFilters: { eraId?: string; chapterId?: string; viewpointId?: string; mode?: string } = {};
+      if (typeof storedFilters.eraId === "string") nextFilters.eraId = storedFilters.eraId;
+      else if (scene.eraId) nextFilters.eraId = scene.eraId;
+      if (typeof storedFilters.chapterId === "string") nextFilters.chapterId = storedFilters.chapterId;
+      else if (scene.chapterId) nextFilters.chapterId = scene.chapterId;
+      if (typeof storedFilters.viewpointId === "string") nextFilters.viewpointId = storedFilters.viewpointId;
+      else if (scene.viewpointId) nextFilters.viewpointId = scene.viewpointId;
+      if (typeof storedFilters.mode === "string") nextFilters.mode = storedFilters.mode;
+
+      if (Object.keys(nextFilters).length > 0) {
+        setFilters(nextFilters);
+      }
+    },
+    [setFilters]
+  );
+
+  const openNewSceneForm = useCallback(() => {
+    setSceneForm({
+      name: "",
+      description: "",
+      eraId: resolveSceneFilterId(eraId, eras),
+      chapterId: resolveSceneFilterId(chapterId, chapters),
+      viewpointId: resolveSceneFilterId(viewpointId, viewpoints)
+    });
+    setSceneFormOpen(true);
+  }, [resolveSceneFilterId, eraId, chapterId, viewpointId, eras, chapters, viewpoints]);
+
+  const saveSceneSnapshot = useCallback(async () => {
+    if (!selectedSceneId) return;
+    setSceneSaving(true);
+    const form = new FormData();
+    form.append("workspaceId", workspaceId);
+    form.append("sceneId", selectedSceneId);
+    const resolvedEraId = resolveSceneFilterId(eraId, eras);
+    const resolvedChapterId = resolveSceneFilterId(chapterId, chapters);
+    const resolvedViewpointId = resolveSceneFilterId(viewpointId, viewpoints);
+    form.append("eraId", resolvedEraId);
+    form.append("chapterId", resolvedChapterId);
+    form.append("viewpointId", resolvedViewpointId);
+    form.append("state", JSON.stringify(captureSceneState()));
+
+    try {
+      const response = await fetch("/api/map-scenes/update", { method: "POST", body: form });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to update scene");
+      }
+      addToast("Scene snapshot saved", "success");
+      router.refresh();
+    } catch (error) {
+      console.error("Error saving scene snapshot:", error);
+      addToast("Failed to save scene snapshot", "error");
+    } finally {
+      setSceneSaving(false);
+    }
+  }, [
+    addToast,
+    captureSceneState,
+    selectedSceneId,
+    workspaceId,
+    resolveSceneFilterId,
+    eraId,
+    chapterId,
+    viewpointId,
+    eras,
+    chapters,
+    viewpoints,
+    router
+  ]);
+
+  const createScene = useCallback(async () => {
+    if (!sceneForm.name.trim()) {
+      addToast("Scene name is required", "error");
+      return;
+    }
+    setSceneSaving(true);
+    const form = new FormData();
+    form.append("workspaceId", workspaceId);
+    form.append("mapId", map.id);
+    form.append("name", sceneForm.name.trim());
+    form.append("description", sceneForm.description.trim());
+    form.append("eraId", sceneForm.eraId);
+    form.append("chapterId", sceneForm.chapterId);
+    form.append("viewpointId", sceneForm.viewpointId);
+    form.append("state", JSON.stringify(captureSceneState()));
+
+    try {
+      const response = await fetch("/api/map-scenes/create", { method: "POST", body: form });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to create scene");
+      }
+      addToast("Scene created", "success");
+      setSceneFormOpen(false);
+      setSceneForm({ name: "", description: "", eraId: "", chapterId: "", viewpointId: "" });
+      router.refresh();
+    } catch (error) {
+      console.error("Error creating scene:", error);
+      addToast("Failed to create scene", "error");
+    } finally {
+      setSceneSaving(false);
+    }
+  }, [addToast, captureSceneState, map.id, sceneForm, workspaceId, router]);
+
   async function submitPin() {
     if (!validatePinForm()) {
       addToast("Please fill in all required fields.", "error");
@@ -1674,6 +1869,118 @@ export function FigmaMapEditor({
             </div>
           </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="map-filter-label">Scenes</span>
+            <select
+              value={selectedSceneId}
+              onChange={(e) => {
+                const nextId = e.target.value;
+                setSelectedSceneId(nextId);
+                const scene = scenes.find((s) => s.id === nextId);
+                if (scene) {
+                  applySceneState(scene);
+                }
+              }}
+              className="bg-bg border border-border rounded-lg px-2 py-1 text-xs min-w-[160px]"
+            >
+              <option value="">Current view</option>
+              {scenes.map((scene) => (
+                <option key={scene.id} value={scene.id}>
+                  {scene.name}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={saveSceneSnapshot}
+              disabled={!selectedSceneId || sceneSaving}
+            >
+              Save snapshot
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => (sceneFormOpen ? setSceneFormOpen(false) : openNewSceneForm())}
+            >
+              {sceneFormOpen ? "Close" : "New scene"}
+            </Button>
+          </div>
+          {selectedScene && (
+            <span className="text-xs text-muted">
+              {selectedScene.description ? selectedScene.description : "No description"}
+            </span>
+          )}
+        </div>
+
+        {sceneFormOpen && (
+          <div className="rounded-xl border border-border bg-bg/70 px-3 py-3 flex flex-wrap gap-3">
+            <div className="flex flex-col gap-1 min-w-[160px]">
+              <label className="map-filter-label">Name</label>
+              <input
+                value={sceneForm.name}
+                onChange={(e) => setSceneForm((prev) => ({ ...prev, name: e.target.value }))}
+                className="bg-bg border border-border rounded-lg px-2 py-1 text-xs"
+                placeholder="Scene name"
+              />
+            </div>
+            <div className="flex flex-col gap-1 min-w-[200px] flex-1">
+              <label className="map-filter-label">Description</label>
+              <input
+                value={sceneForm.description}
+                onChange={(e) => setSceneForm((prev) => ({ ...prev, description: e.target.value }))}
+                className="bg-bg border border-border rounded-lg px-2 py-1 text-xs"
+                placeholder="Optional note"
+              />
+            </div>
+            <div className="flex flex-col gap-1 min-w-[140px]">
+              <label className="map-filter-label">Era</label>
+              <select
+                value={sceneForm.eraId}
+                onChange={(e) => setSceneForm((prev) => ({ ...prev, eraId: e.target.value }))}
+                className="bg-bg border border-border rounded-lg px-2 py-1 text-xs"
+              >
+                <option value="">Any</option>
+                {eras.map((era) => (
+                  <option key={era.id} value={era.id}>{era.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1 min-w-[140px]">
+              <label className="map-filter-label">Chapter</label>
+              <select
+                value={sceneForm.chapterId}
+                onChange={(e) => setSceneForm((prev) => ({ ...prev, chapterId: e.target.value }))}
+                className="bg-bg border border-border rounded-lg px-2 py-1 text-xs"
+              >
+                <option value="">Any</option>
+                {chapters.map((chapter) => (
+                  <option key={chapter.id} value={chapter.id}>{chapter.orderIndex}. {chapter.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1 min-w-[160px]">
+              <label className="map-filter-label">Viewpoint</label>
+              <select
+                value={sceneForm.viewpointId}
+                onChange={(e) => setSceneForm((prev) => ({ ...prev, viewpointId: e.target.value }))}
+                className="bg-bg border border-border rounded-lg px-2 py-1 text-xs"
+              >
+                <option value="">Any</option>
+                {viewpoints.map((vp) => (
+                  <option key={vp.id} value={vp.id}>{vp.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <Button size="sm" onClick={createScene} disabled={sceneSaving}>
+                Create
+              </Button>
+            </div>
+          </div>
+        )}
 
         <div className="flex items-start gap-3">
           <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-3 ${filtersExpanded ? "py-2 space-y-2" : "py-1.5"}`}>

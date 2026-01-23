@@ -36,7 +36,7 @@ export default async function MapEditorPage({ params }: PageProps) {
     return <div className="panel">Select a workspace.</div>;
   }
 
-  const [map, markerStyles, entities, eras, chapters, viewpoints] = await Promise.all([
+  const [map, markerStyles, entities, eras, chapters, viewpoints, scenes] = await Promise.all([
     prisma.map.findFirst({
       where: { id, workspaceId: workspace.id, softDeletedAt: null },
       include: {
@@ -68,6 +68,10 @@ export default async function MapEditorPage({ params }: PageProps) {
     prisma.viewpoint.findMany({
       where: { workspaceId: workspace.id, softDeletedAt: null },
       orderBy: { name: "asc" }
+    }),
+    prisma.mapScene.findMany({
+      where: { workspaceId: workspace.id, mapId: id, softDeletedAt: null },
+      orderBy: { createdAt: "asc" }
     })
   ]);
 
@@ -108,7 +112,16 @@ export default async function MapEditorPage({ params }: PageProps) {
         markerStyle: p.markerStyle ? { color: p.markerStyle.color } : null
       };
     }),
-    events: map.events ?? []
+    events: map.events ?? [],
+    scenes: (scenes ?? []).map((scene) => ({
+      id: scene.id,
+      name: scene.name,
+      description: scene.description,
+      chapterId: scene.chapterId,
+      eraId: scene.eraId,
+      viewpointId: scene.viewpointId,
+      state: scene.state ?? {}
+    }))
   };
 
   return (
