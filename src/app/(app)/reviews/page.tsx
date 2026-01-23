@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { LlmContext } from "@/components/LlmContext";
 import Link from "next/link";
+import { diffLines } from "diff";
 
 type SearchParams = { [key: string]: string | string[] | undefined };
 
@@ -85,29 +86,72 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
 
       {/* Pane 2: Detail / Action Area */}
       <main className="pane-main-content">
-        {selectedReview ? (
+        {selectedReview ? (() => {
+          // Compute diff for inline preview
+          const before = selectedReview.revision.parentRevision?.bodyMd ?? "";
+          const after = selectedReview.revision.bodyMd ?? "";
+          const diff = diffLines(before, after);
+          const hasChanges = diff.some(part => part.added || part.removed);
+
+          return (
           <div className="review-detail">
             <div className="pane-header">
-              <h2>Review Request: {selectedReview.revisionId}</h2>
+              <h2>Review Request: {selectedReview.revisionId.slice(0, 8)}...</h2>
+              <span className={`status-badge status-${selectedReview.status}`}>{selectedReview.status}</span>
             </div>
 
             <div className="detail-body p-6">
+              {/* Inline Diff Preview */}
+              <section className="detail-section mb-6">
+                <div className="section-header">
+                  <h4>Changes</h4>
+                  <Link href={`/revisions/${selectedReview.revisionId}`} className="btn-link text-xs">
+                    Full View →
+                  </Link>
+                </div>
+                {hasChanges ? (
+                  <div className="diff-preview">
+                    <div className="diff-stats">
+                      <span className="diff-added">+{diff.filter(p => p.added).reduce((sum, p) => sum + (p.value.match(/\n/g) || []).length, 0)} lines</span>
+                      <span className="diff-removed">-{diff.filter(p => p.removed).reduce((sum, p) => sum + (p.value.match(/\n/g) || []).length, 0)} lines</span>
+                    </div>
+                    <pre className="diff-block">
+                      {diff.slice(0, 50).map((part, index) => {
+                        const lines = part.value.split('\n').slice(0, 10);
+                        const prefix = part.added ? "+" : part.removed ? "-" : " ";
+                        const className = part.added ? "diff-line-added" : part.removed ? "diff-line-removed" : "diff-line-context";
+                        return lines.map((line, lineIdx) => (
+                          <span key={`${index}-${lineIdx}`} className={className}>
+                            {prefix}{line}
+                            {lineIdx < lines.length - 1 ? '\n' : ''}
+                          </span>
+                        ));
+                      })}
+                      {diff.length > 50 && <span className="diff-truncated">... (truncated, click Full View for complete diff)</span>}
+                    </pre>
+                  </div>
+                ) : (
+                  <div className="muted text-sm">No text changes detected.</div>
+                )}
+              </section>
+
               <section className="detail-section mb-6">
                 <h4>Revision Info</h4>
                 <div className="info-card">
                   <div className="info-row">
                     <span>Status</span> <span className="badge">{selectedReview.revision.status}</span>
                   </div>
+                  <div className="info-row">
+                    <span>Summary</span> <span>{selectedReview.revision.changeSummary || "(No summary)"}</span>
+                  </div>
+                  <div className="info-row">
+                    <span>Created</span> <span>{new Date(selectedReview.revision.createdAt).toLocaleString()}</span>
+                  </div>
                   {selectedReview.revision.parentRevisionId && (
                     <div className="info-row">
-                      <span>Base Revision</span> <code>{selectedReview.revision.parentRevisionId}</code>
+                      <span>Base Revision</span> <code>{selectedReview.revision.parentRevisionId.slice(0, 8)}...</code>
                     </div>
                   )}
-                  <div className="info-actions mt-4">
-                    <Link href={`/revisions/${selectedReview.revisionId}`} className="btn-secondary">
-                      Compare Changes & Diff
-                    </Link>
-                  </div>
                 </div>
               </section>
 
@@ -129,11 +173,17 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
               </section>
 
               <section className="detail-section">
-                <h4>Discussion</h4>
+                <h4>Discussion ({selectedReview.comments.length})</h4>
                 <div className="comments-box mt-4">
+                  {selectedReview.comments.length === 0 && (
+                    <div className="muted text-sm mb-4">No comments yet. Start the discussion below.</div>
+                  )}
                   {selectedReview.comments.map((c) => (
                     <div key={c.id} className="comment-bubble">
-                      <div className="comment-user">{c.user?.name || "Unknown"}</div>
+                      <div className="comment-header">
+                        <span className="comment-user">{c.user?.name || "Unknown"}</span>
+                        <span className="comment-time">{new Date(c.createdAt).toLocaleString()}</span>
+                      </div>
                       <div className="comment-body">{c.bodyMd}</div>
                     </div>
                   ))}
@@ -147,7 +197,8 @@ export default async function ReviewsPage({ searchParams }: ReviewsPageProps) {
               </section>
             </div>
           </div>
-        ) : (
+          );
+        })() : (
           <div className="empty-state-centered">
             <div className="hero-icon">Inbox</div>
             <h2>Inbox Zero</h2>
