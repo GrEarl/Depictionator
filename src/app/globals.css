@@ -1342,6 +1342,16 @@ button[type="submit"]:hover {
   background: rgba(255, 0, 51, 0.08);
 }
 
+.map-filter-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.map-filter-scroll::-webkit-scrollbar {
+  display: none;
+}
+
 .map-legend.floating {
   position: absolute;
   left: 16px;

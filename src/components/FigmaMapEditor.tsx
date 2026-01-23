@@ -1988,9 +1988,9 @@ export function FigmaMapEditor({
           <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-2 ${filtersExpanded ? "py-1.5 space-y-1.5" : "py-1"}`}>
             {filtersExpanded ? (
               <>
-                <div className="space-y-1">
-                  <div className="map-filter-label">Layers</div>
-                  <div className="flex flex-wrap items-center gap-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="map-filter-label flex-none">Layers</div>
+                  <div className="map-filter-scroll flex items-center gap-1 min-w-0 flex-1">
                     <label className={filterPillClass(showImage)}>
                       <input type="checkbox" className="sr-only" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
                       Map Image
@@ -2005,9 +2005,9 @@ export function FigmaMapEditor({
                     </label>
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <div className="map-filter-label">Location Types</div>
-                  <div className="flex flex-wrap items-center gap-1 max-h-14 overflow-y-auto pr-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="map-filter-label flex-none">Location Types</div>
+                  <div className="map-filter-scroll flex items-center gap-1 min-w-0 flex-1">
                     {locationTypes.map((type) => {
                       const active = !hiddenLocationTypes.has(type);
                       return (
