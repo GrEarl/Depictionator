@@ -219,6 +219,8 @@ export function LlmPanel({
       <button
         type="button"
         onClick={() => setOpen(true)}
+        aria-label="Open AI Orchestrator"
+        data-testid="llm-toggle"
         className={cn(
           "fixed bottom-6 right-6 z-40 p-4 rounded-full shadow-2xl transition-all hover:scale-110 active:scale-95 group overflow-hidden",
           "bg-accent text-white"
@@ -237,6 +239,7 @@ export function LlmPanel({
         <div 
           className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-[2px] z-[50] animate-fade-in"
           onClick={() => setOpen(false)}
+          data-testid="llm-backdrop"
         />
       )}
 
@@ -244,7 +247,7 @@ export function LlmPanel({
       <div className={cn(
         "fixed top-0 right-0 h-full w-full max-w-lg z-[60] bg-panel border-l border-border shadow-2xl transition-transform duration-500 ease-in-out flex flex-col",
         open ? "translate-x-0" : "translate-x-full"
-      )}>
+      )} data-testid="llm-panel">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-border bg-bg/50">
           <div className="flex items-center gap-3">
@@ -261,6 +264,8 @@ export function LlmPanel({
           <button 
             onClick={() => setOpen(false)}
             className="p-2 hover:bg-bg rounded-full transition-colors text-muted hover:text-ink"
+            aria-label="Close AI Orchestrator"
+            data-testid="llm-close"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-6 h-6">
               <path d="M18 6L6 18M6 6l12 12" />
@@ -275,6 +280,8 @@ export function LlmPanel({
             <button 
               onClick={() => setShowConfig(!showConfig)}
               className="text-[10px] font-bold uppercase tracking-widest text-muted hover:text-accent flex items-center gap-2"
+              aria-expanded={showConfig}
+              data-testid="llm-config-toggle"
             >
               {showConfig ? "Hide Config" : "Show Config"}
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={cn("w-3 h-3 transition-transform", showConfig && "rotate-180")}>
@@ -284,13 +291,14 @@ export function LlmPanel({
           </div>
 
           {showConfig && (
-            <div className="space-y-4 p-4 rounded-xl bg-bg border border-border animate-in slide-in-from-top-2 duration-300">
+            <div className="space-y-4 p-4 rounded-xl bg-bg border border-border animate-in slide-in-from-top-2 duration-300" data-testid="llm-config-panel">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Provider</label>
                 <select 
                   value={provider} 
                   onChange={(e) => setProvider(e.target.value as Provider)}
                   className="w-full bg-panel border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-accent"
+                  data-testid="llm-provider-select"
                 >
                   {availableProviders.map((v) => (
                     <option key={v} value={v}>{PROVIDER_LABELS[v]}</option>
@@ -312,12 +320,14 @@ export function LlmPanel({
                 placeholder="Ask about the current entity, map, or request worldbuilding ideas..."
                 rows={6}
                 className="w-full bg-bg border border-border rounded-xl p-4 text-sm leading-relaxed outline-none focus:ring-2 focus:ring-accent transition-all resize-none shadow-inner"
+                data-testid="llm-prompt"
               />
             </div>
             <Button 
               onClick={handleSubmit} 
               disabled={loading || !prompt.trim()}
               className="w-full py-4 text-sm font-bold gap-3 rounded-xl shadow-xl shadow-accent/20"
+              data-testid="llm-execute"
             >
               {loading ? (
                 <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
@@ -387,6 +397,7 @@ export function LlmPanel({
                   className="btn-secondary"
                   onClick={handlePreviewDiff}
                   disabled={diffLoading}
+                  data-testid="llm-diff-preview"
                 >
                   {diffLoading ? "Loading diff..." : "Preview Diff"}
                 </button>
@@ -394,15 +405,16 @@ export function LlmPanel({
                   type="button"
                   className="btn-primary"
                   onClick={handleCreateDraft}
+                  data-testid="llm-create-draft"
                 >
                   Create Draft
                 </button>
                 {draftId && (
                   <>
-                    <button type="button" className="btn-secondary" onClick={handleSubmitReview}>
+                    <button type="button" className="btn-secondary" onClick={handleSubmitReview} data-testid="llm-request-review">
                       Request Review
                     </button>
-                    <a href={`/revisions/${draftId}`} className="btn-link">
+                    <a href={`/revisions/${draftId}`} className="btn-link" data-testid="llm-open-draft">
                       Open Draft
                     </a>
                   </>
