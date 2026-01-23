@@ -622,7 +622,7 @@ export function FigmaMapEditor({
           storyFromChapterId: path.storyFromChapterId ?? "",
           storyToChapterId: path.storyToChapterId ?? "",
           relatedEventId: path.relatedEventId ?? "",
-          relatedEntityIds: Array.isArray(path.relatedEntityIds) ? path.relatedEntityIds.join(\",\") : \"\"
+          relatedEntityIds: Array.isArray(path.relatedEntityIds) ? path.relatedEntityIds.join(",") : ""
         })
       );
     },
