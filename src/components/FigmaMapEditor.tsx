@@ -1985,12 +1985,12 @@ export function FigmaMapEditor({
         )}
 
         <div className="flex items-start gap-3">
-          <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-3 ${filtersExpanded ? "py-2 space-y-2" : "py-1.5"}`}>
+          <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-3 ${filtersExpanded ? "py-2 space-y-2" : "py-1"}`}>
             {filtersExpanded ? (
               <>
                 <div className="space-y-2">
                   <div className="map-filter-label">Layers</div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <label className={filterPillClass(showImage)}>
                       <input type="checkbox" className="sr-only" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
                       Map Image
@@ -2007,7 +2007,7 @@ export function FigmaMapEditor({
                 </div>
                 <div className="space-y-2">
                   <div className="map-filter-label">Location Types</div>
-                  <div className="flex flex-wrap items-center gap-2 max-h-24 overflow-y-auto pr-1">
+                  <div className="flex flex-wrap items-center gap-1.5 max-h-20 overflow-y-auto pr-1">
                     {locationTypes.map((type) => {
                       const active = !hiddenLocationTypes.has(type);
                       return (
@@ -2024,7 +2024,7 @@ export function FigmaMapEditor({
               <div className="flex items-center justify-between gap-3 text-xs text-muted">
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Filters</span>
-                  <span className="text-[11px]">
+                  <span className="text-[10px]">
                     Layers {Number(showImage) + Number(showPins) + Number(showPaths)}/3 ・ Types {locationTypes.length - hiddenLocationTypes.size}/{locationTypes.length}
                   </span>
                 </div>
@@ -2034,7 +2034,7 @@ export function FigmaMapEditor({
           <button
             onClick={() => setFiltersExpanded((prev) => !prev)}
             className="px-2 py-1 rounded-lg border border-border bg-bg text-[10px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-ink hover:border-accent transition-colors leading-none"
-            title="Toggle filter layout"
+            title={filtersExpanded ? "2段表示（フィルター展開）" : "1段表示（フィルター折りたたみ）"}
           >
             {filtersExpanded ? "2段" : "1段"}
           </button>

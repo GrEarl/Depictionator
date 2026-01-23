@@ -1300,30 +1300,32 @@ button[type="submit"]:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 4px;
+  padding: 4px 10px;
+  min-height: 22px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
-  line-height: 1;
-  color: var(--muted);
-  background: var(--bg);
+  line-height: 1.1;
+  color: var(--ink);
+  background: var(--bg-elevated);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
 }
 
 .map-filter-pill.is-active {
-  color: var(--accent);
-  border-color: rgba(255, 0, 51, 0.45);
-  background: rgba(255, 0, 51, 0.12);
-  box-shadow: 0 0 0 1px rgba(255, 0, 51, 0.2);
+  color: #ffffff;
+  border-color: var(--accent);
+  background: var(--accent);
+  box-shadow: 0 4px 10px rgba(255, 0, 51, 0.18);
 }
 
 .map-filter-pill.is-inactive:hover {
   color: var(--ink);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 0, 51, 0.35);
+  background: rgba(255, 0, 51, 0.08);
 }
 
 .map-legend.floating {
