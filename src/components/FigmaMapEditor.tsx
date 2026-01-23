@@ -173,6 +173,26 @@ export function FigmaMapEditor({
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [selectedPinId, setSelectedPinId] = useState("");
   const [selectedPinIds, setSelectedPinIds] = useState<string[]>([]);
+
+  const clearPinSelection = useCallback(() => {
+    setSelectedPinId("");
+    setSelectedPinIds([]);
+  }, []);
+
+  const selectSinglePin = useCallback((pinId: string) => {
+    setSelectedPinId(pinId);
+    setSelectedPinIds([pinId]);
+  }, []);
+
+  const togglePinSelection = useCallback((pinId: string) => {
+    setSelectedPinId(pinId);
+    setSelectedPinIds((prev) => {
+      if (prev.includes(pinId)) {
+        return prev.filter((id) => id !== pinId);
+      }
+      return [...prev, pinId];
+    });
+  }, []);
   const [selectedPathId, setSelectedPathId] = useState("");
   const [isEditingPathPoints, setIsEditingPathPoints] = useState(false);
 
@@ -1648,26 +1668,6 @@ export function FigmaMapEditor({
       entityId: match ? match.id : ""
     }));
   };
-
-  const clearPinSelection = useCallback(() => {
-    setSelectedPinId("");
-    setSelectedPinIds([]);
-  }, []);
-
-  const selectSinglePin = useCallback((pinId: string) => {
-    setSelectedPinId(pinId);
-    setSelectedPinIds([pinId]);
-  }, []);
-
-  const togglePinSelection = useCallback((pinId: string) => {
-    setSelectedPinId(pinId);
-    setSelectedPinIds((prev) => {
-      if (prev.includes(pinId)) {
-        return prev.filter((id) => id !== pinId);
-      }
-      return [...prev, pinId];
-    });
-  }, []);
 
   const filterPillClass = (active: boolean) =>
     `map-filter-pill ${active ? "is-active" : "is-inactive"}`;
