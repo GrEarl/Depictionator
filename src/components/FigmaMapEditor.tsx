@@ -1679,7 +1679,7 @@ export function FigmaMapEditor({
       <ToastContainer toasts={toasts} removeToast={removeToast} />
 
       {/* Top Toolbar - Figma style */}
-      <header className="map-editor-header border-b border-border bg-panel px-4 py-3 flex flex-col gap-3 flex-shrink-0 z-50">
+      <header className="map-editor-header border-b border-border bg-panel px-4 py-2 flex flex-col gap-2 flex-shrink-0 z-50">
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-3">
             <Link href="/maps" className="text-muted hover:text-ink transition-colors" title="Back to maps">
@@ -1984,13 +1984,13 @@ export function FigmaMapEditor({
           </div>
         )}
 
-        <div className="flex items-start gap-3">
-          <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-3 ${filtersExpanded ? "py-2 space-y-2" : "py-1"}`}>
+        <div className="flex items-start gap-2">
+          <div className={`flex-1 rounded-xl border border-border bg-bg/70 px-2 ${filtersExpanded ? "py-1.5 space-y-1.5" : "py-1"}`}>
             {filtersExpanded ? (
               <>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div className="map-filter-label">Layers</div>
-                  <div className="flex flex-wrap items-center gap-1.5">
+                  <div className="flex flex-wrap items-center gap-1">
                     <label className={filterPillClass(showImage)}>
                       <input type="checkbox" className="sr-only" checked={showImage} onChange={(e) => setShowImage(e.target.checked)} />
                       Map Image
@@ -2005,9 +2005,9 @@ export function FigmaMapEditor({
                     </label>
                   </div>
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div className="map-filter-label">Location Types</div>
-                  <div className="flex flex-wrap items-center gap-1.5 max-h-20 overflow-y-auto pr-1">
+                  <div className="flex flex-wrap items-center gap-1 max-h-14 overflow-y-auto pr-1">
                     {locationTypes.map((type) => {
                       const active = !hiddenLocationTypes.has(type);
                       return (
@@ -2021,10 +2021,10 @@ export function FigmaMapEditor({
                 </div>
               </>
             ) : (
-              <div className="flex items-center justify-between gap-3 text-xs text-muted">
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted">Filters</span>
-                  <span className="text-[10px]">
+              <div className="flex items-center justify-between gap-2 text-xs text-muted">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted">Filters</span>
+                  <span className="text-[9px]">
                     Layers {Number(showImage) + Number(showPins) + Number(showPaths)}/3 ・ Types {locationTypes.length - hiddenLocationTypes.size}/{locationTypes.length}
                   </span>
                 </div>
@@ -2033,7 +2033,7 @@ export function FigmaMapEditor({
           </div>
           <button
             onClick={() => setFiltersExpanded((prev) => !prev)}
-            className="px-2 py-1 rounded-lg border border-border bg-bg text-[10px] font-semibold uppercase tracking-[0.2em] text-muted hover:text-ink hover:border-accent transition-colors leading-none"
+            className="px-2 py-0.5 rounded-lg border border-border bg-bg text-[9px] font-semibold uppercase tracking-[0.16em] text-muted hover:text-ink hover:border-accent transition-colors leading-none"
             title={filtersExpanded ? "2段表示（フィルター展開）" : "1段表示（フィルター折りたたみ）"}
           >
             {filtersExpanded ? "2段" : "1段"}

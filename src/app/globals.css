@@ -1302,11 +1302,12 @@ button[type="submit"]:hover {
 }
 
 .map-filter-label {
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   color: var(--muted);
+  line-height: 1;
 }
 
 .map-filter-pill {
@@ -1314,13 +1315,13 @@ button[type="submit"]:hover {
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 4px 10px;
-  min-height: 22px;
+  padding: 2px 8px;
+  min-height: 18px;
   border-radius: 999px;
   border: 1px solid var(--border);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 600;
-  line-height: 1.1;
+  line-height: 1;
   color: var(--ink);
   background: var(--bg-elevated);
   cursor: pointer;
