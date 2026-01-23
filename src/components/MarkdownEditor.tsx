@@ -36,6 +36,12 @@ export function MarkdownEditor({
   const [pickerCaption, setPickerCaption] = useState("");
   const [pickerResults, setPickerResults] = useState<any[]>([]);
   const [pickerLoading, setPickerLoading] = useState(false);
+  const [insertPanelOpen, setInsertPanelOpen] = useState(true);
+  const [inlineForm, setInlineForm] = useState<"link" | "template" | "category" | "redirect" | null>(null);
+  const [linkDraft, setLinkDraft] = useState({ url: "", text: "" });
+  const [templateDraft, setTemplateDraft] = useState("");
+  const [categoryDraft, setCategoryDraft] = useState("");
+  const [redirectDraft, setRedirectDraft] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useEffect(() => {
@@ -86,29 +92,31 @@ export function MarkdownEditor({
   };
 
   const handleHeading = () => {
-    const heading = window.prompt("Heading text", "Heading");
-    if (!heading) return;
-    if (syntax === "wikitext") {
-      insertText(`\n== ${heading} ==\n\n`);
-    } else {
-      insertText(`\n## ${heading}\n\n`);
-    }
+    withSelection(({ start, end, selected }) => {
+      const label = selected || "Heading";
+      const prefix = syntax === "wikitext" ? "\n== " : "\n## ";
+      const suffix = syntax === "wikitext" ? " ==\n\n" : "\n\n";
+      const next = value.slice(0, start) + prefix + label + suffix + value.slice(end);
+      const cursorStart = start + prefix.length;
+      const cursorEnd = cursorStart + label.length;
+      return { next, cursorStart, cursorEnd };
+    });
   };
 
   const handleExternalLink = () => {
-    const url = window.prompt("URL", "https://");
-    if (!url) return;
-    const text = window.prompt("Display text", url) || url;
-    if (syntax === "wikitext") {
-      insertText(`[${url} ${text}]`);
-    } else {
-      insertText(`[${text}](${url})`);
-    }
+    const target = textareaRef.current;
+    const start = target?.selectionStart ?? value.length;
+    const end = target?.selectionEnd ?? value.length;
+    const selected = value.slice(start, end);
+    setLinkDraft({ url: "", text: selected });
+    setInlineForm("link");
+    setPickerMode(null);
   };
 
   const handleArticleLink = () => {
     if (workspaceId) {
       setPickerMode("article");
+      setInlineForm(null);
       setPickerQuery("");
       setPickerResults([]);
       return;
@@ -126,6 +134,7 @@ export function MarkdownEditor({
   const handleImageInsert = () => {
     if (workspaceId) {
       setPickerMode("image");
+      setInlineForm(null);
       setPickerQuery("");
       setPickerCaption("");
       setPickerResults([]);
@@ -144,21 +153,67 @@ export function MarkdownEditor({
   };
 
   const handleTemplateInsert = () => {
-    const name = window.prompt("Template name", "");
-    if (!name) return;
-    insertText(`{{${name}}}`);
+    setTemplateDraft("");
+    setInlineForm("template");
+    setPickerMode(null);
   };
 
   const handleCategoryInsert = () => {
-    const name = window.prompt("Category name", "");
-    if (!name) return;
-    insertText(`[[Category:${name}]]`);
+    setCategoryDraft("");
+    setInlineForm("category");
+    setPickerMode(null);
   };
 
   const handleRedirectInsert = () => {
-    const target = window.prompt("Redirect target", "");
+    setRedirectDraft("");
+    setInlineForm("redirect");
+    setPickerMode(null);
+  };
+
+  const handleDividerInsert = () => {
+    insertText(syntax === "wikitext" ? "\n----\n" : "\n---\n");
+  };
+
+  const handleListInsert = () => {
+    insertText(syntax === "wikitext" ? "\n* Item\n* Item\n" : "\n- Item\n- Item\n");
+  };
+
+  const handleQuoteInsert = () => {
+    insertText("\n> Quote\n");
+  };
+
+  const handleApplyLink = () => {
+    const url = linkDraft.url.trim();
+    if (!url) return;
+    withSelection(({ start, end, selected }) => {
+      const text = linkDraft.text.trim() || selected || url;
+      const snippet = syntax === "wikitext" ? `[${url} ${text}]` : `[${text}](${url})`;
+      const next = value.slice(0, start) + snippet + value.slice(end);
+      const cursor = start + snippet.length;
+      return { next, cursorStart: cursor, cursorEnd: cursor };
+    });
+    setInlineForm(null);
+  };
+
+  const handleApplyTemplate = () => {
+    const name = templateDraft.trim();
+    if (!name) return;
+    insertText(`{{${name}}}`);
+    setInlineForm(null);
+  };
+
+  const handleApplyCategory = () => {
+    const name = categoryDraft.trim();
+    if (!name) return;
+    insertText(`[[Category:${name}]]`);
+    setInlineForm(null);
+  };
+
+  const handleApplyRedirect = () => {
+    const target = redirectDraft.trim();
     if (!target) return;
     insertText(`#REDIRECT [[${target}]]\n`);
+    setInlineForm(null);
   };
 
   useEffect(() => {
@@ -336,8 +391,9 @@ export function MarkdownEditor({
             </div>
           )}
           <div className="editor-toolbar-group">
-            <button type="button" onClick={() => insertText(syntax === "wikitext" ? "\n* Item\n* Item\n" : "\n- Item\n- Item\n")}>List</button>
-            <button type="button" onClick={() => insertText(syntax === "wikitext" ? "\n> Quote\n" : "\n> Quote\n")}>Quote</button>
+            <button type="button" onClick={handleListInsert}>List</button>
+            <button type="button" onClick={handleQuoteInsert}>Quote</button>
+            <button type="button" onClick={handleDividerInsert}>Divider</button>
           </div>
           <div className="editor-toolbar-group editor-syntax-toggle">
             {(["markdown", "wikitext"] as const).map((s) => (
@@ -351,6 +407,110 @@ export function MarkdownEditor({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {showToolbar && (
+        <div className="editor-insert-panel">
+          <div className="editor-insert-header">
+            <div className="editor-insert-title">Quick Insert</div>
+            <button
+              type="button"
+              className="editor-insert-toggle"
+              onClick={() => setInsertPanelOpen((prev) => !prev)}
+            >
+              {insertPanelOpen ? "Hide" : "Show"}
+            </button>
+          </div>
+          {insertPanelOpen && (
+            <>
+              <div className="editor-insert-grid">
+                <button type="button" onClick={handleHeading}>Heading</button>
+                <button type="button" onClick={handleListInsert}>List</button>
+                <button type="button" onClick={handleQuoteInsert}>Quote</button>
+                <button type="button" onClick={handleDividerInsert}>Divider</button>
+                <button type="button" onClick={handleExternalLink}>Link</button>
+                <button type="button" onClick={handleArticleLink}>Article</button>
+                <button type="button" onClick={handleImageInsert}>Image</button>
+                {syntax === "wikitext" && (
+                  <>
+                    <button type="button" onClick={handleTemplateInsert}>Template</button>
+                    <button type="button" onClick={handleCategoryInsert}>Category</button>
+                    <button type="button" onClick={handleRedirectInsert}>Redirect</button>
+                  </>
+                )}
+              </div>
+              {inlineForm === "link" && (
+                <div className="editor-inline-form">
+                  <div className="editor-inline-title">Insert Link</div>
+                  <div className="editor-inline-fields">
+                    <input
+                      value={linkDraft.url}
+                      onChange={(event) => setLinkDraft((prev) => ({ ...prev, url: event.target.value }))}
+                      placeholder="https://example.com"
+                    />
+                    <input
+                      value={linkDraft.text}
+                      onChange={(event) => setLinkDraft((prev) => ({ ...prev, text: event.target.value }))}
+                      placeholder="Display text"
+                    />
+                  </div>
+                  <div className="editor-inline-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setInlineForm(null)}>Cancel</button>
+                    <button type="button" className="btn-primary" onClick={handleApplyLink}>Insert</button>
+                  </div>
+                </div>
+              )}
+              {inlineForm === "template" && (
+                <div className="editor-inline-form">
+                  <div className="editor-inline-title">Insert Template</div>
+                  <div className="editor-inline-fields">
+                    <input
+                      value={templateDraft}
+                      onChange={(event) => setTemplateDraft(event.target.value)}
+                      placeholder="Template name"
+                    />
+                  </div>
+                  <div className="editor-inline-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setInlineForm(null)}>Cancel</button>
+                    <button type="button" className="btn-primary" onClick={handleApplyTemplate}>Insert</button>
+                  </div>
+                </div>
+              )}
+              {inlineForm === "category" && (
+                <div className="editor-inline-form">
+                  <div className="editor-inline-title">Insert Category</div>
+                  <div className="editor-inline-fields">
+                    <input
+                      value={categoryDraft}
+                      onChange={(event) => setCategoryDraft(event.target.value)}
+                      placeholder="Category name"
+                    />
+                  </div>
+                  <div className="editor-inline-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setInlineForm(null)}>Cancel</button>
+                    <button type="button" className="btn-primary" onClick={handleApplyCategory}>Insert</button>
+                  </div>
+                </div>
+              )}
+              {inlineForm === "redirect" && (
+                <div className="editor-inline-form">
+                  <div className="editor-inline-title">Insert Redirect</div>
+                  <div className="editor-inline-fields">
+                    <input
+                      value={redirectDraft}
+                      onChange={(event) => setRedirectDraft(event.target.value)}
+                      placeholder="Target article"
+                    />
+                  </div>
+                  <div className="editor-inline-actions">
+                    <button type="button" className="btn-secondary" onClick={() => setInlineForm(null)}>Cancel</button>
+                    <button type="button" className="btn-primary" onClick={handleApplyRedirect}>Insert</button>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       )}
 
