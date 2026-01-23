@@ -925,12 +925,12 @@ export function FigmaMapEditor({
 
           polylineLayer.on("click", (event: any) => {
             L.DomEvent.stopPropagation(event);
-            if (modeRef.current !== "select") return;
             setMode("select");
             clearPinSelection();
             setSelectedPathId(path.id);
             setIsEditingPathPoints(false);
             setPathPoints([]);
+            draftLayerRef.current?.clearLayers();
             setShowRightPanel(true);
             setPathDraft(createPathDraft({
               arrowStyle: path.arrowStyle ?? "arrow",
