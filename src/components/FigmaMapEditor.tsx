@@ -1227,14 +1227,16 @@ export function FigmaMapEditor({
       }
 
       const storedFilters = state?.filters ?? {};
-      const nextFilters: { eraId?: string; chapterId?: string; viewpointId?: string; mode?: string } = {};
+      const isDisplayMode = (value: unknown): value is "canon" | "viewpoint" | "compare" =>
+        value === "canon" || value === "viewpoint" || value === "compare";
+      const nextFilters: { eraId?: string; chapterId?: string; viewpointId?: string; mode?: "canon" | "viewpoint" | "compare" } = {};
       if (typeof storedFilters.eraId === "string") nextFilters.eraId = storedFilters.eraId;
       else if (scene.eraId) nextFilters.eraId = scene.eraId;
       if (typeof storedFilters.chapterId === "string") nextFilters.chapterId = storedFilters.chapterId;
       else if (scene.chapterId) nextFilters.chapterId = scene.chapterId;
       if (typeof storedFilters.viewpointId === "string") nextFilters.viewpointId = storedFilters.viewpointId;
       else if (scene.viewpointId) nextFilters.viewpointId = scene.viewpointId;
-      if (typeof storedFilters.mode === "string") nextFilters.mode = storedFilters.mode;
+      if (isDisplayMode(storedFilters.mode)) nextFilters.mode = storedFilters.mode;
 
       if (Object.keys(nextFilters).length > 0) {
         setFilters(nextFilters);
