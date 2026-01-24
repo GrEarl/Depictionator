@@ -4,6 +4,7 @@ import { logAudit } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { toRedirectUrl } from "@/lib/redirect";
 
 /**
  * POST /api/entities/main-image
@@ -95,8 +96,8 @@ export async function POST(request: NextRequest) {
     });
 
     // Redirect back to the entity page
-    const redirectUrl = `/wiki/${encodeURIComponent(entity.title.replace(/ /g, "_"))}`;
-    return NextResponse.redirect(new URL(redirectUrl, request.url), 303);
+    const redirectPath = `/wiki/${encodeURIComponent(entity.title.replace(/ /g, "_"))}`;
+    return NextResponse.redirect(toRedirectUrl(request, redirectPath), 303);
   } catch (error) {
     console.error("Error updating main image:", error);
     return NextResponse.json(
