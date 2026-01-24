@@ -78,6 +78,20 @@ export function ArticleDetail({
   // Revisions & Content
   const baseRevisions = entity.article?.revisions || [];
   const overlayRevisions = activeOverlay?.revisions || [];
+
+  // Parse infobox media (audio/video)
+  const infoboxMedia = useMemo(() => {
+    if (!entity.infoboxMediaJson) return null;
+    try {
+      const parsed = JSON.parse(entity.infoboxMediaJson);
+      return {
+        audio: Array.isArray(parsed.audio) ? parsed.audio : [],
+        video: Array.isArray(parsed.video) ? parsed.video : []
+      };
+    } catch {
+      return null;
+    }
+  }, [entity.infoboxMediaJson]);
   const relevantRevisions = activeOverlay ? overlayRevisions : baseRevisions;
 
   const publishedRevision = activeOverlay ? activeOverlay.activeRevision : entity.article?.baseRevision;
@@ -269,6 +283,14 @@ export function ArticleDetail({
                     alt: displayTitle,
                     caption: entity.summaryMd?.split('\n')[0] || displayTitle
                   }}
+                  audio={infoboxMedia?.audio?.map((a: { assetId: string; caption?: string }) => ({
+                    src: `/api/assets/file/${a.assetId}`,
+                    caption: a.caption
+                  }))}
+                  video={infoboxMedia?.video?.map((v: { assetId: string; caption?: string }) => ({
+                    src: `/api/assets/file/${v.assetId}`,
+                    caption: v.caption
+                  }))}
                   rows={[
                     { label: "Type", value: entity.type },
                     { label: "Status", value: entity.status },

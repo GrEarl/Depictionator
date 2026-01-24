@@ -14,7 +14,13 @@ import {
   searchWiki,
   normalizeLang,
   resolveWikiPageWithFallback,
-  safeFilename
+  safeFilename,
+  extractWikitextImagePlacements,
+  buildMediaAnalysisPrompt,
+  parseMediaAnalysisResponse,
+  categorizeMediaForInfobox,
+  type MediaAnalysisItem,
+  type MediaRelevanceResult
 } from "@/lib/wiki";
 import { toRedirectUrl } from "@/lib/redirect";
 import { generateText, type LlmProvider } from "@/lib/llm";
@@ -241,52 +247,76 @@ function shouldSkipMediaInfo(info: { mime?: string | null; width?: number | null
   return maxDim < DEFAULT_MEDIA_MIN_DIM;
 }
 
-function buildMediaSection(assets: ImportedAsset[]): string | null {
-  if (!assets.length) return null;
-  const imageLines = assets
+type ImportedAssetWithMeta = ImportedAsset & {
+  placement: "infobox" | "inline" | "gallery";
+  caption?: string;
+  inlineSection?: string;
+  priority: number;
+};
+
+function buildSmartMediaSection(assets: ImportedAssetWithMeta[]): string | null {
+  // Only include gallery items in Media section (inline items will be placed in-text by LLM)
+  const galleryAssets = assets.filter((a) => a.placement === "gallery");
+  if (!galleryAssets.length) return null;
+
+  const imageLines = galleryAssets
     .filter((asset) => asset.mimeType.startsWith("image/"))
-    .map((asset) => `### ${asset.title}\n![${asset.title}](/api/assets/file/${asset.id})`);
-  const audioLines = assets
-    .filter((asset) => asset.mimeType.startsWith("audio/"))
-    .map((asset) => `### ${asset.title}\n![audio:${asset.title}](/api/assets/file/${asset.id})`);
-  const videoLines = assets
-    .filter((asset) => asset.mimeType.startsWith("video/"))
-    .map((asset) => `### ${asset.title}\n![video:${asset.title}](/api/assets/file/${asset.id})`);
-  const fileLines = assets
-    .filter((asset) => !asset.mimeType.startsWith("image/") && !asset.mimeType.startsWith("audio/") && !asset.mimeType.startsWith("video/"))
-    .map((asset) => `- [${asset.title}](/api/assets/file/${asset.id}) (${asset.mimeType})`);
+    .map((asset) => `![${asset.caption || asset.title}](/api/assets/file/${asset.id})`);
 
-  if (imageLines.length === 0 && audioLines.length === 0 && videoLines.length === 0 && fileLines.length === 0) return null;
+  if (imageLines.length === 0) return null;
 
-  const sections: string[] = ["## Media"];
-  if (imageLines.length) {
-    sections.push("### Images", ...imageLines);
-  }
-  if (audioLines.length) {
-    sections.push("### Audio", ...audioLines);
-  }
-  if (videoLines.length) {
-    sections.push("### Video", ...videoLines);
-  }
-  if (fileLines.length) {
-    sections.push("### Files", ...fileLines);
-  }
-  return sections.join("\n");
+  return ["## Reference Gallery", "", ...imageLines].join("\n");
 }
 
-function appendMediaToMarkdown(body: string, assets: ImportedAsset[]): string {
+function insertInlineImages(body: string, assets: ImportedAssetWithMeta[]): string {
+  const inlineAssets = assets.filter((a) => a.placement === "inline" && a.mimeType.startsWith("image/"));
+  if (!inlineAssets.length) return body;
+
+  let result = body;
+
+  // Group by section
+  const bySection = new Map<string, ImportedAssetWithMeta[]>();
+  for (const asset of inlineAssets) {
+    const section = asset.inlineSection?.toLowerCase() || "overview";
+    if (!bySection.has(section)) bySection.set(section, []);
+    bySection.get(section)!.push(asset);
+  }
+
+  // Insert images after section headings
+  for (const [section, sectionAssets] of bySection) {
+    const sectionPattern = new RegExp(`(##\\s*${section}[^\\n]*\\n)`, "i");
+    const match = result.match(sectionPattern);
+    if (match && match.index !== undefined) {
+      const imageMarkdown = sectionAssets
+        .map((a) => `\n![${a.caption || a.title}](/api/assets/file/${a.id})\n`)
+        .join("");
+      const insertPos = match.index + match[0].length;
+      result = result.slice(0, insertPos) + imageMarkdown + result.slice(insertPos);
+    }
+  }
+
+  return result;
+}
+
+function appendMediaToMarkdown(body: string, assets: ImportedAssetWithMeta[]): string {
   const trimmed = body.trim();
   if (!trimmed) return body;
-  if (/##\s*Media/i.test(trimmed)) return body;
-  const section = buildMediaSection(assets);
-  if (!section) return body;
-  const sourceMatch = trimmed.match(/##\s*Sources\b/i);
+  if (/##\s*Reference Gallery/i.test(trimmed)) return body;
+
+  // First insert inline images
+  let result = insertInlineImages(trimmed, assets);
+
+  // Then add gallery section
+  const section = buildSmartMediaSection(assets);
+  if (!section) return result;
+
+  const sourceMatch = result.match(/##\s*Sources\b/i);
   if (!sourceMatch || sourceMatch.index === undefined) {
-    return `${trimmed}\n\n${section}`.trim();
+    return `${result}\n\n${section}`.trim();
   }
   const insertIndex = sourceMatch.index;
-  const before = trimmed.slice(0, insertIndex).trimEnd();
-  const after = trimmed.slice(insertIndex).trimStart();
+  const before = result.slice(0, insertIndex).trimEnd();
+  const after = result.slice(insertIndex).trimStart();
   return `${before}\n\n${section}\n\n${after}`.trim();
 }
 
@@ -541,8 +571,11 @@ export async function POST(request: Request) {
     }
   });
 
-  const importedAssets: ImportedAsset[] = [];
+  const importedAssets: ImportedAssetWithMeta[] = [];
+  let infoboxMediaJson: string | null = null;
+
   if (importMedia) {
+    // Step 1: Gather all media titles from all sources
     const mediaEntries: Array<{ title: string; lang: string }> = [];
     const pageImageTitle = page.pageImageTitle?.replace(/^File:/i, "").trim();
     if (pageImageTitle) {
@@ -561,6 +594,7 @@ export async function POST(request: Request) {
     );
     mediaEntries.push(...mediaLists.flat());
 
+    // Deduplicate
     const seen = new Set<string>();
     const deduped = mediaEntries.filter((entry) => {
       const key = entry.title.toLowerCase();
@@ -569,46 +603,160 @@ export async function POST(request: Request) {
       return true;
     });
 
-    const limited = mediaLimit > 0 ? deduped.slice(0, mediaLimit) : deduped;
-    let mainImageId: string | null = null;
+    // Step 2: Pre-filter obvious UI elements
+    const prefiltered = deduped.filter((entry) => !shouldSkipMediaTitle(entry.title));
+    const limited = mediaLimit > 0 ? prefiltered.slice(0, mediaLimit) : prefiltered;
+
+    // Step 3: Fetch media info for all candidates
+    const mediaInfoList: Array<{
+      entry: { title: string; lang: string };
+      info: Awaited<ReturnType<typeof fetchWikiImageInfo>>;
+    }> = [];
 
     for (const entry of limited) {
       try {
-        if (DEFAULT_SKIP_UI_MEDIA && shouldSkipMediaTitle(entry.title)) {
-          continue;
-        }
         let info = await fetchWikiImageInfo(entry.lang, entry.title);
         if (!info && entry.lang !== "commons") {
           info = await fetchWikiImageInfo("commons", entry.title);
         }
-        if (!info) continue;
-        if (mediaMaxBytes && info.size && info.size > mediaMaxBytes) continue;
-        if (shouldSkipMediaInfo(info)) continue;
-
-        const asset = await importWikiAsset(workspaceId, session.userId, info);
-        if (!asset) continue;
-        importedAssets.push({ id: asset.id, title: info.title, mimeType: asset.mimeType });
-        if (!mainImageId && info.mime.startsWith("image/")) {
-          if (pageImageTitle && entry.title === pageImageTitle) {
-            mainImageId = asset.id;
-          } else if (!pageImageTitle) {
-            mainImageId = asset.id;
+        if (info && (!mediaMaxBytes || !info.size || info.size <= mediaMaxBytes)) {
+          if (!shouldSkipMediaInfo(info)) {
+            mediaInfoList.push({ entry, info });
           }
         }
       } catch {
-        // ignore failed media
+        // ignore failed media info
       }
     }
 
-    if (mainImageId) {
+    // Step 4: Use LLM to analyze media relevance
+    let analysisResults: MediaRelevanceResult[] = [];
+
+    if (useLlm && mediaInfoList.length > 0) {
+      const mediaAnalysisItems: MediaAnalysisItem[] = mediaInfoList.map(({ info }) => ({
+        title: info!.title,
+        mime: info!.mime,
+        width: info!.width,
+        height: info!.height,
+        size: info!.size
+      }));
+
+      // Extract image placements from wikitext
+      const wikitext = page.wikitext || "";
+      const imagePlacements = extractWikitextImagePlacements(wikitext);
+
+      // Build and execute analysis prompt
+      const analysisPrompt = buildMediaAnalysisPrompt(
+        page.title,
+        typeValue,
+        mediaAnalysisItems,
+        wikitext,
+        imagePlacements
+      );
+
+      try {
+        const analysisResponse = await generateText({
+          provider: llmProvider,
+          prompt: analysisPrompt,
+          model: llmModel || undefined,
+          codexAuthBase64
+        });
+        analysisResults = parseMediaAnalysisResponse(analysisResponse);
+      } catch {
+        // If LLM analysis fails, fall back to importing main image only
+        analysisResults = mediaAnalysisItems.slice(0, 5).map((item, i) => ({
+          title: item.title,
+          relevant: i === 0, // Only first item (usually main image)
+          reason: i === 0 ? "Primary image" : "Fallback - LLM analysis failed",
+          placement: i === 0 ? "infobox" as const : "exclude" as const,
+          priority: i + 1
+        }));
+      }
+    } else if (mediaInfoList.length > 0) {
+      // No LLM: just use basic heuristics - take first 5 images
+      analysisResults = mediaInfoList.slice(0, 5).map(({ info }, i) => ({
+        title: info!.title,
+        relevant: true,
+        reason: "No LLM analysis",
+        placement: i === 0 ? "infobox" as const : "gallery" as const,
+        priority: i + 1
+      }));
+    }
+
+    // Create a map for quick lookup
+    const analysisMap = new Map(analysisResults.map((r) => [r.title.toLowerCase(), r]));
+
+    // Step 5: Import only relevant media
+    let mainImageId: string | null = null;
+    const infoboxAudio: Array<{ assetId: string; caption: string }> = [];
+    const infoboxVideo: Array<{ assetId: string; caption: string }> = [];
+
+    for (const { entry, info } of mediaInfoList) {
+      if (!info) continue;
+
+      const analysis = analysisMap.get(info.title.toLowerCase());
+      if (!analysis || !analysis.relevant || analysis.placement === "exclude") {
+        continue;
+      }
+
+      try {
+        const asset = await importWikiAsset(workspaceId, session.userId, info);
+        if (!asset) continue;
+
+        importedAssets.push({
+          id: asset.id,
+          title: info.title,
+          mimeType: asset.mimeType,
+          placement: analysis.placement,
+          caption: analysis.suggestedCaption,
+          inlineSection: analysis.inlineSection,
+          priority: analysis.priority
+        });
+
+        // Handle infobox media
+        if (analysis.placement === "infobox") {
+          if (info.mime.startsWith("image/") && !mainImageId) {
+            mainImageId = asset.id;
+          } else if (info.mime.startsWith("audio/")) {
+            infoboxAudio.push({
+              assetId: asset.id,
+              caption: analysis.suggestedCaption || info.title
+            });
+          } else if (info.mime.startsWith("video/")) {
+            infoboxVideo.push({
+              assetId: asset.id,
+              caption: analysis.suggestedCaption || info.title
+            });
+          }
+        }
+      } catch {
+        // ignore failed media import
+      }
+    }
+
+    // Update entity with main image and infobox media
+    if (mainImageId || infoboxAudio.length > 0 || infoboxVideo.length > 0) {
+      const updateData: { mainImageId?: string; infoboxMediaJson?: string } = {};
+      if (mainImageId) {
+        updateData.mainImageId = mainImageId;
+      }
+      if (infoboxAudio.length > 0 || infoboxVideo.length > 0) {
+        updateData.infoboxMediaJson = JSON.stringify({
+          audio: infoboxAudio,
+          video: infoboxVideo
+        });
+        infoboxMediaJson = updateData.infoboxMediaJson;
+      }
       await prisma.entity.update({
         where: { id: entity.id },
-        data: { mainImageId }
+        data: updateData
       });
     }
   }
 
+  // Sort imported assets by priority and append to markdown
   if (importedAssets.length) {
+    importedAssets.sort((a, b) => a.priority - b.priority);
     bodyMd = appendMediaToMarkdown(bodyMd, importedAssets);
   }
 

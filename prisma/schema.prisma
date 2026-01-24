@@ -330,6 +330,7 @@ model Entity {
   parentEntityId     String?
   mainImageId        String?
   summaryMd          String?
+  infoboxMediaJson   String?       // JSON: { audio: [{assetId, caption}], video: [{assetId, caption}] }
   embedding          Unsupported("vector(768)")?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt

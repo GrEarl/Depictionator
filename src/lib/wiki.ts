@@ -314,3 +314,297 @@ export async function searchWiki(query: string, langInput: string | null) {
     url: `${baseUrl}${encodeURIComponent(String(item.title || "").replace(/ /g, "_"))}`
   }));
 }
+
+// ==========================================
+// Wikitext Structure Analysis
+// ==========================================
+
+export type WikitextImagePlacement = {
+  filename: string;
+  section: string;
+  options: string;
+  position: number;
+  isInfobox: boolean;
+  size?: string;
+  alignment?: "left" | "right" | "center" | "none";
+  caption?: string;
+};
+
+/**
+ * Extract image placement information from wikitext
+ */
+export function extractWikitextImagePlacements(wikitext: string): WikitextImagePlacement[] {
+  if (!wikitext) return [];
+
+  const placements: WikitextImagePlacement[] = [];
+  // Match [[File:...]] or [[Image:...]] patterns
+  const imagePattern = /\[\[(File|Image):([^\]|]+)(?:\|([^\]]*))?\]\]/gi;
+  let match;
+
+  // Track current section
+  const sectionPattern = /==+\s*([^=]+)\s*==+/g;
+  const sections: Array<{ title: string; start: number }> = [{ title: "intro", start: 0 }];
+  let sectionMatch;
+  while ((sectionMatch = sectionPattern.exec(wikitext)) !== null) {
+    sections.push({
+      title: sectionMatch[1].trim(),
+      start: sectionMatch.index
+    });
+  }
+
+  // Check if we're inside an infobox
+  const infoboxStart = wikitext.search(/\{\{[Ii]nfobox/);
+  const infoboxEnd = infoboxStart >= 0 ? findMatchingBrace(wikitext, infoboxStart) : -1;
+
+  while ((match = imagePattern.exec(wikitext)) !== null) {
+    const filename = match[2].trim();
+    const options = match[3] || "";
+    const position = match.index;
+
+    // Find which section this image is in
+    let section = "intro";
+    for (let i = sections.length - 1; i >= 0; i--) {
+      if (position >= sections[i].start) {
+        section = sections[i].title;
+        break;
+      }
+    }
+
+    // Check if inside infobox
+    const isInfobox = infoboxStart >= 0 && position >= infoboxStart && position <= infoboxEnd;
+
+    // Parse options for size and alignment
+    const optionParts = options.split("|").map((o) => o.trim());
+    let size: string | undefined;
+    let alignment: "left" | "right" | "center" | "none" | undefined;
+    let caption: string | undefined;
+
+    for (const opt of optionParts) {
+      if (/^\d+px$/i.test(opt) || /^\d+x\d+px$/i.test(opt)) {
+        size = opt;
+      } else if (["left", "right", "center", "none"].includes(opt.toLowerCase())) {
+        alignment = opt.toLowerCase() as "left" | "right" | "center" | "none";
+      } else if (opt === "thumb" || opt === "thumbnail" || opt === "frame" || opt === "frameless") {
+        // These are display type options, not caption
+      } else if (opt && !["upright", "border", "alt="].some((k) => opt.startsWith(k))) {
+        // Last non-keyword option is usually the caption
+        caption = opt;
+      }
+    }
+
+    placements.push({
+      filename,
+      section,
+      options,
+      position,
+      isInfobox,
+      size,
+      alignment,
+      caption
+    });
+  }
+
+  return placements;
+}
+
+/**
+ * Find matching closing brace for a template
+ */
+function findMatchingBrace(text: string, start: number): number {
+  let depth = 0;
+  for (let i = start; i < text.length - 1; i++) {
+    if (text[i] === "{" && text[i + 1] === "{") {
+      depth++;
+      i++;
+    } else if (text[i] === "}" && text[i + 1] === "}") {
+      depth--;
+      i++;
+      if (depth === 0) return i;
+    }
+  }
+  return text.length;
+}
+
+// ==========================================
+// Media Analysis Types and Prompts
+// ==========================================
+
+export type MediaAnalysisItem = {
+  title: string;
+  mime: string;
+  width?: number;
+  height?: number;
+  size?: number;
+};
+
+export type MediaRelevanceResult = {
+  title: string;
+  relevant: boolean;
+  reason: string;
+  placement: "infobox" | "inline" | "gallery" | "exclude";
+  suggestedCaption?: string;
+  priority: number; // 1 = highest
+  inlineSection?: string; // Which section to place inline images
+};
+
+export type MediaAnalysisResult = {
+  media: MediaRelevanceResult[];
+  infoboxMedia: {
+    mainImage?: { title: string; caption: string };
+    audio: Array<{ title: string; caption: string }>;
+    video: Array<{ title: string; caption: string }>;
+  };
+};
+
+/**
+ * Build LLM prompt for media relevance analysis
+ */
+export function buildMediaAnalysisPrompt(
+  pageTitle: string,
+  entityType: string,
+  mediaList: MediaAnalysisItem[],
+  wikitextSnippet: string,
+  imagePlacements: WikitextImagePlacement[]
+): string {
+  const mediaListStr = mediaList
+    .map((m, i) => `${i + 1}. "${m.title}" (${m.mime}${m.width ? `, ${m.width}x${m.height}` : ""})`)
+    .join("\n");
+
+  const placementsStr = imagePlacements
+    .slice(0, 20)
+    .map((p) => `- "${p.filename}" in ${p.isInfobox ? "infobox" : `section "${p.section}"`}${p.caption ? `: "${p.caption}"` : ""}`)
+    .join("\n");
+
+  return `You are analyzing media files from a Wikipedia article to determine their relevance for a worldbuilding reference database.
+
+SUBJECT: "${pageTitle}"
+ENTITY TYPE: ${entityType}
+
+AVAILABLE MEDIA FILES:
+${mediaListStr}
+
+ORIGINAL WIKIPEDIA IMAGE PLACEMENTS:
+${placementsStr || "(none detected)"}
+
+WIKITEXT EXCERPT (for context):
+${wikitextSnippet.slice(0, 2000)}
+
+TASK: Analyze each media file and determine:
+1. Is it relevant to the subject? (directly shows or describes "${pageTitle}")
+2. Where should it be placed?
+3. What priority? (1 = most important, 5 = least)
+
+PLACEMENT RULES:
+- "infobox": Main representative image, audio clips (sounds, voice samples), short videos demonstrating the subject
+- "inline": Images that belong near specific text sections (diagrams, historical photos, technical details)
+- "gallery": Additional reference images useful for artists/modelers
+- "exclude": Country flags, national emblems, political icons, UI elements, Wikipedia icons, location maps showing operators/users, portraits of unrelated people, generic symbols
+
+BE STRICT: Only mark as relevant if the media DIRECTLY shows or describes "${pageTitle}".
+Flags of countries that used/operated the subject are NOT relevant.
+Maps showing distribution/operators are NOT relevant.
+Only the actual subject matter is relevant.
+
+RESPOND WITH VALID JSON ONLY (no markdown, no explanation):
+{
+  "media": [
+    {
+      "title": "exact filename from list",
+      "relevant": true,
+      "reason": "brief explanation",
+      "placement": "infobox",
+      "suggestedCaption": "Caption for display",
+      "priority": 1,
+      "inlineSection": "optional section name for inline placement"
+    }
+  ]
+}`;
+}
+
+/**
+ * Parse LLM response for media analysis
+ */
+export function parseMediaAnalysisResponse(response: string): MediaRelevanceResult[] {
+  // Try to extract JSON from the response
+  let jsonStr = response.trim();
+
+  // Remove markdown code blocks if present
+  const codeBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (codeBlockMatch) {
+    jsonStr = codeBlockMatch[1].trim();
+  }
+
+  // Try to find JSON object
+  const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    jsonStr = jsonMatch[0];
+  }
+
+  try {
+    const parsed = JSON.parse(jsonStr);
+    if (parsed.media && Array.isArray(parsed.media)) {
+      return parsed.media.map((item: any) => ({
+        title: String(item.title || ""),
+        relevant: Boolean(item.relevant),
+        reason: String(item.reason || ""),
+        placement: ["infobox", "inline", "gallery", "exclude"].includes(item.placement)
+          ? item.placement
+          : "exclude",
+        suggestedCaption: item.suggestedCaption ? String(item.suggestedCaption) : undefined,
+        priority: typeof item.priority === "number" ? item.priority : 5,
+        inlineSection: item.inlineSection ? String(item.inlineSection) : undefined
+      }));
+    }
+  } catch {
+    // Failed to parse
+  }
+
+  return [];
+}
+
+/**
+ * Categorize analyzed media into infobox components
+ */
+export function categorizeMediaForInfobox(
+  analysisResults: MediaRelevanceResult[],
+  mediaList: MediaAnalysisItem[]
+): MediaAnalysisResult["infoboxMedia"] {
+  const result: MediaAnalysisResult["infoboxMedia"] = {
+    audio: [],
+    video: []
+  };
+
+  // Create a map for quick lookup
+  const mediaMap = new Map(mediaList.map((m) => [m.title.toLowerCase(), m]));
+
+  // Sort by priority
+  const sortedResults = [...analysisResults]
+    .filter((r) => r.relevant && r.placement !== "exclude")
+    .sort((a, b) => a.priority - b.priority);
+
+  for (const item of sortedResults) {
+    const mediaInfo = mediaMap.get(item.title.toLowerCase());
+    if (!mediaInfo) continue;
+
+    const mime = mediaInfo.mime.toLowerCase();
+
+    if (mime.startsWith("audio/")) {
+      result.audio.push({
+        title: item.title,
+        caption: item.suggestedCaption || item.title
+      });
+    } else if (mime.startsWith("video/")) {
+      result.video.push({
+        title: item.title,
+        caption: item.suggestedCaption || item.title
+      });
+    } else if (mime.startsWith("image/") && item.placement === "infobox" && !result.mainImage) {
+      result.mainImage = {
+        title: item.title,
+        caption: item.suggestedCaption || item.title
+      };
+    }
+  }
+
+  return result;
+}
