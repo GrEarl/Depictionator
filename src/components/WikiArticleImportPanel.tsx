@@ -6,14 +6,14 @@ import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 type WikiSearchResult = {
-  pageId: number;
+  pageId: string;
   title: string;
   snippet: string;
   url: string;
 };
 
 type WikiPage = {
-  pageId: number;
+  pageId: string;
   title: string;
   url: string;
   extract: string;
@@ -140,27 +140,29 @@ export function WikiArticleImportPanel({
   const runSearch = async () => {
     const trimmed = query.trim();
     if (!trimmed) {
-      setError("Query required.");
+      setError("検索語を入力してください。");
       return;
     }
     setLoading(true);
     setError("");
     try {
-      const form = new FormData();
-      form.append("query", trimmed);
-      form.append("lang", lang);
-      const res = await fetch("/api/wiki/search", { method: "POST", body: form });
+      const params = new URLSearchParams({
+        query: trimmed,
+        lang
+      });
+      const res = await fetch(`/api/wiki/search?${params.toString()}`);
       if (!res.ok) {
-        const text = await res.text();
-        setError(text || "Search failed.");
+        const data = await res.json().catch(() => null);
+        const message = data?.error ?? "検索に失敗しました。";
+        setError(message);
         setResults([]);
         return;
       }
       const data = await res.json();
-      setResults(data.results ?? []);
+      setResults(Array.isArray(data.results) ? data.results : []);
     } catch (err) {
       console.error("Wiki search failed:", err);
-      setError("Search failed.");
+      setError("検索に失敗しました。");
     } finally {
       setLoading(false);
     }
@@ -319,6 +321,11 @@ export function WikiArticleImportPanel({
           {loading ? "Scanning..." : "Query Wiki Ecosystem"}
         </Button>
         {error && <div className="text-xs font-medium text-red-500 bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}
+        {!loading && !error && !page && results.length === 0 && query.trim() && (
+          <div className="text-xs text-muted bg-bg border border-border rounded-lg p-3">
+            結果が見つかりませんでした。言語を切り替えるか、別のキーワードで検索してください。
+          </div>
+        )}
       </div>
 
       {/* Results & Preview */}

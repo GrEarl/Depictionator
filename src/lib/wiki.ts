@@ -288,6 +288,10 @@ export async function fetchWikiImageInfo(langInput: string | null, title: string
 
 export async function searchWiki(query: string, langInput: string | null) {
   const lang = normalizeLang(langInput || DEFAULT_LANG) || DEFAULT_LANG;
+  const baseUrl =
+    lang === "commons"
+      ? "https://commons.wikimedia.org/wiki/"
+      : `https://${lang}.wikipedia.org/wiki/`;
   const url = buildWikiApiUrl(lang, {
     action: "query",
     format: "json",
@@ -306,6 +310,7 @@ export async function searchWiki(query: string, langInput: string | null) {
   return results.map((item: any) => ({
     pageId: String(item.pageid),
     title: item.title,
-    snippet: item.snippet
+    snippet: item.snippet,
+    url: `${baseUrl}${encodeURIComponent(String(item.title || "").replace(/ /g, "_"))}`
   }));
 }
