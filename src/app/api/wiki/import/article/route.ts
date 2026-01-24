@@ -18,7 +18,6 @@ import {
   extractWikitextImagePlacements,
   buildMediaAnalysisPrompt,
   parseMediaAnalysisResponse,
-  categorizeMediaForInfobox,
   type MediaAnalysisItem,
   type MediaRelevanceResult
 } from "@/lib/wiki";
@@ -247,6 +246,18 @@ function shouldSkipMediaInfo(info: { mime?: string | null; width?: number | null
   return maxDim < DEFAULT_MEDIA_MIN_DIM;
 }
 
+function normalizeMediaTitle(title: string) {
+  return title.toLowerCase().replace(/^file:/i, "").trim();
+}
+
+function stripExtension(title: string) {
+  return title.replace(/\.[a-z0-9]+$/i, "");
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 type ImportedAssetWithMeta = ImportedAsset & {
   placement: "infobox" | "inline" | "gallery";
   caption?: string;
@@ -284,7 +295,7 @@ function insertInlineImages(body: string, assets: ImportedAssetWithMeta[]): stri
 
   // Insert images after section headings
   for (const [section, sectionAssets] of bySection) {
-    const sectionPattern = new RegExp(`(##\\s*${section}[^\\n]*\\n)`, "i");
+    const sectionPattern = new RegExp(`(##\\s*${escapeRegExp(section)}[^\\n]*\\n)`, "i");
     const match = result.match(sectionPattern);
     if (match && match.index !== undefined) {
       const imageMarkdown = sectionAssets
@@ -572,7 +583,6 @@ export async function POST(request: Request) {
   });
 
   const importedAssets: ImportedAssetWithMeta[] = [];
-  let infoboxMediaJson: string | null = null;
 
   if (importMedia) {
     // Step 1: Gather all media titles from all sources
@@ -683,8 +693,25 @@ export async function POST(request: Request) {
       }));
     }
 
-    // Create a map for quick lookup
-    const analysisMap = new Map(analysisResults.map((r) => [r.title.toLowerCase(), r]));
+    if (analysisResults.length === 0 && mediaInfoList.length > 0) {
+      // If LLM returns no usable result, fall back to heuristic selection.
+      analysisResults = mediaInfoList.slice(0, 5).map(({ info }, i) => ({
+        title: info!.title,
+        relevant: i === 0 || i < 5,
+        reason: "Fallback - no LLM result",
+        placement: i === 0 ? "infobox" as const : "gallery" as const,
+        priority: i + 1
+      }));
+    }
+
+    // Create a map for quick lookup (normalize titles & strip extensions)
+    const analysisMap = new Map<string, MediaRelevanceResult>();
+    for (const result of analysisResults) {
+      const normalized = normalizeMediaTitle(result.title);
+      if (!normalized) continue;
+      analysisMap.set(normalized, result);
+      analysisMap.set(stripExtension(normalized), result);
+    }
 
     // Step 5: Import only relevant media
     let mainImageId: string | null = null;
@@ -694,7 +721,10 @@ export async function POST(request: Request) {
     for (const { entry, info } of mediaInfoList) {
       if (!info) continue;
 
-      const analysis = analysisMap.get(info.title.toLowerCase());
+      const normalizedTitle = normalizeMediaTitle(info.title);
+      const analysis =
+        analysisMap.get(normalizedTitle) ??
+        analysisMap.get(stripExtension(normalizedTitle));
       if (!analysis || !analysis.relevant || analysis.placement === "exclude") {
         continue;
       }
@@ -745,7 +775,6 @@ export async function POST(request: Request) {
           audio: infoboxAudio,
           video: infoboxVideo
         });
-        infoboxMediaJson = updateData.infoboxMediaJson;
       }
       await prisma.entity.update({
         where: { id: entity.id },

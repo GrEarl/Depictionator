@@ -542,8 +542,11 @@ export function parseMediaAnalysisResponse(response: string): MediaRelevanceResu
 
   try {
     const parsed = JSON.parse(jsonStr);
-    if (parsed.media && Array.isArray(parsed.media)) {
-      return parsed.media.map((item: any) => ({
+    const mediaItems = Array.isArray(parsed)
+      ? parsed
+      : (parsed.media && Array.isArray(parsed.media) ? parsed.media : []);
+    if (mediaItems.length) {
+      return mediaItems.map((item: any) => ({
         title: String(item.title || ""),
         relevant: Boolean(item.relevant),
         reason: String(item.reason || ""),
