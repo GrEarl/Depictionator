@@ -841,5 +841,6 @@ export async function POST(request: Request) {
     meta: { source: "wikipedia", url: page.url, lang: pageLang, synthesized: usedLlm }
   });
 
-  return NextResponse.redirect(toRedirectUrl(request, toWikiPath(entity.title)));
+  const redirectPath = `${toWikiPath(entity.title)}?id=${entity.id}`;
+  return NextResponse.redirect(toRedirectUrl(request, redirectPath));
 }

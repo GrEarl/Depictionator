@@ -24,6 +24,14 @@ export default async function WikiResolvePage({ params, searchParams }: PageProp
     return <div className="panel">Select a workspace.</div>;
   }
 
+  const resolvedSearchParams = await searchParams;
+  const explicitEntityId = String(resolvedSearchParams.id ?? resolvedSearchParams.entityId ?? "").trim();
+  const mode = String(resolvedSearchParams.mode ?? "canon");
+  const viewpoint = String(resolvedSearchParams.viewpoint ?? "canon");
+  const eraFilter = String(resolvedSearchParams.era ?? "all");
+  const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
+  const query = String(resolvedSearchParams.q ?? "").trim();
+
   const membership = await prisma.workspaceMember.findFirst({
     where: { userId: user.id, workspaceId: workspace.id },
     select: { role: true }
@@ -147,65 +155,48 @@ export default async function WikiResolvePage({ params, searchParams }: PageProp
     );
   }
 
-  const exactMatches = await prisma.entity.findMany({
-    where: {
-      workspaceId: workspace.id,
-      softDeletedAt: null,
-      OR: [
-        { title: { equals: normalized, mode: "insensitive" } },
-        { aliases: { has: normalized } }
-      ]
-    },
-    select: { id: true, title: true, type: true, updatedAt: true }
-  });
-
-  if (exactMatches.length === 1) {
-    const resolvedSearchParams = await searchParams;
-    const mode = String(resolvedSearchParams.mode ?? "canon");
-    const viewpoint = String(resolvedSearchParams.viewpoint ?? "canon");
-    const eraFilter = String(resolvedSearchParams.era ?? "all");
-    const chapterFilter = String(resolvedSearchParams.chapter ?? "all");
-    const query = String(resolvedSearchParams.q ?? "").trim();
-
-    const entity = await prisma.entity.findUnique({
-      where: { id: exactMatches[0].id },
+  const entityInclude = {
+    article: {
       include: {
-        article: {
-          include: {
-            revisions: { orderBy: { createdAt: "desc" } },
-            baseRevision: true
-          }
-        },
-        overlays: {
-          where: { softDeletedAt: null },
-          include: {
-            revisions: { orderBy: { createdAt: "desc" } },
-            activeRevision: true
-          }
-        },
-        mainImage: true,
-        parentEntity: { select: { id: true, title: true, type: true } },
-        childEntities: {
-          where: { softDeletedAt: null },
-          select: { id: true, title: true, type: true },
-          take: 20
-        },
-        relationsFrom: {
-          where: { softDeletedAt: null },
-          include: { toEntity: { select: { id: true, title: true, type: true } } },
-          take: 50
-        },
-        relationsTo: {
-          where: { softDeletedAt: null },
-          include: { fromEntity: { select: { id: true, title: true, type: true } } },
-          take: 50
-        },
-        pins: {
-          where: { softDeletedAt: null },
-          include: { map: { select: { id: true, title: true } } },
-          take: 10
-        }
+        revisions: { orderBy: { createdAt: "desc" } },
+        baseRevision: true
       }
+    },
+    overlays: {
+      where: { softDeletedAt: null },
+      include: {
+        revisions: { orderBy: { createdAt: "desc" } },
+        activeRevision: true
+      }
+    },
+    mainImage: true,
+    parentEntity: { select: { id: true, title: true, type: true } },
+    childEntities: {
+      where: { softDeletedAt: null },
+      select: { id: true, title: true, type: true },
+      take: 20
+    },
+    relationsFrom: {
+      where: { softDeletedAt: null },
+      include: { toEntity: { select: { id: true, title: true, type: true } } },
+      take: 50
+    },
+    relationsTo: {
+      where: { softDeletedAt: null },
+      include: { fromEntity: { select: { id: true, title: true, type: true } } },
+      take: 50
+    },
+    pins: {
+      where: { softDeletedAt: null },
+      include: { map: { select: { id: true, title: true } } },
+      take: 10
+    }
+  } as const;
+
+  const renderEntity = async (entityId: string) => {
+    const entity = await prisma.entity.findUnique({
+      where: { id: entityId },
+      include: entityInclude
     });
 
     if (!entity) {
@@ -300,6 +291,36 @@ export default async function WikiResolvePage({ params, searchParams }: PageProp
         />
       </div>
     );
+  };
+
+  if (explicitEntityId) {
+    const explicit = await prisma.entity.findFirst({
+      where: {
+        id: explicitEntityId,
+        workspaceId: workspace.id,
+        softDeletedAt: null
+      },
+      select: { id: true }
+    });
+    if (explicit) {
+      return await renderEntity(explicit.id);
+    }
+  }
+
+  const exactMatches = await prisma.entity.findMany({
+    where: {
+      workspaceId: workspace.id,
+      softDeletedAt: null,
+      OR: [
+        { title: { equals: normalized, mode: "insensitive" } },
+        { aliases: { has: normalized } }
+      ]
+    },
+    select: { id: true, title: true, type: true, updatedAt: true }
+  });
+
+  if (exactMatches.length === 1) {
+    return await renderEntity(exactMatches[0].id);
   }
 
   const suggestions = exactMatches.length
@@ -328,7 +349,11 @@ export default async function WikiResolvePage({ params, searchParams }: PageProp
       ) : (
         <div className="list-sm mt-4">
           {suggestions.map((item) => (
-            <Link key={item.id} href={toWikiPath(item.title)} className="list-row-sm">
+            <Link
+              key={item.id}
+              href={`${toWikiPath(item.title)}?id=${item.id}`}
+              className="list-row-sm"
+            >
               <div>
                 <div className="font-semibold">{item.title}</div>
                 <div className="text-xs muted uppercase tracking-wider">{item.type}</div>
