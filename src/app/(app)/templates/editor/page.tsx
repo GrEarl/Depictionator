@@ -156,7 +156,7 @@ export default async function TemplateEditorPage({ searchParams }: PageProps) {
           <div className="rounded-xl border border-border bg-bg p-4 space-y-2">
             <div className="text-xs uppercase tracking-widest text-muted">Quick Tips</div>
             <ul className="text-sm text-muted space-y-2">
-              <li>Use <code>{{`{{TEMPLATE:Name}}`}}</code> to embed templates.</li>
+              <li>Use <code>{"{{TEMPLATE:Name}}"}</code> to embed templates.</li>
               <li>Templates are stored as entities for revision history.</li>
               <li>Keep names short and consistent with your wiki naming.</li>
             </ul>
