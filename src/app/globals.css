@@ -4676,6 +4676,40 @@ button[type="submit"]:hover {
   gap: 10px;
 }
 
+.audit-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  margin-bottom: 16px;
+}
+
+.audit-filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 160px;
+}
+
+.audit-filter-input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.audit-filter-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
 .audit-item {
   display: flex;
   justify-content: space-between;
@@ -4718,6 +4752,56 @@ button[type="submit"]:hover {
   white-space: nowrap;
 }
 
+/* ========================================================================
+   Permissions Matrix
+   ======================================================================== */
+
+.permission-matrix {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.4fr) repeat(4, minmax(90px, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.permission-row {
+  display: contents;
+}
+
+.permission-cell {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.permission-cell:last-child {
+  border-right: none;
+}
+
+.permission-head {
+  background: var(--bg-elevated);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: var(--muted);
+}
+
+.permission-label {
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.permission-yes {
+  color: var(--accent);
+  font-weight: 800;
+}
+
+.permission-no {
+  color: var(--muted);
+}
+
 /* ==========================================================================
    Notifications Styles
    ========================================================================== */
@@ -4751,6 +4835,55 @@ button[type="submit"]:hover {
   border-color: rgba(255, 0, 51, 0.4);
   color: var(--accent);
   background: rgba(255, 0, 51, 0.1);
+}
+
+.notification-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.notification-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  margin-bottom: 16px;
+}
+
+.notification-toolbar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 180px;
+}
+
+.notification-toolbar-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.notification-input,
+.notification-select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .notification-list {

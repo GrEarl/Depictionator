@@ -17,6 +17,9 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
   const workspace = await getActiveWorkspace(user.id);
   const resolvedSearchParams = await searchParams;
   const tab = typeof resolvedSearchParams.tab === "string" ? resolvedSearchParams.tab : "members";
+  const auditAction = typeof resolvedSearchParams.auditAction === "string" ? resolvedSearchParams.auditAction : "";
+  const auditTargetType = typeof resolvedSearchParams.auditTargetType === "string" ? resolvedSearchParams.auditTargetType : "";
+  const auditQuery = typeof resolvedSearchParams.auditQuery === "string" ? resolvedSearchParams.auditQuery.trim() : "";
   const rawNotice = typeof resolvedSearchParams.notice === "string" ? resolvedSearchParams.notice : null;
   const rawError = typeof resolvedSearchParams.error === "string" ? resolvedSearchParams.error : null;
   const noticeText =
@@ -65,17 +68,56 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
 
   if (!workspace) return <div className="p-8 text-center text-muted">Select a workspace.</div>;
 
-  const auditLogs = tab === "audit"
+  const auditWhere: Record<string, any> = { workspaceId: workspace.id };
+  if (auditAction) auditWhere.action = auditAction;
+  if (auditTargetType) auditWhere.targetType = auditTargetType;
+
+  const auditLogsRaw = tab === "audit"
     ? await prisma.auditLog.findMany({
-        where: { workspaceId: workspace.id },
+        where: auditWhere,
         include: { actorUser: { select: { name: true, email: true } } },
         orderBy: { createdAt: "desc" },
         take: 200
       })
     : [];
 
+  const auditLogs = auditQuery
+    ? auditLogsRaw.filter((log) => {
+        const haystack = [
+          log.action,
+          log.targetType,
+          log.targetId,
+          log.actorUser.name,
+          log.actorUser.email
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(auditQuery.toLowerCase());
+      })
+    : auditLogsRaw;
+
+  const auditActions = Array.from(new Set(auditLogsRaw.map((log) => log.action))).sort();
+  const auditTargets = Array.from(new Set(auditLogsRaw.map((log) => log.targetType))).sort();
+
   const formatAuditDate = (date: Date) =>
     date.toLocaleString("ja-JP", { dateStyle: "medium", timeStyle: "short" });
+
+  const roleLabels = {
+    viewer: "Viewer",
+    editor: "Editor",
+    reviewer: "Reviewer",
+    admin: "Admin"
+  };
+
+  const permissionRows = [
+    { label: "View articles, maps, boards", roles: ["viewer", "editor", "reviewer", "admin"] },
+    { label: "Create & edit content", roles: ["editor", "reviewer", "admin"] },
+    { label: "Approve revisions", roles: ["reviewer", "admin"] },
+    { label: "Manage members & roles", roles: ["admin"] },
+    { label: "Manage workspace settings", roles: ["admin"] }
+  ];
+
+  const auditFiltersActive = Boolean(auditAction || auditTargetType || auditQuery);
 
   const tabs = [
     {
@@ -86,6 +128,16 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />
           <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+        </svg>
+      )
+    },
+    {
+      id: "permissions",
+      label: "Permissions",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+          <path d="M12 3l8 4v5c0 5-3.5 9-8 9s-8-4-8-9V7l8-4Z" />
+          <path d="M9 12l2 2 4-4" />
         </svg>
       )
     },
@@ -343,6 +395,45 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
             </div>
           )}
 
+          {tab === "permissions" && (
+            <div className="space-y-8">
+              <section className="bg-panel border border-border rounded-xl p-6 shadow-sm space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-2">Role Matrix</h4>
+                  <p className="text-sm text-muted">Current workspace roles and their default capabilities.</p>
+                </div>
+                <div className="permission-matrix">
+                  <div className="permission-cell permission-head">Capability</div>
+                  <div className="permission-cell permission-head">{roleLabels.viewer}</div>
+                  <div className="permission-cell permission-head">{roleLabels.editor}</div>
+                  <div className="permission-cell permission-head">{roleLabels.reviewer}</div>
+                  <div className="permission-cell permission-head">{roleLabels.admin}</div>
+                  {permissionRows.map((row) => (
+                    <div className="permission-row" key={row.label}>
+                      <div className="permission-cell permission-label">{row.label}</div>
+                      {(["viewer", "editor", "reviewer", "admin"] as const).map((role) => (
+                        <div key={role} className="permission-cell">
+                          {row.roles.includes(role) ? (
+                            <span className="permission-yes">Yes</span>
+                          ) : (
+                            <span className="permission-no">—</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="bg-panel border border-border rounded-xl p-6 shadow-sm space-y-3">
+                <h4 className="text-sm font-bold uppercase tracking-widest text-muted">Default Access</h4>
+                <p className="text-sm text-muted">
+                  Invite links currently add members as <strong>viewer</strong>. Change member roles in the Team & Access tab.
+                </p>
+              </section>
+            </div>
+          )}
+
           {tab === "viewpoints" && (
             <div className="space-y-8">
               <section className="bg-panel border border-border rounded-xl p-6 shadow-sm">
@@ -566,6 +657,42 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
                   <h4 className="text-sm font-bold uppercase tracking-widest text-muted">Recent Activity Log</h4>
                   <span className="text-xs text-muted">{auditLogs.length} entries</span>
                 </div>
+                <form method="get" className="audit-filters">
+                  <input type="hidden" name="tab" value="audit" />
+                  <div className="audit-filter-group">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted">Action</label>
+                    <select name="auditAction" defaultValue={auditAction} className="audit-filter-input">
+                      <option value="">All actions</option>
+                      {auditActions.map((action) => (
+                        <option key={action} value={action}>{action}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="audit-filter-group">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted">Target</label>
+                    <select name="auditTargetType" defaultValue={auditTargetType} className="audit-filter-input">
+                      <option value="">All targets</option>
+                      {auditTargets.map((target) => (
+                        <option key={target} value={target}>{target}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="audit-filter-group flex-1">
+                    <label className="text-xs font-bold uppercase tracking-widest text-muted">Search</label>
+                    <input
+                      name="auditQuery"
+                      defaultValue={auditQuery}
+                      placeholder="Search by actor or target"
+                      className="audit-filter-input"
+                    />
+                  </div>
+                  <div className="audit-filter-actions">
+                    <button type="submit" className="btn-secondary">Apply</button>
+                    {auditFiltersActive && (
+                      <Link href="?tab=audit" className="btn-link">Clear</Link>
+                    )}
+                  </div>
+                </form>
                 <div className="audit-list">
                   {auditLogs.map((log) => (
                     <div key={log.id} className="audit-item">

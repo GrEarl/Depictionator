@@ -21,18 +21,35 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   const workspace = await getActiveWorkspace(user.id);
   const resolvedSearchParams = await searchParams;
   const status = typeof resolvedSearchParams.status === "string" ? resolvedSearchParams.status : "unread";
+  const typeFilter = typeof resolvedSearchParams.type === "string" ? resolvedSearchParams.type : "all";
+  const query = typeof resolvedSearchParams.q === "string" ? resolvedSearchParams.q.trim() : "";
 
   const where: Record<string, any> = { userId: user.id };
   if (workspace?.id) where.workspaceId = workspace.id;
   if (status === "unread") where.readAt = null;
   if (status === "read") where.readAt = { not: null };
+  if (typeFilter && typeFilter !== "all") where.type = typeFilter;
 
-  const notifications = await prisma.notification.findMany({
-    where,
-    include: { workspace: { select: { id: true, name: true, slug: true } } },
-    orderBy: { createdAt: "desc" },
-    take: 200
-  });
+  const [notifications, unreadCount, totalCount] = await Promise.all([
+    prisma.notification.findMany({
+      where,
+      include: { workspace: { select: { id: true, name: true, slug: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 200
+    }),
+    prisma.notification.count({
+      where: {
+        userId: user.id,
+        ...(workspace?.id ? { workspaceId: workspace.id } : {}),
+        readAt: null
+      }
+    }),
+    prisma.notification.count({
+      where: { userId: user.id, ...(workspace?.id ? { workspaceId: workspace.id } : {}) }
+    })
+  ]);
+
+  const readCount = Math.max(totalCount - unreadCount, 0);
 
   const entityIds = new Set<string>();
   const mapIds = new Set<string>();
@@ -115,7 +132,24 @@ export default async function NotificationsPage({ searchParams }: { searchParams
   };
 
   const buildFilterLink = (nextStatus: string) =>
-    `?status=${nextStatus}`;
+    `?status=${nextStatus}${typeFilter !== "all" ? `&type=${encodeURIComponent(typeFilter)}` : ""}${query ? `&q=${encodeURIComponent(query)}` : ""}`;
+
+  const typeOptions = Array.from(new Set(notifications.map((note) => note.type))).sort();
+
+  const enriched = notifications.map((note) => ({ note, info: buildNotification(note) }));
+  const filtered = query
+    ? enriched.filter(({ note, info }) => {
+        const haystack = [
+          note.type,
+          info.title,
+          info.subtitle,
+          note.workspace?.name ?? ""
+        ]
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(query.toLowerCase());
+      })
+    : enriched;
 
   return (
     <div className="page-container max-w-4xl">
@@ -134,19 +168,46 @@ export default async function NotificationsPage({ searchParams }: { searchParams
 
       <div className="notification-filters">
         <Link href={buildFilterLink("unread")} className={status === "unread" ? "active" : ""}>
-          Unread
+          Unread <span className="notification-count">{unreadCount}</span>
         </Link>
         <Link href={buildFilterLink("all")} className={status === "all" ? "active" : ""}>
-          All
+          All <span className="notification-count">{totalCount}</span>
         </Link>
         <Link href={buildFilterLink("read")} className={status === "read" ? "active" : ""}>
-          Read
+          Read <span className="notification-count">{readCount}</span>
         </Link>
       </div>
 
+      <form method="get" className="notification-toolbar">
+        <input type="hidden" name="status" value={status} />
+        <div className="notification-toolbar-group">
+          <label className="text-xs font-bold uppercase tracking-widest text-muted">Type</label>
+          <select name="type" defaultValue={typeFilter} className="notification-select">
+            <option value="all">All types</option>
+            {typeOptions.map((type) => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+        </div>
+        <div className="notification-toolbar-group flex-1">
+          <label className="text-xs font-bold uppercase tracking-widest text-muted">Search</label>
+          <input
+            name="q"
+            defaultValue={query}
+            placeholder="Search notifications"
+            className="notification-input"
+          />
+        </div>
+        <div className="notification-toolbar-actions">
+          <button type="submit" className="btn-secondary">Apply</button>
+          {(typeFilter !== "all" || query) && (
+            <Link href={`?status=${status}`} className="btn-link">Clear</Link>
+          )}
+        </div>
+      </form>
+
       <div className="notification-list">
-        {notifications.map((note) => {
-          const info = buildNotification(note);
+        {filtered.map(({ note, info }) => {
           return (
             <div key={note.id} className={`notification-item ${note.readAt ? "read" : "unread"}`}>
               <div className="notification-main">
@@ -175,7 +236,7 @@ export default async function NotificationsPage({ searchParams }: { searchParams
             </div>
           );
         })}
-        {notifications.length === 0 && (
+        {filtered.length === 0 && (
           <div className="empty-state-centered">
             <h2>No notifications</h2>
             <p className="muted">You're all caught up.</p>
