@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import Image from "next/image";
 
 type InfoboxProps = {
   title: string;
@@ -21,14 +20,11 @@ export function Infobox({ title, image, rows }: InfoboxProps) {
     <div className="markdown-infobox">
       {image && (
         <div className="relative">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={image.src}
             alt={image.alt}
-            width={280}
-            height={280}
-            className="markdown-infobox-image"
-            style={{ objectFit: "cover" }}
-            unoptimized={image.src.startsWith("http")}
+            className="markdown-infobox-image w-full h-auto max-h-[280px] object-cover"
           />
           {image.caption && (
             <div className="px-3 py-2 text-xs text-muted text-center border-b border-border bg-bg-elevated">

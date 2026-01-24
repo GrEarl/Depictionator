@@ -6,7 +6,6 @@ import { MarkdownToc } from "@/components/MarkdownToc";
 import { MarkdownEditor } from "@/components/MarkdownEditor";
 import { Infobox } from "@/components/Infobox";
 import Link from "next/link";
-import Image from "next/image";
 import { useGlobalFilters } from "@/components/GlobalFilterProvider";
 import { toWikiPath } from "@/lib/wiki";
 import { getProtectionLevel, type ProtectionLevel } from "@/lib/protection";
@@ -590,12 +589,11 @@ Regular paragraph text. You can use **bold**, *italic*, and [[internal links]].
           {/* Main Image */}
           {mainImage && (
             <div className="infobox-image relative w-full aspect-square bg-bg rounded-md overflow-hidden border border-border">
-              <Image
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
                 src={`/api/assets/file/${mainImage.id}`}
                 alt={entity.title}
-                fill
-                className="object-cover"
-                sizes="(max-width: 768px) 100vw, 300px"
+                className="absolute inset-0 w-full h-full object-cover"
               />
             </div>
           )}
