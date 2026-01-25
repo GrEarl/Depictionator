@@ -224,13 +224,12 @@ export function WikiArticleImportPanel({
       // Actually submit the form
       const res = await fetch("/api/wiki/import/article", {
         method: "POST",
-        body: form,
-        redirect: "manual" // Don't follow redirects automatically
+        body: form
       });
 
-      if (res.type === "opaqueredirect" || res.status === 303 || res.status === 302) {
-        // Get the redirect location
-        const location = res.headers.get("Location");
+      const redirectedUrl = res.redirected && res.url ? new URL(res.url) : null;
+
+      if (redirectedUrl) {
         if (downloadMedia) {
           setImportStep("downloading_media");
           await new Promise(resolve => setTimeout(resolve, 300));
@@ -242,13 +241,8 @@ export function WikiArticleImportPanel({
         // Wait a moment to show complete status, then redirect
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        if (location) {
-          router.push(location);
-        } else {
-          // Fallback: construct the URL from the page title
-          const wikiPath = `/wiki/${encodeURIComponent(page.title.replace(/ /g, "_"))}`;
-          router.push(wikiPath);
-        }
+        const resolvedPath = `${redirectedUrl.pathname}${redirectedUrl.search}`;
+        router.push(resolvedPath);
         return;
       }
 
