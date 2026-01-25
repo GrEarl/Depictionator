@@ -1,5 +1,4 @@
 ﻿import { NextResponse } from "next/server";
-import { toRedirectUrl } from "@/lib/redirect";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
@@ -102,5 +101,5 @@ export async function POST(request: Request) {
     payload: { mapSceneId: scene.id, mapId }
   });
 
-  return NextResponse.redirect(toRedirectUrl(request, "/maps"));
+  return NextResponse.json({ ok: true, mapSceneId: scene.id, mapId });
 }
