@@ -175,15 +175,18 @@ export function FigmaMapEditor({
   const [showRightPanel, setShowRightPanel] = useState(false);
   const [selectedPinId, setSelectedPinId] = useState("");
   const [selectedPinIds, setSelectedPinIds] = useState<string[]>([]);
+  const [showPinDeleteConfirm, setShowPinDeleteConfirm] = useState(false);
 
   const clearPinSelection = useCallback(() => {
     setSelectedPinId("");
     setSelectedPinIds([]);
+    setShowPinDeleteConfirm(false);
   }, []);
 
   const selectSinglePin = useCallback((pinId: string) => {
     setSelectedPinId(pinId);
     setSelectedPinIds([pinId]);
+    setShowPinDeleteConfirm(false);
   }, []);
 
   const togglePinSelection = useCallback((pinId: string) => {
@@ -194,6 +197,7 @@ export function FigmaMapEditor({
       }
       return [...prev, pinId];
     });
+    setShowPinDeleteConfirm(false);
   }, []);
   const [selectedPathId, setSelectedPathId] = useState("");
   const [isEditingPathPoints, setIsEditingPathPoints] = useState(false);
@@ -1510,7 +1514,6 @@ export function FigmaMapEditor({
 
   async function deletePin() {
     if (!selectedPinId) return;
-    if (!confirm("Delete this pin?")) return;
     try {
       const form = new FormData();
       form.append("workspaceId", workspaceId);
@@ -1524,6 +1527,7 @@ export function FigmaMapEditor({
 
       clearPinSelection();
       setPinDraft(createPinDraft());
+      setShowPinDeleteConfirm(false);
       setShowRightPanel(false);
       draftLayerRef.current?.clearLayers();
       router.refresh();
@@ -2737,13 +2741,34 @@ export function FigmaMapEditor({
 
             <div className="p-4 border-t border-border flex-shrink-0">
               {selectedPinId ? (
-                <div className="flex gap-2">
-                  <Button onClick={submitPinUpdate} className="flex-1">Save Changes</Button>
-                  <Button variant="danger" onClick={deletePin} title="Delete Pin">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                      <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-                    </svg>
-                  </Button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <Button onClick={submitPinUpdate} className="flex-1">Save Changes</Button>
+                    {!showPinDeleteConfirm && (
+                      <Button
+                        variant="danger"
+                        onClick={() => setShowPinDeleteConfirm(true)}
+                        title="Delete Pin"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+                        </svg>
+                      </Button>
+                    )}
+                  </div>
+                  {showPinDeleteConfirm && (
+                    <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-xs text-red-600">
+                      <div className="font-bold">Delete this pin?</div>
+                      <div className="mt-2 flex gap-2">
+                        <Button variant="danger" onClick={deletePin} className="flex-1">
+                          Confirm Delete
+                        </Button>
+                        <Button variant="secondary" onClick={() => setShowPinDeleteConfirm(false)} className="flex-1">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Button onClick={submitPin} disabled={pinDraft.x === null || !pinDraft.label.trim()} className="w-full">
