@@ -1867,7 +1867,9 @@ export function FigmaMapEditor({
                     <path d="M21 21l-4.35-4.35" />
                   </svg>
                 </button>
-                <span className="px-1 font-medium min-w-[3ch] text-center">{Math.round((zoomLevel + 2) * 50)}%</span>
+                <span className="px-1 font-medium min-w-[3ch] text-center">
+                  {Math.max(1, Math.round(Math.pow(2, zoomLevel) * 100))}%
+                </span>
                 <button
                   onClick={() => mapRef.current?.zoomIn()}
                   className="px-1 py-0.5 hover:text-ink transition-colors"
