@@ -2168,6 +2168,9 @@ button[type="submit"]:hover {
   clear: right;
   width: 280px;
   margin: 0 0 1rem 1.5rem;
+  flex: 0 0 auto;
+  align-self: flex-end;
+  height: auto;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: 8px;
