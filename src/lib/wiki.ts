@@ -475,6 +475,100 @@ export function buildMediaAnalysisPrompt(
     .map((p) => `- "${p.filename}" in ${p.isInfobox ? "infobox" : `section "${p.section}"`}${p.caption ? `: "${p.caption}"` : ""}`)
     .join("\n");
 
+  // Use specialized prompt for items (weapons, vehicles, objects) that need modeling references
+  const isModelingType = ["item", "weapon", "vehicle", "object", "equipment", "tool", "device"].includes(entityType.toLowerCase());
+
+  if (isModelingType) {
+    return buildModelingMediaPrompt(pageTitle, entityType, mediaListStr, placementsStr, wikitextSnippet);
+  }
+
+  // Default prompt for other entity types (characters, locations, events, etc.)
+  return buildDefaultMediaPrompt(pageTitle, entityType, mediaListStr, placementsStr, wikitextSnippet);
+}
+
+function buildModelingMediaPrompt(
+  pageTitle: string,
+  entityType: string,
+  mediaListStr: string,
+  placementsStr: string,
+  wikitextSnippet: string
+): string {
+  return `You are analyzing media files from a Wikipedia article for a MODELING & VFX REFERENCE DATABASE.
+This is for 3D artists, modelers, texture artists, riggers, and VFX creators who need visual references.
+
+SUBJECT: "${pageTitle}"
+ENTITY TYPE: ${entityType}
+
+AVAILABLE MEDIA FILES:
+${mediaListStr}
+
+ORIGINAL WIKIPEDIA IMAGE PLACEMENTS:
+${placementsStr || "(none detected)"}
+
+WIKITEXT EXCERPT (for context):
+${wikitextSnippet.slice(0, 2000)}
+
+## YOUR TASK
+Analyze each media file and determine if it's useful as a MODELING/VFX REFERENCE.
+Mark relevant: true for media that would help a 3D artist recreate this subject.
+
+## WHAT TO INCLUDE (relevant: true)
+HIGHLY VALUABLE (priority 1-2):
+- Photos of the actual subject from multiple angles
+- Technical diagrams, blueprints, schematics, cutaway views
+- Dimension drawings, orthographic projections
+- Close-up photos showing surface details, materials, textures
+- Disassembly photos showing internal structure
+- Historical photographs showing the subject in use
+
+VALUABLE (priority 3-4):
+- Comparison photos (size reference with humans/objects)
+- Variant models or different versions
+- Manufacturing/production photos
+- Damaged/weathered examples (for weathering reference)
+
+## WHAT TO EXCLUDE (relevant: false, placement: "exclude")
+- Country flags (even if the country used/operated the subject)
+- National emblems, coats of arms, insignia
+- Political icons, military rank insignia
+- Wikipedia UI elements (icons, buttons, logos)
+- Location/distribution maps
+- Portraits of designers/inventors (unless the entity IS that person)
+- Generic symbols or pictograms
+
+## PLACEMENT RULES
+- "infobox": THE best representative image, plus any audio/video
+- "inline": Technical images that belong with specific text sections
+- "gallery": Additional reference photos and diagrams for artists
+
+## OUTPUT FORMAT
+Respond with ONLY valid JSON (no markdown code blocks, no explanation):
+{
+  "media": [
+    {
+      "title": "exact filename from list",
+      "relevant": true,
+      "reason": "Shows the subject from side angle with visible details",
+      "placement": "gallery",
+      "suggestedCaption": "Side view",
+      "priority": 2,
+      "inlineSection": "optional section name"
+    }
+  ]
+}
+
+IMPORTANT: For a modeling database, we need MULTIPLE reference images (5-15 typically).
+Include all images that show the subject itself, even if similar to each other.
+Different angles and lighting conditions are valuable for artists.`;
+}
+
+function buildDefaultMediaPrompt(
+  pageTitle: string,
+  entityType: string,
+  mediaListStr: string,
+  placementsStr: string,
+  wikitextSnippet: string
+): string {
   return `You are analyzing media files from a Wikipedia article to determine their relevance for a worldbuilding reference database.
 
 SUBJECT: "${pageTitle}"
@@ -489,23 +583,34 @@ ${placementsStr || "(none detected)"}
 WIKITEXT EXCERPT (for context):
 ${wikitextSnippet.slice(0, 2000)}
 
-TASK: Analyze each media file and determine:
+## YOUR TASK
+Analyze each media file and determine:
 1. Is it relevant to the subject? (directly shows or describes "${pageTitle}")
 2. Where should it be placed?
 3. What priority? (1 = most important, 5 = least)
 
-PLACEMENT RULES:
-- "infobox": Main representative image, audio clips (sounds, voice samples), short videos demonstrating the subject
-- "inline": Images that belong near specific text sections (diagrams, historical photos, technical details)
-- "gallery": Additional reference images useful for artists/modelers
-- "exclude": Country flags, national emblems, political icons, UI elements, Wikipedia icons, location maps showing operators/users, portraits of unrelated people, generic symbols
+## WHAT TO INCLUDE (relevant: true)
+- Photos or images of the actual subject
+- Historical photographs
+- Maps showing the subject's location (if a place)
+- Portraits (if the subject is a person)
+- Related artwork or illustrations
+- Diagrams explaining the subject
 
-BE STRICT: Only mark as relevant if the media DIRECTLY shows or describes "${pageTitle}".
-Flags of countries that used/operated the subject are NOT relevant.
-Maps showing distribution/operators are NOT relevant.
-Only the actual subject matter is relevant.
+## WHAT TO EXCLUDE (relevant: false, placement: "exclude")
+- Country flags (unless the entity IS about that country/flag)
+- National emblems, coats of arms (unless the subject IS about them)
+- Wikipedia UI elements (icons, buttons, logos)
+- Generic symbols or pictograms
+- Unrelated portraits
 
-RESPOND WITH VALID JSON ONLY (no markdown, no explanation):
+## PLACEMENT RULES
+- "infobox": Main representative image, audio clips, short videos
+- "inline": Images that belong near specific text sections
+- "gallery": Additional reference images
+
+## OUTPUT FORMAT
+Respond with ONLY valid JSON (no markdown code blocks, no explanation):
 {
   "media": [
     {
