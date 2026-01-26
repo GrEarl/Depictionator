@@ -195,6 +195,9 @@ export function ArticleDetail({
 
   const hasRenderBody = Boolean(renderBody?.trim());
 
+  const hasInfoboxMedia = Boolean(infoboxMedia?.audio?.length || infoboxMedia?.video?.length);
+  const showInfobox = Boolean(mainImage || hasInfoboxMedia);
+
   return (
     <>
       {/* Center Pane: Content */}
@@ -275,14 +278,18 @@ export function ArticleDetail({
           {tab === "read" && (
             <>
               {/* Infobox with image */}
-              {mainImage && (
+              {showInfobox && (
                 <Infobox
                   title={displayTitle}
-                  image={{
-                    src: `/api/assets/file/${mainImage.id}`,
-                    alt: displayTitle,
-                    caption: entity.summaryMd?.split('\n')[0] || displayTitle
-                  }}
+                  image={
+                    mainImage
+                      ? {
+                          src: `/api/assets/file/${mainImage.id}`,
+                          alt: displayTitle,
+                          caption: entity.summaryMd?.split("\n")[0] || displayTitle
+                        }
+                      : undefined
+                  }
                   audio={infoboxMedia?.audio?.map((a: { assetId: string; caption?: string }) => ({
                     src: `/api/assets/file/${a.assetId}`,
                     caption: a.caption

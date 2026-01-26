@@ -732,6 +732,61 @@ export async function POST(request: Request) {
       }));
     }
 
+    // Ensure audio/video get placed in infobox even when LLM misses them
+    const analysisLookup = new Map<string, MediaRelevanceResult>();
+    for (const result of analysisResults) {
+      const normalized = normalizeMediaTitle(result.title);
+      if (!normalized) continue;
+      analysisLookup.set(normalized, result);
+      analysisLookup.set(stripExtension(normalized), result);
+    }
+    const ensureInfoboxMedia = (mimePrefix: string, reason: string) => {
+      const candidates = mediaInfoList
+        .map(({ info }) => info)
+        .filter((info): info is NonNullable<typeof info> => Boolean(info))
+        .filter((info) => info.mime?.startsWith(mimePrefix));
+      if (!candidates.length) return;
+
+      let hasInfobox = false;
+      for (const candidate of candidates) {
+        const key = normalizeMediaTitle(candidate.title);
+        const existing =
+          (key && (analysisLookup.get(key) ?? analysisLookup.get(stripExtension(key)))) || null;
+        if (existing) {
+          if (existing.relevant && existing.placement === "infobox") {
+            hasInfobox = true;
+            break;
+          }
+          if (existing.relevant && existing.placement !== "infobox") {
+            existing.placement = "infobox";
+            existing.reason = existing.reason || reason;
+            existing.priority = Math.min(existing.priority || 1, 1);
+            hasInfobox = true;
+            break;
+          }
+        }
+      }
+
+      if (hasInfobox) return;
+      const fallback = candidates[0];
+      const fallbackResult: MediaRelevanceResult = {
+        title: fallback.title,
+        relevant: true,
+        reason,
+        placement: "infobox",
+        suggestedCaption: fallback.title,
+        priority: 1
+      };
+      analysisResults.push(fallbackResult);
+      const normalized = normalizeMediaTitle(fallback.title);
+      if (normalized) {
+        analysisLookup.set(normalized, fallbackResult);
+        analysisLookup.set(stripExtension(normalized), fallbackResult);
+      }
+    };
+    ensureInfoboxMedia("audio/", "Auto-selected audio for infobox");
+    ensureInfoboxMedia("video/", "Auto-selected video for infobox");
+
     // Create a map for quick lookup (normalize titles & strip extensions)
     const analysisMap = new Map<string, MediaRelevanceResult>();
     for (const result of analysisResults) {
