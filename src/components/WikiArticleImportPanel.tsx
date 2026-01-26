@@ -24,6 +24,7 @@ type WikiPage = {
 type WikiArticleImportPanelProps = {
   workspaceId: string;
   entityTypes: string[];
+  defaultTargetLang?: string;
 };
 
 type PromptTemplate = {
@@ -53,13 +54,14 @@ const STEP_LABELS: Record<ImportStep, string> = {
 
 export function WikiArticleImportPanel({
   workspaceId,
-  entityTypes
+  entityTypes,
+  defaultTargetLang
 }: WikiArticleImportPanelProps) {
   const router = useRouter();
   const defaultEntityType = entityTypes[0] ?? "concept";
   const [query, setQuery] = useState("");
   const [lang, setLang] = useState("en");
-  const [targetLang, setTargetLang] = useState("");
+  const [targetLang, setTargetLang] = useState(defaultTargetLang ?? "");
   const [results, setResults] = useState<WikiSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");

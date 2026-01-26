@@ -3,12 +3,14 @@ import { requireUser } from "@/lib/auth";
 import { getActiveWorkspace } from "@/lib/workspaces";
 import { WikiArticleImportPanel } from "@/components/WikiArticleImportPanel";
 import { EntityType } from "@prisma/client";
+import { getLocaleFromCookies } from "@/lib/locale";
 
 const ENTITY_TYPES = Object.values(EntityType);
 
 export default async function ArticleImportPage() {
   const user = await requireUser();
   const workspace = await getActiveWorkspace(user.id);
+  const locale = await getLocaleFromCookies();
 
   if (!workspace) {
     return (
@@ -31,7 +33,11 @@ export default async function ArticleImportPage() {
       </div>
 
       <section className="panel">
-        <WikiArticleImportPanel workspaceId={workspace.id} entityTypes={ENTITY_TYPES} />
+        <WikiArticleImportPanel
+          workspaceId={workspace.id}
+          entityTypes={ENTITY_TYPES}
+          defaultTargetLang={locale}
+        />
       </section>
     </div>
   );
