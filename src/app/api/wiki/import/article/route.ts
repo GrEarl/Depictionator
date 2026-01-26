@@ -1141,6 +1141,57 @@ export async function POST(request: Request) {
         data: updateData
       });
     }
+
+    const galleryAssets = importedAssets.filter((asset) => asset.placement === "gallery");
+    const remainingMediaSlots =
+      mediaLimit > 0 ? Math.max(0, mediaLimit - importedAssets.length) : 0;
+    if (galleryAssets.length < DEFAULT_GALLERY_MIN_COUNT && remainingMediaSlots > 0) {
+      const needed = Math.min(
+        DEFAULT_GALLERY_MIN_COUNT - galleryAssets.length,
+        remainingMediaSlots,
+        6
+      );
+      const pageTitleKeywords = extractTitleKeywords(page.title);
+      const existingTitles = new Set(
+        importedAssets.map((asset) => normalizeMediaTitle(asset.title))
+      );
+      const commonsTitles = await fetchCommonsSearchImages(page.title, Math.max(needed * 2, 8));
+      let added = 0;
+      for (const title of commonsTitles) {
+        if (added >= needed) break;
+        if (shouldSkipMediaTitle(title)) continue;
+        const normalized = normalizeMediaTitle(title);
+        if (existingTitles.has(normalized) || existingTitles.has(stripExtension(normalized))) {
+          continue;
+        }
+        if (pageTitleKeywords.length) {
+          if (!pageTitleKeywords.some((keyword) => normalized.includes(keyword))) {
+            continue;
+          }
+        }
+        try {
+          const info = await fetchWikiImageInfo("commons", title);
+          if (!info) continue;
+          if (mediaMaxBytes && info.size && info.size > mediaMaxBytes) continue;
+          if (shouldSkipMediaInfo(info)) continue;
+          const asset = await importWikiAsset(workspaceId, session.userId, info);
+          if (!asset) continue;
+          importedAssets.push({
+            id: asset.id,
+            title: info.title,
+            mimeType: asset.mimeType,
+            placement: "gallery",
+            caption: info.title,
+            priority: 6
+          });
+          existingTitles.add(normalized);
+          existingTitles.add(stripExtension(normalized));
+          added += 1;
+        } catch {
+          // ignore failed commons fallback import
+        }
+      }
+    }
   }
 
   // Sort imported assets by priority and append to markdown
