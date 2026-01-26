@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+﻿import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { EntityType, SourceTargetType } from "@prisma/client";
 import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
@@ -85,7 +85,7 @@ function normalizeTitle(value: string): string {
   return value
     .toLowerCase()
     .replace(/\([^)]*\)/g, "")
-    .replace(/[_\-–—]/g, " ")
+    .replace(/[_\-窶凪脳/g, " ")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
@@ -199,7 +199,7 @@ function buildFallbackMarkdown(targetLang: string, sources: WikiSource[]): strin
     .join("\n\n");
   const sentences = combined
     .replace(/#+\s*/g, "")
-    .split(/[。．.!?]\s+/)
+    .split(/[縲ゑｼ・!?]\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
   const summary = sentences.slice(0, 5).map((s) => `- ${s}`);
@@ -296,8 +296,11 @@ function extractTitleKeywords(title: string) {
 function extractRelatedLinksFromWikitext(wikitext: string): string[] {
   if (!wikitext) return [];
   const headings = ["See also", "Related", "関連項目", "関連事項", "関連作品"];
+  const escapedHeadings = headings
+    .map((h) => h.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&"))
+    .join("|");
   const headingPattern = new RegExp(
-    `==\\s*(${headings.map((h) => h.replace(/[.*+?^${}()|[\\]\\\\]/g, \"\\\\$&\")).join(\"|\")})\\s*==([\\s\\S]*?)(?==\\s*[^=]+\\s*==|$)`,
+    "==\\s*(" + escapedHeadings + ")\\s*==([\\s\\S]*?)(?==\\s*[^=]+\\s*==|$)",
     "i"
   );
   const match = wikitext.match(headingPattern);
@@ -341,8 +344,8 @@ function extractInfoboxMediaTitles(wikitext: string): string[] {
 
 function appendRelatedLinks(body: string, links: string[], targetLang: string): string {
   if (!links.length) return body;
-  if (/^##\s*(Related|関連)/im.test(body)) return body;
-  const header = /^ja/i.test(targetLang) ? "## 関連項目" : "## Related";
+  if (/^##\s*(Related|髢｢騾｣)/im.test(body)) return body;
+  const header = /^ja/i.test(targetLang) ? "## 髢｢騾｣鬆・岼" : "## Related";
   const list = links.slice(0, 12).map((title) => `- ${title}`).join("\n");
   const sourcesMatch = body.match(/\n##\s*Sources\b/i);
   if (!sourcesMatch) {
@@ -1328,3 +1331,5 @@ export async function POST(request: Request) {
   const redirectPath = `${toWikiPath(entity.title)}?id=${entity.id}`;
   return NextResponse.redirect(toRedirectUrl(request, redirectPath));
 }
+
+
