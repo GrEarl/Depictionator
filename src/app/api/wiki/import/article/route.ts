@@ -720,32 +720,6 @@ export async function POST(request: Request) {
     );
     mediaEntries.push(...mediaLists.flat());
 
-    const pageTitleKeywords = extractTitleKeywords(page.title);
-    const needsCommonsFallback =
-      mediaEntries.length < Math.max(DEFAULT_GALLERY_MIN_COUNT * 3, 8);
-    if (needsCommonsFallback) {
-      const commonsLimit = Math.min(
-        12,
-        Math.max(0, DEFAULT_MEDIA_LIMIT - mediaEntries.length)
-      );
-      if (commonsLimit > 0) {
-        const commonsTitles = await fetchCommonsSearchImages(page.title, commonsLimit);
-        const filteredCommons = commonsTitles
-          .filter((title) => !shouldSkipMediaTitle(title))
-          .filter((title) => {
-            if (!pageTitleKeywords.length) return true;
-            const normalized = normalizeMediaTitle(title);
-            return pageTitleKeywords.some((keyword) => normalized.includes(keyword));
-          });
-        mediaEntries.push(
-          ...filteredCommons.map((title) => ({
-            title,
-            lang: "commons"
-          }))
-        );
-      }
-    }
-
     // Deduplicate
     const seen = new Set<string>();
     const deduped = mediaEntries.filter((entry) => {
@@ -757,6 +731,30 @@ export async function POST(request: Request) {
 
     // Step 2: Pre-filter obvious UI elements
     const prefiltered = deduped.filter((entry) => !shouldSkipMediaTitle(entry.title));
+    const pageTitleKeywords = extractTitleKeywords(page.title);
+    const commonsThreshold = Math.max(DEFAULT_GALLERY_MIN_COUNT * 2, 6);
+    if (prefiltered.length < commonsThreshold) {
+      const commonsLimit = Math.min(
+        12,
+        Math.max(0, DEFAULT_MEDIA_LIMIT - prefiltered.length)
+      );
+      if (commonsLimit > 0) {
+        const commonsTitles = await fetchCommonsSearchImages(page.title, commonsLimit);
+        for (const title of commonsTitles) {
+          if (shouldSkipMediaTitle(title)) continue;
+          const normalizedKey = title.toLowerCase();
+          if (seen.has(normalizedKey)) continue;
+          if (pageTitleKeywords.length) {
+            const normalized = normalizeMediaTitle(title);
+            if (!pageTitleKeywords.some((keyword) => normalized.includes(keyword))) {
+              continue;
+            }
+          }
+          seen.add(normalizedKey);
+          prefiltered.push({ title, lang: "commons" });
+        }
+      }
+    }
     const limited = mediaLimit > 0 ? prefiltered.slice(0, mediaLimit) : prefiltered;
 
     // Step 3: Fetch media info for all candidates
