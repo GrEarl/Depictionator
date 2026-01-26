@@ -782,6 +782,48 @@ export async function POST(request: Request) {
       }
     }
 
+    const mediaInfoThreshold = Math.max(DEFAULT_GALLERY_MIN_COUNT * 2, 6);
+    if (mediaInfoList.length < mediaInfoThreshold) {
+      const commonsLimit = Math.min(
+        12,
+        Math.max(0, DEFAULT_MEDIA_LIMIT - mediaInfoList.length)
+      );
+      if (commonsLimit > 0) {
+        const pageTitleKeywords = extractTitleKeywords(page.title);
+        const existingMediaKeys = new Set(
+          mediaInfoList
+            .map(({ info }) => info?.title)
+            .filter(Boolean)
+            .map((title) => normalizeMediaTitle(String(title)))
+        );
+        const commonsTitles = await fetchCommonsSearchImages(page.title, commonsLimit);
+        for (const title of commonsTitles) {
+          if (shouldSkipMediaTitle(title)) continue;
+          const normalized = normalizeMediaTitle(title);
+          if (existingMediaKeys.has(normalized) || existingMediaKeys.has(stripExtension(normalized))) {
+            continue;
+          }
+          if (pageTitleKeywords.length) {
+            if (!pageTitleKeywords.some((keyword) => normalized.includes(keyword))) {
+              continue;
+            }
+          }
+          try {
+            const info = await fetchWikiImageInfo("commons", title);
+            if (info && (!mediaMaxBytes || !info.size || info.size <= mediaMaxBytes)) {
+              if (!shouldSkipMediaInfo(info)) {
+                mediaInfoList.push({ entry: { title, lang: "commons" }, info });
+                existingMediaKeys.add(normalized);
+                existingMediaKeys.add(stripExtension(normalized));
+              }
+            }
+          } catch {
+            // ignore failed media info
+          }
+        }
+      }
+    }
+
     // Step 4: Use LLM to analyze media relevance
     let analysisResults: MediaRelevanceResult[] = [];
 
