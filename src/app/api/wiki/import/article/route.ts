@@ -284,6 +284,15 @@ function stripExtension(title: string) {
   return title.replace(/\.[a-z0-9]+$/i, "");
 }
 
+function extractTitleKeywords(title: string) {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .map((token) => token.trim())
+    .filter((token) => token && token.length >= 2 && /[a-z]/.test(token));
+}
+
 const REFERENCE_MEDIA_KEYWORDS = [
   "diagram",
   "schematic",
@@ -903,6 +912,7 @@ export async function POST(request: Request) {
       (item) => item.relevant && item.placement === "gallery"
     ).length;
     if (finalGalleryCount < DEFAULT_GALLERY_MIN_COUNT) {
+      const titleKeywords = extractTitleKeywords(page.title);
       const candidates = mediaInfoList
         .map(({ info }) => info)
         .filter((info): info is NonNullable<typeof info> => Boolean(info))
@@ -913,7 +923,16 @@ export async function POST(request: Request) {
           return bScore - aScore;
         });
 
-      for (const info of candidates) {
+      const matchByTitle = (info: NonNullable<typeof info>) => {
+        if (!titleKeywords.length) return true;
+        const normalized = normalizeMediaTitle(info.title);
+        return titleKeywords.some((token) => normalized.includes(token));
+      };
+
+      const fallbackPool = candidates.filter(matchByTitle);
+      const pool = fallbackPool.length ? fallbackPool : candidates;
+
+      for (const info of pool) {
         if (finalGalleryCount >= DEFAULT_GALLERY_MIN_COUNT) break;
         const normalized = normalizeMediaTitle(info.title);
         const existing = analysisLookup.get(normalized) ?? analysisLookup.get(stripExtension(normalized));
