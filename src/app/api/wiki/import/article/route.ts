@@ -315,6 +315,10 @@ function extractRelatedLinksFromWikitext(wikitext: string): string[] {
   return Array.from(new Set(links));
 }
 
+function cleanMediaTitle(value: string): string {
+  return value.replace(/^(File|Image):/i, "").trim();
+}
+
 function extractInfoboxMediaTitles(wikitext: string): string[] {
   if (!wikitext) return [];
   const start = wikitext.search(/\{\{[Ii]nfobox/);
@@ -343,7 +347,16 @@ function extractInfoboxMediaTitles(wikitext: string): string[] {
     ...Array.from(infobox.matchAll(filePattern)).map((m) => String(m[2] ?? "").trim()),
     ...Array.from(infobox.matchAll(filenamePattern)).map((m) => String(m[1] ?? "").trim())
   ];
-  return Array.from(new Set(matches.filter(Boolean)));
+  return Array.from(new Set(matches.map(cleanMediaTitle).filter(Boolean)));
+}
+
+function extractAudioMediaTitles(wikitext: string): string[] {
+  if (!wikitext) return [];
+  const filenamePattern = /(?:filename|file|audio|sound)\s*=\s*([^\|\}\n\r]+?\.(?:ogg|oga|mp3|wav|flac|webm|mp4))/gi;
+  const matches = Array.from(wikitext.matchAll(filenamePattern)).map((m) =>
+    String(m[1] ?? "").trim()
+  );
+  return Array.from(new Set(matches.map(cleanMediaTitle).filter(Boolean)));
 }
 
 function appendRelatedLinks(body: string, links: string[], targetLang: string): string {
@@ -775,6 +788,10 @@ export async function POST(request: Request) {
     }
     const infoboxMediaTitles = extractInfoboxMediaTitles(page.wikitext || "");
     for (const title of infoboxMediaTitles) {
+      mediaEntries.push({ title, lang: pageLang });
+    }
+    const listenMediaTitles = extractAudioMediaTitles(page.wikitext || "");
+    for (const title of listenMediaTitles) {
       mediaEntries.push({ title, lang: pageLang });
     }
 
