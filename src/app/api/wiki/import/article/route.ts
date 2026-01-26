@@ -336,6 +336,7 @@ type ImportedAssetWithMeta = ImportedAsset & {
   inlineSection?: string;
   priority: number;
 };
+type MediaInfo = NonNullable<Awaited<ReturnType<typeof fetchWikiImageInfo>>>;
 
 function buildSmartMediaSection(assets: ImportedAssetWithMeta[]): string | null {
   // Only include gallery items in Media section (inline items will be placed in-text by LLM)
@@ -923,7 +924,7 @@ export async function POST(request: Request) {
           return bScore - aScore;
         });
 
-      const matchByTitle = (info: NonNullable<typeof info>) => {
+      const matchByTitle = (info: MediaInfo) => {
         if (!titleKeywords.length) return true;
         const normalized = normalizeMediaTitle(info.title);
         return titleKeywords.some((token) => normalized.includes(token));
