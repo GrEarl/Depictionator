@@ -338,14 +338,18 @@ function extractInfoboxMediaTitles(wikitext: string): string[] {
   }
   const infobox = end > start ? wikitext.slice(start, end) : wikitext.slice(start);
   const filePattern = /(File|Image):([^\]|}\n\r]+?\.(?:ogg|oga|mp3|wav|flac|webm|mp4))/gi;
-  const matches = Array.from(infobox.matchAll(filePattern)).map((m) => String(m[2] ?? "").trim());
+  const filenamePattern = /(?:filename|file|audio|sound)\s*=\s*([^\|\}\n\r]+?\.(?:ogg|oga|mp3|wav|flac|webm|mp4))/gi;
+  const matches = [
+    ...Array.from(infobox.matchAll(filePattern)).map((m) => String(m[2] ?? "").trim()),
+    ...Array.from(infobox.matchAll(filenamePattern)).map((m) => String(m[1] ?? "").trim())
+  ];
   return Array.from(new Set(matches.filter(Boolean)));
 }
 
 function appendRelatedLinks(body: string, links: string[], targetLang: string): string {
   if (!links.length) return body;
-  if (/^##\s*(Related|髢｢騾｣)/im.test(body)) return body;
-  const header = /^ja/i.test(targetLang) ? "## 髢｢騾｣鬆・岼" : "## Related";
+  if (/^##\s*(Related|関連項目|関連事項|関連作品)/im.test(body)) return body;
+  const header = /^ja/i.test(targetLang) ? "## 関連項目" : "## Related";
   const list = links.slice(0, 12).map((title) => `- ${title}`).join("\n");
   const sourcesMatch = body.match(/\n##\s*Sources\b/i);
   if (!sourcesMatch) {
