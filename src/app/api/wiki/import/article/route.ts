@@ -34,6 +34,7 @@ const DEFAULT_LANG_LIMIT = Number(process.env.WIKI_IMPORT_LANG_LIMIT ?? "10");
 const DEFAULT_MEDIA_LIMIT = Number(process.env.WIKI_IMPORT_MEDIA_LIMIT ?? "50");
 const DEFAULT_MEDIA_MAX_BYTES = Number(process.env.WIKI_IMPORT_MEDIA_MAX_BYTES ?? `${200 * 1024 * 1024}`);
 const DEFAULT_MEDIA_MIN_DIM = Number(process.env.WIKI_IMPORT_MEDIA_MIN_DIM ?? "200");
+const DEFAULT_GALLERY_MIN_COUNT = Number(process.env.WIKI_IMPORT_GALLERY_MIN ?? "3");
 const DEFAULT_SKIP_UI_MEDIA = String(process.env.WIKI_IMPORT_SKIP_UI_MEDIA ?? "true") === "true";
 const DEFAULT_VERIFY_LIMIT = Number(process.env.WIKI_IMPORT_VERIFY_LIMIT ?? "3");
 const DEFAULT_MIN_BODY_CHARS = Number(process.env.WIKI_IMPORT_MIN_CHARS ?? "600");
@@ -864,7 +865,7 @@ export async function POST(request: Request) {
     const galleryCount = analysisResults.filter(
       (item) => item.relevant && item.placement === "gallery"
     ).length;
-    if (galleryCount < 3) {
+    if (galleryCount < DEFAULT_GALLERY_MIN_COUNT) {
       for (const { info } of mediaInfoList) {
         if (!info) continue;
         if (!info.mime.startsWith("image/")) continue;
@@ -894,6 +895,52 @@ export async function POST(request: Request) {
         });
         analysisLookup.set(normalized, analysisResults[analysisResults.length - 1]);
         analysisLookup.set(stripExtension(normalized), analysisResults[analysisResults.length - 1]);
+      }
+    }
+
+    // If gallery is still too small, add top images by size as a final fallback
+    let finalGalleryCount = analysisResults.filter(
+      (item) => item.relevant && item.placement === "gallery"
+    ).length;
+    if (finalGalleryCount < DEFAULT_GALLERY_MIN_COUNT) {
+      const candidates = mediaInfoList
+        .map(({ info }) => info)
+        .filter((info): info is NonNullable<typeof info> => Boolean(info))
+        .filter((info) => info.mime?.startsWith("image/"))
+        .sort((a, b) => {
+          const aScore = a.size ?? ((a.width ?? 0) * (a.height ?? 0));
+          const bScore = b.size ?? ((b.width ?? 0) * (b.height ?? 0));
+          return bScore - aScore;
+        });
+
+      for (const info of candidates) {
+        if (finalGalleryCount >= DEFAULT_GALLERY_MIN_COUNT) break;
+        const normalized = normalizeMediaTitle(info.title);
+        const existing = analysisLookup.get(normalized) ?? analysisLookup.get(stripExtension(normalized));
+        if (existing) {
+          if (existing.placement === "infobox" || existing.placement === "inline") continue;
+          if (!existing.relevant || existing.placement === "exclude") {
+            existing.relevant = true;
+          }
+          if (existing.placement !== "gallery") {
+            existing.placement = "gallery";
+          }
+          existing.reason = existing.reason || "Fallback - gallery fill";
+          existing.priority = Math.min(existing.priority || 5, 5);
+        } else {
+          analysisResults.push({
+            title: info.title,
+            relevant: true,
+            reason: "Fallback - gallery fill",
+            placement: "gallery",
+            suggestedCaption: info.title,
+            priority: 5
+          });
+          const inserted = analysisResults[analysisResults.length - 1];
+          analysisLookup.set(normalized, inserted);
+          analysisLookup.set(stripExtension(normalized), inserted);
+        }
+        finalGalleryCount += 1;
       }
     }
 
