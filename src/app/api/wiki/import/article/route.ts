@@ -85,7 +85,7 @@ function normalizeTitle(value: string): string {
   return value
     .toLowerCase()
     .replace(/\([^)]*\)/g, "")
-    .replace(/[_\-窶凪脳/g, " ")
+    .replace(/[_-]+/g, " ")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .replace(/\s+/g, " ")
     .trim();
