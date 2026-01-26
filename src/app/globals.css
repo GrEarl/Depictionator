@@ -1939,7 +1939,9 @@ button[type="submit"]:hover {
 .article-toc-inline {
   clear: both;
   margin: 16px 0;
-  max-width: 100%;
+  display: inline-block;
+  width: fit-content;
+  max-width: 320px;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -3149,6 +3151,11 @@ button[type="submit"]:hover {
 
   .article-title-row {
     flex-direction: column;
+  }
+
+  .article-toc-inline {
+    width: 100%;
+    max-width: 100%;
   }
 }
 
