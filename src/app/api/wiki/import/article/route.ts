@@ -282,6 +282,39 @@ function stripExtension(title: string) {
   return title.replace(/\.[a-z0-9]+$/i, "");
 }
 
+const REFERENCE_MEDIA_KEYWORDS = [
+  "diagram",
+  "schematic",
+  "schematics",
+  "blueprint",
+  "blue print",
+  "cutaway",
+  "cross-section",
+  "cross section",
+  "orthographic",
+  "plan",
+  "outline",
+  "drawing",
+  "technical",
+  "profile",
+  "side view",
+  "top view",
+  "front view",
+  "rear view",
+  "section",
+  "elevation",
+  "layout",
+  "dimension",
+  "dimensions",
+  "spec",
+  "specs"
+];
+
+function isReferenceMediaTitle(title: string) {
+  const normalized = title.toLowerCase().replace(/[_\-]+/g, " ");
+  return REFERENCE_MEDIA_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
+
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -483,6 +516,15 @@ export async function POST(request: Request) {
   let sources: WikiSource[] = [{ lang: pageLang, page }];
   let bodyMd = "";
   let usedLlm = false;
+  const imagePlacements = extractWikitextImagePlacements(page.wikitext || "");
+  const placementMap = new Map<string, WikitextImagePlacement>();
+  for (const placement of imagePlacements) {
+    const normalized = normalizeMediaTitle(placement.filename);
+    if (!normalized) continue;
+    if (!placementMap.has(normalized)) placementMap.set(normalized, placement);
+    const stripped = stripExtension(normalized);
+    if (!placementMap.has(stripped)) placementMap.set(stripped, placement);
+  }
 
   if (useLlm) {
     if (aggregateLangs) {
@@ -658,7 +700,10 @@ export async function POST(request: Request) {
           info = await fetchWikiImageInfo("commons", entry.title);
         }
         if (info && (!mediaMaxBytes || !info.size || info.size <= mediaMaxBytes)) {
-          if (!shouldSkipMediaInfo(info)) {
+          const normalized = normalizeMediaTitle(info.title);
+          const placementHit =
+            placementMap.has(normalized) || placementMap.has(stripExtension(normalized));
+          if (!shouldSkipMediaInfo(info) || placementHit) {
             mediaInfoList.push({ entry, info });
           }
         }
@@ -679,9 +724,7 @@ export async function POST(request: Request) {
         size: info!.size
       }));
 
-      // Extract image placements from wikitext
       const wikitext = page.wikitext || "";
-      const imagePlacements = extractWikitextImagePlacements(wikitext);
 
       // Build and execute analysis prompt
       const analysisPrompt = buildMediaAnalysisPrompt(
@@ -786,6 +829,72 @@ export async function POST(request: Request) {
     };
     ensureInfoboxMedia("audio/", "Auto-selected audio for infobox");
     ensureInfoboxMedia("video/", "Auto-selected video for infobox");
+
+    // Promote images referenced in wikitext placements
+    for (const [key, placement] of placementMap) {
+      const existing =
+        analysisLookup.get(key) ?? analysisLookup.get(stripExtension(key)) ?? null;
+      if (existing) {
+        if (!existing.relevant || existing.placement === "exclude") {
+          existing.relevant = true;
+        }
+        existing.placement = placement.isInfobox ? "infobox" : "inline";
+        if (!existing.suggestedCaption && placement.caption) {
+          existing.suggestedCaption = placement.caption;
+        }
+        if (!existing.inlineSection && !placement.isInfobox) {
+          existing.inlineSection = placement.section;
+        }
+        existing.priority = Math.min(existing.priority || 3, placement.isInfobox ? 1 : 3);
+        continue;
+      }
+      analysisResults.push({
+        title: placement.filename,
+        relevant: true,
+        reason: "Referenced in article wikitext",
+        placement: placement.isInfobox ? "infobox" : "inline",
+        suggestedCaption: placement.caption || placement.filename,
+        priority: placement.isInfobox ? 1 : 3,
+        inlineSection: placement.isInfobox ? undefined : placement.section
+      });
+    }
+
+    // If we have too few gallery images, include reference/diagram assets by title
+    const galleryCount = analysisResults.filter(
+      (item) => item.relevant && item.placement === "gallery"
+    ).length;
+    if (galleryCount < 3) {
+      for (const { info } of mediaInfoList) {
+        if (!info) continue;
+        if (!info.mime.startsWith("image/")) continue;
+        if (!isReferenceMediaTitle(info.title)) continue;
+        const normalized = normalizeMediaTitle(info.title);
+        const existing = analysisLookup.get(normalized) ?? analysisLookup.get(stripExtension(normalized));
+        if (existing) {
+          if (!existing.relevant || existing.placement === "exclude") {
+            existing.relevant = true;
+          }
+          if (existing.placement === "exclude") {
+            existing.placement = "gallery";
+          }
+          if (existing.placement !== "infobox" && existing.placement !== "inline") {
+            existing.placement = "gallery";
+          }
+          existing.reason = existing.reason || "Reference diagram/title match";
+          continue;
+        }
+        analysisResults.push({
+          title: info.title,
+          relevant: true,
+          reason: "Reference diagram/title match",
+          placement: "gallery",
+          suggestedCaption: info.title,
+          priority: 4
+        });
+        analysisLookup.set(normalized, analysisResults[analysisResults.length - 1]);
+        analysisLookup.set(stripExtension(normalized), analysisResults[analysisResults.length - 1]);
+      }
+    }
 
     // Create a map for quick lookup (normalize titles & strip extensions)
     const analysisMap = new Map<string, MediaRelevanceResult>();
