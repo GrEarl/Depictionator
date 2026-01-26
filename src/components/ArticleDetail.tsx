@@ -277,72 +277,74 @@ export function ArticleDetail({
         <div className="article-main-content">
           {tab === "read" && (
             <>
-              {/* Infobox with image */}
-              {showInfobox && (
-                <Infobox
-                  title={displayTitle}
-                  image={
-                    mainImage
-                      ? {
-                          src: `/api/assets/file/${mainImage.id}`,
-                          alt: displayTitle,
-                          caption: entity.summaryMd?.split("\n")[0] || displayTitle
-                        }
-                      : undefined
-                  }
-                  audio={infoboxMedia?.audio?.map((a: { assetId: string; caption?: string }) => ({
-                    src: `/api/assets/file/${a.assetId}`,
-                    caption: a.caption
-                  }))}
-                  video={infoboxMedia?.video?.map((v: { assetId: string; caption?: string }) => ({
-                    src: `/api/assets/file/${v.assetId}`,
-                    caption: v.caption
-                  }))}
-                  rows={[
-                    { label: "Type", value: entity.type },
-                    { label: "Status", value: entity.status },
-                    ...(entity.worldExistFrom || entity.worldExistTo ? [{
-                      label: "Period",
-                      value: `${entity.worldExistFrom || '?'} - ${entity.worldExistTo || '?'}`
-                    }] : []),
-                    ...(parentEntity ? [{
-                      label: "Part of",
-                      value: <Link href={toWikiPath(parentEntity.title)} className="entity-link">{parentEntity.title}</Link>
-                    }] : []),
-                    ...(locations && locations.length > 0 ? [{
-                      label: "Locations",
-                      value: locations.length.toString()
-                    }] : []),
-                  ]}
-                />
-              )}
-
-              {/* Summary/Lead section */}
-              {entity.summaryMd && (
-                <div className="article-summary">
-                  <MarkdownView value={linkedSummary} />
-                </div>
-              )}
-
-              {/* Table of Contents */}
-              {hasRenderBody && (
-                <div className="article-toc-inline">
-                  <MarkdownToc value={renderBody} />
-                </div>
-              )}
-
-              {/* Main Body */}
               <div className="read-view">
-                {hasRenderBody ? (
-                  <MarkdownView value={linkedBody} />
-                ) : (
-                  <div className="empty-content">
-                    <p>This article has no content yet.</p>
-                    <button className="btn-primary" onClick={() => setTab("edit")}>
-                      Start writing
-                    </button>
+                {/* Infobox with image */}
+                {showInfobox && (
+                  <Infobox
+                    title={displayTitle}
+                    image={
+                      mainImage
+                        ? {
+                            src: `/api/assets/file/${mainImage.id}`,
+                            alt: displayTitle,
+                            caption: entity.summaryMd?.split("\n")[0] || displayTitle
+                          }
+                        : undefined
+                    }
+                    audio={infoboxMedia?.audio?.map((a: { assetId: string; caption?: string }) => ({
+                      src: `/api/assets/file/${a.assetId}`,
+                      caption: a.caption
+                    }))}
+                    video={infoboxMedia?.video?.map((v: { assetId: string; caption?: string }) => ({
+                      src: `/api/assets/file/${v.assetId}`,
+                      caption: v.caption
+                    }))}
+                    rows={[
+                      { label: "Type", value: entity.type },
+                      { label: "Status", value: entity.status },
+                      ...(entity.worldExistFrom || entity.worldExistTo ? [{
+                        label: "Period",
+                        value: `${entity.worldExistFrom || '?'} - ${entity.worldExistTo || '?'}`
+                      }] : []),
+                      ...(parentEntity ? [{
+                        label: "Part of",
+                        value: <Link href={toWikiPath(parentEntity.title)} className="entity-link">{parentEntity.title}</Link>
+                      }] : []),
+                      ...(locations && locations.length > 0 ? [{
+                        label: "Locations",
+                        value: locations.length.toString()
+                      }] : []),
+                    ]}
+                  />
+                )}
+
+                {/* Summary/Lead section */}
+                {entity.summaryMd && (
+                  <div className="article-summary">
+                    <MarkdownView value={linkedSummary} />
                   </div>
                 )}
+
+                {/* Table of Contents */}
+                {hasRenderBody && (
+                  <div className="article-toc-inline">
+                    <MarkdownToc value={renderBody} />
+                  </div>
+                )}
+
+                {/* Main Body */}
+                <div className="read-body">
+                  {hasRenderBody ? (
+                    <MarkdownView value={linkedBody} />
+                  ) : (
+                    <div className="empty-content">
+                      <p>This article has no content yet.</p>
+                      <button className="btn-primary" onClick={() => setTab("edit")}>
+                        Start writing
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Child Entities */}

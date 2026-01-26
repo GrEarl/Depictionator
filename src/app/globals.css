@@ -1923,24 +1923,32 @@ button[type="submit"]:hover {
   overflow-y: auto;
 }
 
-.article-summary,
 .read-view {
   border-radius: 12px;
   border: 1px solid var(--border);
   background: var(--bg-elevated);
   padding: 16px;
+  overflow: visible;
+}
+
+.article-summary {
+  margin-bottom: 12px;
 }
 
 /* TOC inline - Wikipedia style, no heavy border */
 .article-toc-inline {
-  float: right;
-  margin: 0 0 16px 24px;
-  max-width: 280px;
+  clear: both;
+  margin: 16px 0;
+  max-width: 100%;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
   padding: 12px 16px;
   font-size: 13px;
+}
+
+.read-body {
+  margin-top: 12px;
 }
 
 .empty-content {
