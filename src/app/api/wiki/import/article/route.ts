@@ -451,6 +451,24 @@ type ImportedAssetWithMeta = ImportedAsset & {
 };
 type MediaInfo = NonNullable<Awaited<ReturnType<typeof fetchWikiImageInfo>>>;
 
+const AUDIO_EXTENSIONS = [".ogg", ".oga", ".mp3", ".wav", ".flac"];
+const VIDEO_EXTENSIONS = [".webm", ".mp4"];
+
+function isAudioFile(info: MediaInfo) {
+  const mime = (info.mime || "").toLowerCase();
+  const title = info.title.toLowerCase();
+  if (mime.startsWith("audio/")) return true;
+  if (mime === "application/ogg" || mime === "application/x-ogg") return true;
+  return AUDIO_EXTENSIONS.some((ext) => title.endsWith(ext));
+}
+
+function isVideoFile(info: MediaInfo) {
+  const mime = (info.mime || "").toLowerCase();
+  const title = info.title.toLowerCase();
+  if (mime.startsWith("video/")) return true;
+  return VIDEO_EXTENSIONS.some((ext) => title.endsWith(ext));
+}
+
 function buildSmartMediaSection(assets: ImportedAssetWithMeta[]): string | null {
   // Only include gallery items in Media section (inline items will be placed in-text by LLM)
   const galleryAssets = assets.filter((a) => a.placement === "gallery");
@@ -982,11 +1000,11 @@ export async function POST(request: Request) {
       analysisLookup.set(normalized, result);
       analysisLookup.set(stripExtension(normalized), result);
     }
-    const ensureInfoboxMedia = (mimePrefix: string, reason: string) => {
+    const ensureInfoboxMedia = (filter: (info: MediaInfo) => boolean, reason: string) => {
       const candidates = mediaInfoList
         .map(({ info }) => info)
         .filter((info): info is NonNullable<typeof info> => Boolean(info))
-        .filter((info) => info.mime?.startsWith(mimePrefix));
+        .filter(filter);
       if (!candidates.length) return;
 
       let hasInfobox = false;
@@ -1026,8 +1044,8 @@ export async function POST(request: Request) {
         analysisLookup.set(stripExtension(normalized), fallbackResult);
       }
     };
-    ensureInfoboxMedia("audio/", "Auto-selected audio for infobox");
-    ensureInfoboxMedia("video/", "Auto-selected video for infobox");
+    ensureInfoboxMedia(isAudioFile, "Auto-selected audio for infobox");
+    ensureInfoboxMedia(isVideoFile, "Auto-selected video for infobox");
 
     // Promote images referenced in wikitext placements
     for (const [key, placement] of placementMap) {
@@ -1194,12 +1212,12 @@ export async function POST(request: Request) {
         if (analysis.placement === "infobox") {
           if (info.mime.startsWith("image/") && !mainImageId) {
             mainImageId = asset.id;
-          } else if (info.mime.startsWith("audio/")) {
+          } else if (isAudioFile(info)) {
             infoboxAudio.push({
               assetId: asset.id,
               caption: analysis.suggestedCaption || info.title
             });
-          } else if (info.mime.startsWith("video/")) {
+          } else if (isVideoFile(info)) {
             infoboxVideo.push({
               assetId: asset.id,
               caption: analysis.suggestedCaption || info.title
