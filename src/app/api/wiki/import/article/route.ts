@@ -142,20 +142,37 @@ function renderPromptTemplate(template: string, targetLang: string, sources: Wik
       return `SOURCE [${source.lang}] ${source.page.title}\nURL: ${source.page.url}\nCONTENT:\n${clipped}`;
     })
     .join("\n\n");
+  const importRules = buildImportRules(targetLang);
   const replacements: Record<string, string> = {
-    targetLang,
+    targetlang: targetLang,
+    target_lang: targetLang,
+    language: targetLang,
+    lang: targetLang,
+    output_lang: targetLang,
     source_list: sourceList,
+    sourcelist: sourceList,
+    sources_list: sourceList,
     sources: bodies,
-    source_count: String(sources.length)
+    source_block: bodies,
+    sourceblock: bodies,
+    sources_block: bodies,
+    sources_text: bodies,
+    source_text: bodies,
+    source_count: String(sources.length),
+    import_rules: importRules,
+    rules: importRules
   };
   const renderedBody = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
-    if (key in replacements) return replacements[key];
+    const normalizedKey = key.toLowerCase();
+    if (normalizedKey in replacements) return replacements[normalizedKey];
     return match;
   });
-  const rendered = `${buildImportRules(targetLang)}\n\n${renderedBody}`.trim();
+  const includesRulesPlaceholder = /\{\{\s*(import_rules|rules)\s*\}\}/i.test(template);
+  const rendered = (includesRulesPlaceholder ? renderedBody : `${importRules}\n\n${renderedBody}`).trim();
 
-  if (!rendered.includes(sourceList) && !rendered.includes("SOURCE [")) {
-    return `${rendered}\n\nSources:\n${sourceList}\n\n${bodies}`;
+  const hasAnySourceUrl = sources.some((source) => rendered.includes(source.page.url));
+  if (!hasAnySourceUrl && !/SOURCE \[/i.test(rendered)) {
+    return `${rendered}\n\nSources:\n${sourceList}\n\n${bodies}`.trim();
   }
   return rendered;
 }
