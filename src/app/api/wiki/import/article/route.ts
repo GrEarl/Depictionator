@@ -16,6 +16,7 @@ import {
   resolveWikiPageWithFallback,
   safeFilename,
   extractWikitextImagePlacements,
+  type WikitextImagePlacement,
   buildMediaAnalysisPrompt,
   parseMediaAnalysisResponse,
   type MediaAnalysisItem,
