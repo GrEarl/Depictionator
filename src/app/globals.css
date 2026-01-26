@@ -2163,7 +2163,7 @@ button[type="submit"]:hover {
 
 /* Infobox (MediaWiki-style) */
 .markdown-infobox {
-  display: none;
+  display: block;
   float: right;
   clear: right;
   width: 280px;
