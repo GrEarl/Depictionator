@@ -293,6 +293,40 @@ function extractTitleKeywords(title: string) {
     .filter((token) => token && token.length >= 2 && /[a-z]/.test(token));
 }
 
+async function fetchCommonsSearchImages(query: string, limit: number): Promise<string[]> {
+  const trimmed = query.trim();
+  if (!trimmed || limit <= 0) return [];
+  const params = new URLSearchParams({
+    action: "query",
+    list: "search",
+    srsearch: trimmed,
+    srnamespace: "6",
+    srlimit: String(limit),
+    format: "json",
+    origin: "*"
+  });
+  const url = `https://commons.wikimedia.org/w/api.php?${params.toString()}`;
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Depictionator/1.0 (media import)"
+      }
+    });
+    if (!res.ok) return [];
+    const data = (await res.json()) as {
+      query?: { search?: Array<{ title?: string | null }> };
+    };
+    const titles = data?.query?.search ?? [];
+    return titles
+      .map((item) => String(item.title ?? "").trim())
+      .filter(Boolean)
+      .map((title) => title.replace(/^File:/i, "").trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
 const REFERENCE_MEDIA_KEYWORDS = [
   "diagram",
   "schematic",
@@ -685,6 +719,32 @@ export async function POST(request: Request) {
       })
     );
     mediaEntries.push(...mediaLists.flat());
+
+    const pageTitleKeywords = extractTitleKeywords(page.title);
+    const needsCommonsFallback =
+      mediaEntries.length < Math.max(DEFAULT_GALLERY_MIN_COUNT * 3, 8);
+    if (needsCommonsFallback) {
+      const commonsLimit = Math.min(
+        12,
+        Math.max(0, DEFAULT_MEDIA_LIMIT - mediaEntries.length)
+      );
+      if (commonsLimit > 0) {
+        const commonsTitles = await fetchCommonsSearchImages(page.title, commonsLimit);
+        const filteredCommons = commonsTitles
+          .filter((title) => !shouldSkipMediaTitle(title))
+          .filter((title) => {
+            if (!pageTitleKeywords.length) return true;
+            const normalized = normalizeMediaTitle(title);
+            return pageTitleKeywords.some((keyword) => normalized.includes(keyword));
+          });
+        mediaEntries.push(
+          ...filteredCommons.map((title) => ({
+            title,
+            lang: "commons"
+          }))
+        );
+      }
+    }
 
     // Deduplicate
     const seen = new Set<string>();
