@@ -148,6 +148,7 @@ function renderPromptTemplate(template: string, targetLang: string, sources: Wik
     target_lang: targetLang,
     language: targetLang,
     lang: targetLang,
+    outputlang: targetLang,
     output_lang: targetLang,
     source_list: sourceList,
     sourcelist: sourceList,
@@ -158,16 +159,26 @@ function renderPromptTemplate(template: string, targetLang: string, sources: Wik
     sources_block: bodies,
     sources_text: bodies,
     source_text: bodies,
+    sourcestext: bodies,
+    sourcetext: bodies,
     source_count: String(sources.length),
+    sourcecount: String(sources.length),
     import_rules: importRules,
+    importrules: importRules,
     rules: importRules
   };
-  const renderedBody = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (match, key) => {
-    const normalizedKey = key.toLowerCase();
-    if (normalizedKey in replacements) return replacements[normalizedKey];
-    return match;
-  });
-  const includesRulesPlaceholder = /\{\{\s*(import_rules|rules)\s*\}\}/i.test(template);
+  const replaceTokens = (input: string, pattern: RegExp) =>
+    input.replace(pattern, (match, key) => {
+      const normalizedKey = String(key).toLowerCase();
+      if (normalizedKey in replacements) return replacements[normalizedKey];
+      return match;
+    });
+  let renderedBody = replaceTokens(template, /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g);
+  renderedBody = replaceTokens(renderedBody, /\$\{\s*([a-zA-Z0-9_]+)\s*\}/g);
+  const includesRulesPlaceholder =
+    /(\{\{\s*(import_rules|importrules|rules)\s*\}\}|\$\{\s*(import_rules|importrules|rules)\s*\})/i.test(
+      template
+    );
   const rendered = (includesRulesPlaceholder ? renderedBody : `${importRules}\n\n${renderedBody}`).trim();
 
   const hasAnySourceUrl = sources.some((source) => rendered.includes(source.page.url));
