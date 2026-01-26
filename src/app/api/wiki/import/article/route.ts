@@ -293,6 +293,65 @@ function extractTitleKeywords(title: string) {
     .filter((token) => token && token.length >= 2 && /[a-z]/.test(token));
 }
 
+function extractRelatedLinksFromWikitext(wikitext: string): string[] {
+  if (!wikitext) return [];
+  const headings = ["See also", "Related", "関連項目", "関連事項", "関連作品"];
+  const headingPattern = new RegExp(
+    `==\\s*(${headings.map((h) => h.replace(/[.*+?^${}()|[\\]\\\\]/g, \"\\\\$&\")).join(\"|\")})\\s*==([\\s\\S]*?)(?==\\s*[^=]+\\s*==|$)`,
+    "i"
+  );
+  const match = wikitext.match(headingPattern);
+  if (!match) return [];
+  const sectionBody = match[2] ?? "";
+  const links = Array.from(sectionBody.matchAll(/\[\[([^|\]]+)(?:\|[^\]]+)?\]\]/g))
+    .map((m) => String(m[1] ?? "").trim())
+    .filter(Boolean)
+    .filter((title) => !/^File:/i.test(title))
+    .filter((title) => !/^Image:/i.test(title))
+    .filter((title) => !/^Category:/i.test(title));
+  return Array.from(new Set(links));
+}
+
+function extractInfoboxMediaTitles(wikitext: string): string[] {
+  if (!wikitext) return [];
+  const start = wikitext.search(/\{\{[Ii]nfobox/);
+  if (start < 0) return [];
+  let depth = 0;
+  let end = -1;
+  for (let i = start; i < wikitext.length - 1; i += 1) {
+    if (wikitext[i] === "{" && wikitext[i + 1] === "{") {
+      depth += 1;
+      i += 1;
+      continue;
+    }
+    if (wikitext[i] === "}" && wikitext[i + 1] === "}") {
+      depth -= 1;
+      i += 1;
+      if (depth === 0) {
+        end = i + 1;
+        break;
+      }
+    }
+  }
+  const infobox = end > start ? wikitext.slice(start, end) : wikitext.slice(start);
+  const filePattern = /(File|Image):([^\]|}\n\r]+?\.(?:ogg|oga|mp3|wav|flac|webm|mp4))/gi;
+  const matches = Array.from(infobox.matchAll(filePattern)).map((m) => String(m[2] ?? "").trim());
+  return Array.from(new Set(matches.filter(Boolean)));
+}
+
+function appendRelatedLinks(body: string, links: string[], targetLang: string): string {
+  if (!links.length) return body;
+  if (/^##\s*(Related|関連)/im.test(body)) return body;
+  const header = /^ja/i.test(targetLang) ? "## 関連項目" : "## Related";
+  const list = links.slice(0, 12).map((title) => `- ${title}`).join("\n");
+  const sourcesMatch = body.match(/\n##\s*Sources\b/i);
+  if (!sourcesMatch) {
+    return `${body}\n\n${header}\n${list}`.trim();
+  }
+  const index = sourcesMatch.index ?? body.length;
+  return `${body.slice(0, index).trim()}\n\n${header}\n${list}\n\n${body.slice(index).trim()}`.trim();
+}
+
 async function fetchCommonsSearchImages(query: string, limit: number): Promise<string[]> {
   const trimmed = query.trim();
   if (!trimmed || limit <= 0) return [];
@@ -706,6 +765,10 @@ export async function POST(request: Request) {
     const pageImageTitle = page.pageImageTitle?.replace(/^File:/i, "").trim();
     if (pageImageTitle) {
       mediaEntries.push({ title: pageImageTitle, lang: pageLang });
+    }
+    const infoboxMediaTitles = extractInfoboxMediaTitles(page.wikitext || "");
+    for (const title of infoboxMediaTitles) {
+      mediaEntries.push({ title, lang: pageLang });
     }
 
     const mediaLists = await Promise.all(
@@ -1198,6 +1261,16 @@ export async function POST(request: Request) {
   if (importedAssets.length) {
     importedAssets.sort((a, b) => a.priority - b.priority);
     bodyMd = appendMediaToMarkdown(bodyMd, importedAssets);
+  }
+  const relatedLinks = Array.from(
+    new Set(
+      sources.flatMap((source) =>
+        extractRelatedLinksFromWikitext(source.page.wikitext || "")
+      )
+    )
+  );
+  if (relatedLinks.length) {
+    bodyMd = appendRelatedLinks(bodyMd, relatedLinks, targetLang || preferredLang);
   }
 
   const revision = await prisma.articleRevision.create({
