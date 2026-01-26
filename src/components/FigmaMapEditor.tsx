@@ -764,6 +764,17 @@ export function FigmaMapEditor({
           }).addTo(draftLayer);
         } else if (currentMode === "path") {
           setPathPoints((prev) => [...prev, coords]);
+        } else if (currentMode === "card") {
+          const containerPoint = mapRef.current?.latLngToContainerPoint(event.latlng);
+          const newCard = {
+            id: `note-${Date.now()}`,
+            x: containerPoint?.x ?? 0,
+            y: containerPoint?.y ?? 0,
+            type: "note" as const,
+            title: "New note",
+            content: ""
+          };
+          setMapCards((prev) => [...prev, newCard]);
         } else if (currentMode === "select") {
           clearPinSelection();
           setSelectedPathId("");
@@ -2188,7 +2199,7 @@ export function FigmaMapEditor({
             {mode === "select" && "Select Mode (V) - Click pins to edit, drag to move"}
             {mode === "pin" && "Pin Mode (P) - Click on map to place a pin"}
             {mode === "path" && `Path Mode (L) - ${pathPoints.length} point${pathPoints.length !== 1 ? "s" : ""} ${pathPoints.length < 2 ? "(need 2+ to create)" : "ready"}`}
-            {mode === "card" && "Card Mode (C) - Drag entities onto map to create cards"}
+            {mode === "card" && "Card Mode (C) - Drag entities onto map or click to add a note card"}
           </div>
 
           {/* Evidence Cards Layer */}
