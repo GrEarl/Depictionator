@@ -285,6 +285,8 @@ model Workspace {
   mapCards    MapCard[]
   cardConnections CardConnection[]
   promptTemplates LlmPromptTemplate[]
+  externalSearchJobs ExternalSearchJob[]
+  externalSources ExternalSource[]
 }
 
 model LlmPromptTemplate {
@@ -331,6 +333,7 @@ model Entity {
   mainImageId        String?
   summaryMd          String?
   infoboxMediaJson   String?       // JSON: { audio: [{assetId, caption}], video: [{assetId, caption}] }
+  technicalSpecsJson String?       // JSON: Structured technical specifications for modeling
   embedding          Unsupported("vector(768)")?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
@@ -354,6 +357,7 @@ model Entity {
   relationsFrom EntityRelation[] @relation("RelationFrom")
   relationsTo   EntityRelation[] @relation("RelationTo")
   talkThreads   TalkThread[]
+  externalSearchJobs ExternalSearchJob[]
 
   @@index([workspaceId, type])
 }
@@ -711,6 +715,7 @@ model Asset {
   evidenceItems EvidenceItem[]
   references Reference[]
   entityMainImages Entity[] @relation("EntityMainImage")
+  externalSources ExternalSource[] @relation("ExternalSourceAsset")
 
   @@index([workspaceId])
 }
@@ -1145,4 +1150,81 @@ model CardConnection {
   toCard    MapCard   @relation("CardConnectionTo", fields: [toCardId], references: [id])
 
   @@index([workspaceId, mapId])
+}
+
+// ============================================
+// External Source Enrichment (ESE)
+// ============================================
+
+enum SearchJobStatus {
+  pending
+  searching
+  processing
+  completed
+  failed
+}
+
+enum ExternalSourceType {
+  google_search
+  wikipedia
+  wikimedia_commons
+  wikidata
+  youtube
+  flickr
+  freesound
+  internet_archive
+  academic
+  other
+}
+
+model ExternalSearchJob {
+  id              String          @id @default(cuid())
+  workspaceId     String
+  entityId        String?
+  query           String
+  entityType      EntityType
+  status          SearchJobStatus @default(pending)
+  sourcesConfig   String          // JSON: enabled sources, limits, options
+  resultsJson     String?         // JSON: aggregated results
+  technicalSpecs  String?         // JSON: extracted technical specifications
+  errorMessage    String?
+  createdAt       DateTime        @default(now())
+  completedAt     DateTime?
+  createdById     String?
+
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id])
+  entity          Entity?            @relation(fields: [entityId], references: [id])
+  externalSources ExternalSource[]
+
+  @@index([workspaceId, status])
+  @@index([entityId])
+}
+
+model ExternalSource {
+  id              String             @id @default(cuid())
+  workspaceId     String
+  jobId           String?
+  sourceType      ExternalSourceType
+  url             String
+  title           String
+  snippet         String?
+  contentJson     String?            // JSON: full extracted content
+  mediaUrls       String[]           // Discovered media URLs
+  relevanceScore  Float              @default(0)
+  licenseId       String?
+  licenseUrl      String?
+  author          String?
+  publishedAt     DateTime?
+  retrievedAt     DateTime           @default(now())
+  verified        Boolean            @default(false)
+  imported        Boolean            @default(false)
+  importedAssetId String?
+  metadata        String?            // JSON: additional metadata
+
+  workspace       Workspace           @relation(fields: [workspaceId], references: [id])
+  job             ExternalSearchJob?  @relation(fields: [jobId], references: [id])
+  importedAsset   Asset?              @relation("ExternalSourceAsset", fields: [importedAssetId], references: [id])
+
+  @@index([workspaceId, sourceType])
+  @@index([jobId])
 }
