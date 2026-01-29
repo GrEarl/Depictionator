@@ -502,6 +502,7 @@ export async function searchWikimediaCommons(
         url: imageInfo.url,
         title,
         snippet: result.snippet?.replace(/<[^>]*>/g, ""),
+        mediaUrls: [imageInfo.url],
         relevanceScore: 0.5,
         licenseId: imageInfo.licenseId ?? undefined,
         licenseUrl: imageInfo.licenseUrl ?? undefined,
@@ -861,6 +862,15 @@ export async function executeExternalSearch(
   const filteredSources = allSources.filter((s) => s.relevanceScore >= opts.minRelevanceScore);
   console.log(`[ESE] ${filteredSources.length} sources passed relevance filter`);
 
+  const licenseFilteredSources = opts.requireLicense
+    ? filteredSources.filter((s) => {
+        const hasMedia = (s.mediaUrls && s.mediaUrls.length > 0)
+          || ["wikimedia_commons", "flickr", "freesound", "youtube"].includes(s.sourceType);
+        if (!hasMedia) return true;
+        return Boolean(s.licenseId || s.licenseUrl);
+      })
+    : filteredSources;
+
   // 9. Extract technical specs (if enabled)
   let technicalSpecs: TechnicalSpecs | undefined;
   if (opts.extractTechnicalSpecs && filteredSources.length > 0) {
@@ -879,7 +889,7 @@ export async function executeExternalSearch(
   }
 
   return {
-    sources: filteredSources,
+    sources: licenseFilteredSources,
     technicalSpecs,
     mediaAssets,
   };
@@ -1121,4 +1131,3 @@ export async function verifyTechnicalSpecs(
     confidence,
   };
 }
-

@@ -127,9 +127,15 @@ export async function POST(request: Request) {
 
       for (const mediaUrl of mediaUrls.slice(0, 5)) {
         try {
+          const urlParts = new URL(mediaUrl);
+          const host = urlParts.hostname.toLowerCase();
+          const isWikiHost = host.endsWith(".wikimedia.org") || host.endsWith(".wikipedia.org");
+          if (!isWikiHost) {
+            continue;
+          }
+
           // For Wikimedia Commons URLs, extract the file info
-          if (mediaUrl.includes("wikimedia.org") || mediaUrl.includes("wikipedia.org")) {
-            const urlParts = new URL(mediaUrl);
+          {
             const pathParts = urlParts.pathname.split("/");
             const filename = decodeURIComponent(pathParts[pathParts.length - 1]);
 
@@ -227,12 +233,12 @@ export async function POST(request: Request) {
     );
 
     // Create article and revision
-    const existingArticle = await prisma.article.findUnique({
+    let article = await prisma.article.findUnique({
       where: { entityId: entity.id },
     });
 
-    if (!existingArticle) {
-      await prisma.article.create({
+    if (!article) {
+      article = await prisma.article.create({
         data: {
           entityId: entity.id,
           workspaceId,
@@ -244,7 +250,7 @@ export async function POST(request: Request) {
       data: {
         workspaceId,
         targetType: "base",
-        articleId: entity.id,
+        articleId: article.id,
         bodyMd: articleBody,
         changeSummary: `Synthesized from ${sources.length} external sources`,
         createdById: session.userId,
