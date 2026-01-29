@@ -1,7 +1,7 @@
 /**
  * Gemini Grounding with Google Search
  *
- * Uses Gemini 2.0+ models with built-in Google Search tool
+ * Uses Gemini 3 models with built-in Google Search tool
  * for real-time web grounding and fact verification.
  */
 
@@ -51,7 +51,7 @@ export interface GroundedSearchResult {
 // ============================================
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GROUNDING_MODEL = process.env.GEMINI_GROUNDING_MODEL ?? "gemini-2.0-flash";
+const GROUNDING_MODEL = process.env.GEMINI_GROUNDING_MODEL ?? "gemini-3-flash-preview";
 
 // ============================================
 // Helper Functions
