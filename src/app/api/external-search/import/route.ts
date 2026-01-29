@@ -250,7 +250,7 @@ export async function POST(request: Request) {
       data: {
         workspaceId,
         targetType: "base",
-        articleId: article.id,
+        articleId: article.entityId,
         bodyMd: articleBody,
         changeSummary: `Synthesized from ${sources.length} external sources`,
         createdById: session.userId,
