@@ -95,6 +95,7 @@ export async function GET(
     query: job.query,
     entityType: job.entityType,
     entityId: job.entityId,
+    searchMode: job.searchMode,
     createdAt: job.createdAt.toISOString(),
     completedAt: job.completedAt?.toISOString() || null,
     errorMessage: job.errorMessage,
@@ -102,5 +103,6 @@ export async function GET(
     sourceCount: sources.length,
     results: resultsJson,
     technicalSpecs,
+    deepResearchText: job.deepResearchText || null,
   });
 }

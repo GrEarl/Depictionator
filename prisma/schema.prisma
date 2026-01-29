@@ -1177,16 +1177,24 @@ enum ExternalSourceType {
   other
 }
 
+enum SearchMode {
+  standard
+  extended
+  deep
+}
+
 model ExternalSearchJob {
   id              String          @id @default(cuid())
   workspaceId     String
   entityId        String?
   query           String
   entityType      EntityType
+  searchMode      SearchMode      @default(standard)
   status          SearchJobStatus @default(pending)
   sourcesConfig   String          // JSON: enabled sources, limits, options
   resultsJson     String?         // JSON: aggregated results
   technicalSpecs  String?         // JSON: extracted technical specifications
+  deepResearchText String?        // Text from deep research mode
   errorMessage    String?
   createdAt       DateTime        @default(now())
   completedAt     DateTime?

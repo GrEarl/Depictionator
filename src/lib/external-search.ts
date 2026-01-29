@@ -676,87 +676,23 @@ export async function searchWithGeminiGrounding(
   query: string,
   entityType: EntityType,
   options: ExternalSearchOptions,
-  llmProvider: LlmProvider = "gemini_ai"
+  _llmProvider: LlmProvider = "gemini_ai"
 ): Promise<ExternalSource[]> {
-  const sources: ExternalSource[] = [];
-
-  const isModeling = options.modelingFocus || isModelingEntityType(entityType);
-
-  const prompt = isModeling
-    ? `Search for detailed technical information about "${query}" for 3D modeling reference.
-
-Find:
-1. Technical specifications (dimensions, materials, weight)
-2. Diagrams, blueprints, cross-section images
-3. Historical information and variants
-4. Manufacturing or construction details
-
-For each source found, extract:
-- URL
-- Title
-- Key facts and measurements
-- Whether it contains useful diagrams/images
-
-Respond with a structured list of sources and their key information.`
-    : `Search for comprehensive information about "${query}" for a worldbuilding reference database.
-
-Find:
-1. Overview and description
-2. Historical context
-3. Notable examples
-4. Related concepts
-
-For each source found, extract:
-- URL
-- Title
-- Key information
-
-Respond with a structured list of sources and their key information.`;
+  // Use the dedicated grounding module
+  const { executeGroundedSearch } = await import("./gemini-grounding");
 
   try {
-    // Note: This uses the standard generateText which doesn't have grounding enabled yet
-    // In a full implementation, we'd use the Gemini API directly with grounding tools
-    const response = await generateText({
-      provider: llmProvider,
-      prompt: `[SIMULATED GROUNDED SEARCH - In production, use Gemini API with googleSearch tool]
-
-${prompt}
-
-Since grounding is not fully implemented, return a JSON response with suggested search approaches:
-{
-  "searchQueries": ["query 1", "query 2"],
-  "suggestedSources": [
-    {"type": "wikipedia", "query": "..."},
-    {"type": "commons", "query": "..."}
-  ],
-  "note": "Use these queries with the respective APIs"
-}`,
+    const result = await executeGroundedSearch(query, entityType, {
+      modelingFocus: options.modelingFocus,
+      targetLang: options.targetLang,
+      maxSources: options.maxResultsPerSource,
     });
 
-    // Parse the response (this is a placeholder - real implementation would parse grounding results)
-    try {
-      const parsed = JSON.parse(response.replace(/```json\n?|\n?```/g, "").trim());
-      // Return as metadata for further processing
-      sources.push({
-        id: generateId(),
-        sourceType: "google_search",
-        url: "",
-        title: "Search Suggestions",
-        snippet: "Suggested queries for external sources",
-        relevanceScore: 1,
-        retrievedAt: new Date(),
-        verified: false,
-        metadata: parsed,
-      });
-    } catch {
-      // If parsing fails, still useful for debugging
-      console.log("Grounding search response:", response.slice(0, 500));
-    }
+    return result.sources;
   } catch (error) {
     console.error("Gemini grounding search failed:", error);
+    return [];
   }
-
-  return sources;
 }
 
 // ============================================
@@ -971,3 +907,218 @@ export async function synthesizeFromExternalSources(
   const synthesized = await generateText({ provider: llmProvider, prompt });
   return synthesized;
 }
+
+// ============================================
+// Extended Search with All Providers
+// ============================================
+
+/**
+ * Execute extended search including Flickr, Freesound, Archive, Sketchfab
+ */
+export async function executeExtendedSearch(
+  entityTitle: string,
+  entityType: EntityType,
+  existingContext: string,
+  options: Partial<ExternalSearchOptions> & {
+    enableFlickr?: boolean;
+    enableFreesound?: boolean;
+    enableArchive?: boolean;
+    enableSketchfab?: boolean;
+    enableDeepResearch?: boolean;
+  } = {},
+  llmProvider: LlmProvider = "gemini_ai"
+): Promise<ExternalSearchResult & {
+  extendedSources: ExternalSource[];
+  researchPath?: string[];
+}> {
+  // First, run the standard search
+  const baseResult = await executeExternalSearch(
+    entityTitle,
+    entityType,
+    existingContext,
+    options,
+    llmProvider
+  );
+
+  const extendedSources: ExternalSource[] = [];
+  let researchPath: string[] | undefined;
+
+  // Import external providers dynamically
+  const providers = await import("./external-providers");
+
+  // Run extended searches in parallel
+  const extendedPromises: Promise<void>[] = [];
+
+  // Flickr for images
+  if (options.enableFlickr) {
+    extendedPromises.push(
+      providers.searchFlickr(entityTitle, { limit: 15, licenseFilter: "commercial" })
+        .then(sources => {
+          extendedSources.push(...sources);
+          for (const s of sources) {
+            baseResult.mediaAssets.push({
+              url: s.url,
+              title: s.title,
+              type: "image",
+              sourceType: "flickr",
+              license: s.licenseId,
+              author: s.author,
+            });
+          }
+        })
+        .catch(e => console.error("[ExtendedSearch] Flickr failed:", e))
+    );
+  }
+
+  // Freesound for audio
+  if (options.enableFreesound) {
+    extendedPromises.push(
+      providers.searchFreesound(entityTitle, { limit: 10 })
+        .then(sources => {
+          extendedSources.push(...sources);
+          for (const s of sources) {
+            baseResult.mediaAssets.push({
+              url: s.url,
+              title: s.title,
+              type: "audio",
+              sourceType: "freesound",
+              license: s.licenseId,
+              author: s.author,
+            });
+          }
+        })
+        .catch(e => console.error("[ExtendedSearch] Freesound failed:", e))
+    );
+  }
+
+  // Internet Archive for historical content
+  if (options.enableArchive) {
+    extendedPromises.push(
+      providers.searchInternetArchive(entityTitle, { limit: 10 })
+        .then(sources => { extendedSources.push(...sources); })
+        .catch(e => console.error("[ExtendedSearch] Archive failed:", e))
+    );
+  }
+
+  // Sketchfab for 3D model references (especially useful for modeling focus)
+  if (options.enableSketchfab || (options.modelingFocus && isModelingEntityType(entityType))) {
+    extendedPromises.push(
+      providers.searchSketchfab(entityTitle, { limit: 8 })
+        .then(sources => { extendedSources.push(...sources); })
+        .catch(e => console.error("[ExtendedSearch] Sketchfab failed:", e))
+    );
+  }
+
+  await Promise.all(extendedPromises);
+
+  // Deep research with Gemini Grounding (multi-turn)
+  if (options.enableDeepResearch) {
+    try {
+      const { executeDeepResearch } = await import("./gemini-grounding");
+      const deepResult = await executeDeepResearch(
+        entityTitle,
+        entityType,
+        existingContext,
+        {
+          maxTurns: 3,
+          modelingFocus: options.modelingFocus,
+          targetLang: options.targetLang,
+        }
+      );
+
+      // Add deep research sources
+      for (const source of deepResult.allSources) {
+        if (!extendedSources.some(s => s.url === source.url)) {
+          extendedSources.push(source);
+        }
+      }
+
+      researchPath = deepResult.researchPath;
+
+      // If we got substantial content, update synthesized content
+      if (deepResult.finalText && deepResult.finalText.length > 500) {
+        baseResult.synthesizedContent = deepResult.finalText;
+      }
+    } catch (error) {
+      console.error("[ExtendedSearch] Deep research failed:", error);
+    }
+  }
+
+  console.log(`[ExtendedSearch] Found ${extendedSources.length} additional sources`);
+
+  // Merge extended sources with base sources
+  const allSources = [...baseResult.sources];
+  for (const source of extendedSources) {
+    if (!allSources.some(s => s.url === source.url)) {
+      allSources.push(source);
+    }
+  }
+
+  return {
+    ...baseResult,
+    sources: allSources,
+    extendedSources,
+    researchPath,
+  };
+}
+
+/**
+ * Verify technical specifications using grounded search
+ */
+export async function verifyTechnicalSpecs(
+  entityTitle: string,
+  specs: TechnicalSpecs
+): Promise<{
+  verified: TechnicalSpecs;
+  corrections: Array<{ field: string; original: string; corrected: string; source: string }>;
+  confidence: number;
+}> {
+  const { verifyFacts } = await import("./gemini-grounding");
+
+  // Extract claims from specs
+  const claims: string[] = [];
+
+  if (specs.dimensions) {
+    for (const [key, dim] of Object.entries(specs.dimensions)) {
+      claims.push(`The ${key} of ${entityTitle} is ${dim.value} ${dim.unit}`);
+    }
+  }
+
+  if (specs.weight) {
+    claims.push(`The weight of ${entityTitle} is ${specs.weight.value} ${specs.weight.unit}`);
+  }
+
+  if (specs.materials) {
+    for (const mat of specs.materials) {
+      claims.push(`The ${mat.part} of ${entityTitle} is made of ${mat.material}`);
+    }
+  }
+
+  // Verify claims
+  const verifications = await verifyFacts(claims, entityTitle);
+
+  // Build corrections list
+  const corrections: Array<{ field: string; original: string; corrected: string; source: string }> = [];
+
+  for (const v of verifications) {
+    if (!v.verified && v.correction) {
+      corrections.push({
+        field: v.claim.split(" of ")[0].replace("The ", ""),
+        original: v.claim,
+        corrected: v.correction,
+        source: v.sources[0] || "Grounded search",
+      });
+    }
+  }
+
+  // Calculate overall confidence
+  const verifiedCount = verifications.filter(v => v.verified).length;
+  const confidence = claims.length > 0 ? verifiedCount / claims.length : 0;
+
+  return {
+    verified: specs, // In a full implementation, update specs with corrections
+    corrections,
+    confidence,
+  };
+}
+

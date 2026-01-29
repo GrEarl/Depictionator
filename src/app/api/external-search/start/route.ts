@@ -4,10 +4,12 @@ import { requireApiSession, requireWorkspaceAccess, apiError } from "@/lib/api";
 import { logAudit } from "@/lib/audit";
 import {
   executeExternalSearch,
-  synthesizeFromExternalSources,
+  executeExtendedSearch,
   type ExternalSearchOptions,
   DEFAULT_SEARCH_OPTIONS,
 } from "@/lib/external-search";
+import { searchMultipleSources } from "@/lib/external-providers";
+import { executeDeepResearch } from "@/lib/gemini-grounding";
 import type { EntityType, SearchJobStatus } from "@prisma/client";
 import type { LlmProvider } from "@/lib/llm";
 
@@ -43,6 +45,10 @@ export async function POST(request: Request) {
   const llmProvider = (llmProviderRaw || DEFAULT_LLM_PROVIDER) as LlmProvider;
   const existingContext = String(form.get("existingContext") ?? "").trim();
 
+  // Search mode
+  const searchMode = String(form.get("searchMode") ?? "standard").trim() as "standard" | "extended" | "deep";
+  const deepResearchTurns = Number(form.get("deepResearchTurns")) || 3;
+
   // Parse source options
   const sourcesConfig: ExternalSearchOptions["sources"] = {
     googleSearch: parseBooleanValue(form.get("source_googleSearch"), true),
@@ -52,6 +58,15 @@ export async function POST(request: Request) {
     youtube: parseBooleanValue(form.get("source_youtube"), false),
     flickr: parseBooleanValue(form.get("source_flickr"), false),
     freesound: parseBooleanValue(form.get("source_freesound"), false),
+  };
+
+  // Extended source options (for extended/deep modes)
+  const extendedSources = {
+    flickr: parseBooleanValue(form.get("ext_flickr"), false),
+    freesound: parseBooleanValue(form.get("ext_freesound"), false),
+    archive: parseBooleanValue(form.get("ext_archive"), false),
+    googleCSE: parseBooleanValue(form.get("ext_googleCSE"), false),
+    sketchfab: parseBooleanValue(form.get("ext_sketchfab"), false),
   };
 
   // Parse additional options
@@ -82,8 +97,9 @@ export async function POST(request: Request) {
       entityId,
       query,
       entityType: entityType as EntityType,
+      searchMode: searchMode as any,
       status: "searching",
-      sourcesConfig: JSON.stringify(options),
+      sourcesConfig: JSON.stringify({ ...options, searchMode, extendedSources }),
       createdById: session.userId,
     },
   });
@@ -92,16 +108,67 @@ export async function POST(request: Request) {
   // For now, we'll do it synchronously but return immediately
   (async () => {
     try {
-      const result = await executeExternalSearch(
-        query,
-        entityType as EntityType,
-        existingContext,
-        options,
-        llmProvider
-      );
+      let allSources: any[] = [];
+      let technicalSpecs: any = null;
+      let deepResearchText = "";
+      let researchPath: string[] = [];
+
+      // Standard search
+      if (searchMode === "standard" || searchMode === "extended") {
+        const result = await executeExternalSearch(
+          query,
+          entityType as EntityType,
+          existingContext,
+          options,
+          llmProvider
+        );
+        allSources = result.sources;
+        technicalSpecs = result.technicalSpecs;
+      }
+
+      // Extended search: add more providers
+      if (searchMode === "extended") {
+        const extendedResult = await searchMultipleSources({
+          query,
+          enabledSources: extendedSources,
+          mediaFocus: options.modelingFocus ? "image" : "all",
+        });
+        // Merge sources, avoiding duplicates by URL
+        const existingUrls = new Set(allSources.map(s => s.url));
+        for (const source of extendedResult.sources) {
+          if (!existingUrls.has(source.url)) {
+            allSources.push(source);
+            existingUrls.add(source.url);
+          }
+        }
+      }
+
+      // Deep research mode: use multi-turn Gemini grounding
+      if (searchMode === "deep") {
+        const deepResult = await executeDeepResearch(
+          query,
+          entityType as EntityType,
+          existingContext,
+          {
+            maxTurns: deepResearchTurns,
+            modelingFocus: options.modelingFocus,
+            targetLang,
+          }
+        );
+        // Add sources from deep research
+        const existingUrls = new Set(allSources.map(s => s.url));
+        for (const source of deepResult.allSources) {
+          if (!existingUrls.has(source.url)) {
+            allSources.push(source);
+            existingUrls.add(source.url);
+          }
+        }
+        deepResearchText = deepResult.finalText;
+        researchPath = deepResult.researchPath;
+      }
 
       // Store sources in database
-      for (const source of result.sources) {
+      for (const source of allSources) {
         await prisma.externalSource.create({
           data: {
             workspaceId,
@@ -130,11 +197,12 @@ export async function POST(request: Request) {
         data: {
           status: "completed",
           resultsJson: JSON.stringify({
-            sourceCount: result.sources.length,
-            mediaAssetCount: result.mediaAssets.length,
-            mediaAssets: result.mediaAssets,
+            searchMode,
+            sourceCount: allSources.length,
+            researchPath: researchPath.length > 0 ? researchPath : undefined,
           }),
-          technicalSpecs: result.technicalSpecs ? JSON.stringify(result.technicalSpecs) : null,
+          technicalSpecs: technicalSpecs ? JSON.stringify(technicalSpecs) : null,
+          deepResearchText: deepResearchText || null,
           completedAt: new Date(),
         },
       });
@@ -145,7 +213,7 @@ export async function POST(request: Request) {
         action: "search",
         targetType: "external_search_job",
         targetId: job.id,
-        meta: { query, sourceCount: result.sources.length },
+        meta: { query, searchMode, sourceCount: allSources.length },
       });
     } catch (error) {
       await prisma.externalSearchJob.update({
@@ -162,7 +230,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     jobId: job.id,
     status: "searching",
-    message: "Search started. Poll /api/external-search/status/:jobId for results.",
+    searchMode,
+    message: `${searchMode === "deep" ? "Deep research" : "Search"} started. Poll /api/external-search/status/:jobId for results.`,
   });
 }
 
