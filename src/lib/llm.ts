@@ -26,7 +26,7 @@ const VERTEX_GEMINI_API_VERSION = process.env.VERTEX_GEMINI_API_VERSION ?? "v1be
 const VERTEX_GEMINI_API_VERSION_FALLBACK =
   process.env.VERTEX_GEMINI_API_VERSION_FALLBACK ??
   (VERTEX_GEMINI_API_VERSION === "v1beta1" ? "v1" : "v1beta1");
-const CODEX_MODEL = "gpt-5.2";
+const CODEX_MODEL = "gpt-5.3-codex";
 const CODEX_CLI_PATH = process.env.CODEX_CLI_PATH ?? "codex";
 const CODEX_TIMEOUT_MS = Number(process.env.CODEX_EXEC_TIMEOUT_MS ?? "120000");
 

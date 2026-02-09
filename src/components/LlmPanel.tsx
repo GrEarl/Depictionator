@@ -19,7 +19,7 @@ type LlmPanelProps = {
 const PROVIDER_LABELS: Record<Provider, string> = {
   gemini_ai: "Gemini (AI Studio)",
   gemini_vertex: "Gemini (Vertex AI)",
-  codex_cli: "GPT-5.2 (Codex CLI)"
+  codex_cli: "GPT-5.3 Codex (Codex CLI)"
 };
 
 const FALLBACK_PROVIDERS: Provider[] = ["gemini_ai", "gemini_vertex", "codex_cli"];
